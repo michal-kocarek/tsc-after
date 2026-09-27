@@ -41,7 +41,7 @@ jobs:
       - run: pnpm run test:unit --run
       - run: pnpm build
       - run: pnpm run test:e2e --run
-      - run: node bin/tsc-cleaner --help
+      - run: node bin/tsc-clean --help
       - run: pnpm lint
       - run: pnpm lint:knip
       - run: pnpm lint:spelling

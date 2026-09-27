@@ -24,7 +24,9 @@
 	"sideEffects": false,
 	"type": "module",
 	"exports": null,
-	"bin": "bin/tsc-cleaner",
+	"bin": {
+		"tsc-clean": "bin/tsc-clean"
+	},
 	"files": [
 		"dist/"
 	],

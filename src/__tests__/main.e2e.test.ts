@@ -2,7 +2,7 @@ import { execa } from "execa";
 import { stripVTControlCharacters } from "node:util";
 import { describe, it } from "vitest";
 
-const binPath = require.resolve("../../bin/tsc-cleaner");
+const binPath = require.resolve("../../bin/tsc-clean");
 
 async function runTscCleaner(
 	args: string[],
@@ -22,7 +22,7 @@ async function runTscCleaner(
 	return result;
 }
 
-describe("tsc-cleaner", () => {
+describe("tsc-clean", () => {
 	it("should print help", async ({ expect }) => {
 		const result = await runTscCleaner(["--help"]);
 

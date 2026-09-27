@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`tsc-cleaner > should print help 1`] = `
+exports[`tsc-clean > should print help 1`] = `
 "tsc-clean - Remove stale TypeScript build output
 
 USAGE

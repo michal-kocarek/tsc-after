@@ -108,8 +108,8 @@ Past tools failed because they were single-author, one-off scripts that lacked d
 
 ## Naming Research
 
-The final decision (`tsc-clean`, with `tsc-reap` reserved as a fallback) and its rationale live in [`PRODUCT.md`](./PRODUCT.md).
-This appendix preserves the raw research behind it.
+The original `tsc-clean` naming decision and its rationale live in [`PRODUCT.md`](./PRODUCT.md).
+The availability check below has been corrected after discovering the existing `tsc_clean` package.
 
 ### What the community calls the action
 
@@ -128,13 +128,14 @@ Word counts across all comments in TypeScript issues #16057, #61056, #36648, #43
 
 Issue titles themselves use the same vocabulary: _"Cleaning Target Files on Source Deletion"_ (#16057) and _"doesn't clean files from output folder"_ (#36648). `clean` is unambiguously the community's word, and `--clean` is the flag people ask `tsc` for.
 
-### npm availability (checked against `registry.npmjs.org`)
+### npm availability (rechecked against `registry.npmjs.org` on 2026-09-27)
 
 | Candidate                                                                                                                         | Status            | Notes                                                                                                                                         |
 | :-------------------------------------------------------------------------------------------------------------------------------- | :---------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tsc-clean`                                                                                                                       | ✅ Free           | **Chosen.** Differs from `ts-clean` by a letter, not punctuation, so it passes npm's moniker rule.                                            |
-| `tsc-reap`                                                                                                                        | ✅ Free           | **Reserved** as fallback / alias.                                                                                                             |
-| `tsc-cleanup`                                                                                                                     | ✅ Free           | Candidate for a deprecated pointer to `tsc-clean`.                                                                                            |
+| `tsc-clean`                                                                                                                       | ⛔ Blocked        | Registry 404, but collides with existing `tsc_clean` under npm's punctuation-only moniker rule.                                               |
+| `@michal-kocarek/tsc-clean`                                                                                                       | ✅ 404            | Scoped route preserving the project and CLI name, if the publisher controls that npm scope.                                                   |
+| `tsc-reap`                                                                                                                        | ✅ 404            | Short unscoped fallback; punctuation variants also returned 404.                                                                              |
+| `tsc-cleanup`                                                                                                                     | ✅ 404            | Descriptive unscoped option; punctuation variants also returned 404.                                                                          |
 | `tsc-sweep`, `tsc-tidy`, `tsc-gc`, `tsc-stale`, `tsc-janitor`, `tsc-broom`, `tsc-scrub`, `tsc-purge`, `tsc-vacuum`, `tsc-orphans` | ✅ Free           | Rejected: zero vocabulary match with the issue threads.                                                                                       |
 | `tsc-prune`                                                                                                                       | ✅ Free           | Rejected: too close to `ts-prune` (popular unused-exports tool).                                                                              |
 | `dist-prune`, `dist-sweep`, `tidy-dist`                                                                                           | ✅ Free           | Rejected: assume `dist` as `outDir`.                                                                                                          |
@@ -142,10 +143,12 @@ Issue titles themselves use the same vocabulary: _"Cleaning Target Files on Sour
 | `tsweep`, `tscrub`, `tsbroom`, `orphaned`                                                                                         | ✅ Free           | Rejected: brandable but not self-explanatory in a scripts list.                                                                               |
 | `ts-cleaner`                                                                                                                      | ❌ Taken          | `TarVK/ts-cleaner`, ~7k dl/mo, unmaintained since 2019.                                                                                       |
 | `ts-clean`                                                                                                                        | ❌ Taken          | `koa-next/ts-clean`, 915 dl/mo, abandoned Dec 2019.                                                                                           |
+| `tsc_clean`                                                                                                                       | ❌ Taken          | v1.0.0, a separate tool described as "tsc & remove all js comments".                                                                          |
 | `tsc-clear`                                                                                                                       | ❌ Taken          | Windows-only Rust CLI, 19 dl/mo.                                                                                                              |
 | `tsc-cleaner`                                                                                                                     | ❌ Taken          | Generic rimraf wrapper, v0.0.3, 4 dl/mo.                                                                                                      |
 | `ts-prune`, `ts-purify`, `ts-clean-built`, `typemon`, `broom`, `dustoff`                                                          | ❌ Taken          | —                                                                                                                                             |
 | `tsclean`, `tsprune`                                                                                                              | ⛔ Blocked by npm | The registry rejects names that differ from an existing package only by punctuation or case (`tsclean` → `ts-clean`, `tsprune` → `ts-prune`). |
 
-**Note on npm's moniker rule:** npm refuses new package names that are "too similar" to existing ones when the difference is only punctuation (`-`, `.`, `_`) or case.
-Differences in letters are allowed, which is why `tsc-clean` is publishable despite `ts-clean` existing, while `tsclean` is not.
+**Note on npm's moniker rule:** npm refuses unscoped names that differ from an existing package only by punctuation (`-`, `.`, `_`) or case.
+`tsc-clean` and `tsc_clean` differ only by punctuation, so a registry 404 for `tsc-clean` does not mean it can be published.
+The 404 checks above are a snapshot, not a guarantee of publishability or future availability.

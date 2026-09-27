@@ -28,20 +28,23 @@ tsc && tsc-clean
   The TypeScript team closed the request as out of scope, so the slot stays open indefinitely.
 - **It's a compiler companion.** The `tsc-*` prefix places it next to `tsc-watch` (~3M downloads/month) and `tsc-alias` — tools people already reach for right after `tsc`.
 
-**Availability** (verified against `registry.npmjs.org`)
+**npm package availability** (rechecked against `registry.npmjs.org` on 2026-09-27)
 
-| Name                                                                        | Status                                     | Notes                                                                                                              |
-| :-------------------------------------------------------------------------- | :----------------------------------------- | :----------------------------------------------------------------------------------------------------------------- |
-| `tsc-clean`                                                                 | ✅ **Free** (404)                          | Not blocked by npm's punctuation-only "moniker" rule — it differs from `ts-clean` by a letter, not by punctuation. |
-| `tsc-reap`                                                                  | ✅ Free — **reserved as fallback / alias** | Memorable and playful; no vocabulary match, so it stays the backup.                                                |
-| `tsc-cleanup`                                                               | ✅ Free                                    | Optional: publish as a deprecated pointer to `tsc-clean` to catch typos.                                           |
-| `ts-clean`                                                                  | ❌ Taken                                   | 915 dl/mo, abandoned Dec 2019.                                                                                     |
-| `tsc-clear`                                                                 | ❌ Taken                                   | 19 dl/mo, Windows-only Rust CLI.                                                                                   |
-| `tsc-cleaner`                                                               | ❌ Taken                                   | 4 dl/mo, generic rimraf wrapper at v0.0.3.                                                                         |
-| `ts-cleaner`, `ts-prune`, `ts-purify`, `ts-clean-built`, `broom`, `dustoff` | ❌ Taken                                   | Avoid.                                                                                                             |
-| `tsclean`, `tsprune`                                                        | ⛔ Rejected by npm                         | Collide with `ts-clean` / `ts-prune` under the moniker rule.                                                       |
+| Name                                                                        | Status             | Notes                                                                        |
+| :-------------------------------------------------------------------------- | :----------------- | :--------------------------------------------------------------------------- |
+| `tsc-clean`                                                                 | ⛔ **Blocked**     | Registry 404, but existing `tsc_clean` differs only by punctuation.          |
+| `@michal-kocarek/tsc-clean`                                                 | ✅ 404             | Preserves the project and CLI name if the publisher controls this npm scope. |
+| `tsc-reap`                                                                  | ✅ 404             | Short unscoped fallback; punctuation variants also returned 404.             |
+| `tsc-cleanup`                                                               | ✅ 404             | Descriptive unscoped package name; punctuation variants also returned 404.   |
+| `ts-clean`                                                                  | ❌ Taken           | 915 dl/mo, abandoned Dec 2019.                                               |
+| `tsc_clean`                                                                 | ❌ Taken           | Separate tool described as "tsc & remove all js comments".                   |
+| `tsc-clear`                                                                 | ❌ Taken           | 19 dl/mo, Windows-only Rust CLI.                                             |
+| `tsc-cleaner`                                                               | ❌ Taken           | 4 dl/mo, generic rimraf wrapper at v0.0.3.                                   |
+| `ts-cleaner`, `ts-prune`, `ts-purify`, `ts-clean-built`, `broom`, `dustoff` | ❌ Taken           | Avoid.                                                                       |
+| `tsclean`, `tsprune`                                                        | ⛔ Rejected by npm | Collide with `ts-clean` / `ts-prune` under the moniker rule.                 |
 
-The neighbours are dead or negligible, so `tsc-clean` inherits the obvious search terms without inheriting anyone's confusion.
+Registry 404s are a snapshot, not a guarantee of publishability or future availability.
+The npm package name must be changed before publishing; the executable can still be called `tsc-clean`.
 
 **Rejected alternatives**
 
