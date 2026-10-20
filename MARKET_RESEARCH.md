@@ -11,7 +11,8 @@ This causes serious developer friction:
 - Runtime import errors when converting modules (e.g., `foo.ts` -> `foo/index.ts`).
 - Developers forced to run full nukes (`rimraf dist && tsc`), eliminating the performance advantages of incremental builds and `tsc --watch`.
 
-This document synthesizes ecosystem research, community demand on GitHub, the official TypeScript team stance, and product opportunities for a modern TypeScript cleanup tool (`tsc-clean` — see [`PRODUCT.md`](./PRODUCT.md) for the product brief).
+This document synthesizes ecosystem research, community demand on GitHub, the official TypeScript team stance, and product opportunities for a modern TypeScript post-build companion (`tsc-after` — see [`PRODUCT.md`](./PRODUCT.md) for the product brief).
+Cleaning is enabled by default; opt-in `--copy` support for additional artifacts in `outDir` is planned, not implemented.
 
 ---
 
@@ -100,7 +101,7 @@ Past tools failed because they were single-author, one-off scripts that lacked d
    - Strict containment: refuse to operate outside verified `outDir` directories to prevent accidental data loss.
    - Respect `.gitignore` and ignore non-TypeScript assets unless configured.
 5. **Seamless Execution Modes:**
-   - **One-shot CLI:** Run post-build (`tsc && tsc-clean`).
+   - **One-shot CLI:** Run post-build (`tsc && tsc-after`).
    - **Watch Mode Companion:** Lightweight watcher (using modern fs events) that operates alongside `tsc --watch` without crashing on file churn.
    - **Programmatic Node.js API:** For integration into custom build scripts.
 
@@ -108,8 +109,9 @@ Past tools failed because they were single-author, one-off scripts that lacked d
 
 ## Naming Research
 
-The original `tsc-clean` naming decision and its rationale live in [`PRODUCT.md`](./PRODUCT.md).
-The availability check below has been corrected after discovering the existing `tsc_clean` package.
+The chosen name is now `tsc-after`, covering default cleaning and planned opt-in artifact copying via `--copy`; see [`PRODUCT.md`](./PRODUCT.md).
+The research below records the earlier cleanup-only `tsc-clean` proposal and historical alternatives, not the current naming decision.
+The availability check below has been corrected after discovering the existing `tsc_clean` package; it does not verify availability of `tsc-after`.
 
 ### What the community calls the action
 

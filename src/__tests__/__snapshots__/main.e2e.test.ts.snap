@@ -1,10 +1,10 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`tsc-clean > should print help 1`] = `
-"tsc-clean - Remove stale TypeScript build output
+exports[`tsc-after > should print help 1`] = `
+"tsc-after - Remove stale TypeScript build output
 
 USAGE
-  tsc-clean [options]
+  tsc-after [options]
 
 OPTIONS
   --project, -p <path>   Path to configuration file for this project, or to a folder with a 'tsconfig.json'.

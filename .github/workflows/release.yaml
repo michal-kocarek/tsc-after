@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     name: Verify and pack npm package
-    if: github.repository == 'michal-kocarek/tsc-clean'
+    if: github.repository == 'michal-kocarek/tsc-after'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,7 +41,7 @@ jobs:
       - run: pnpm run test:unit --run
       - run: pnpm build
       - run: pnpm run test:e2e --run
-      - run: node bin/tsc-clean --help
+      - run: node bin/tsc-after --help
       - run: pnpm lint
       - run: pnpm lint:knip
       - run: pnpm lint:spelling
@@ -59,7 +59,7 @@ jobs:
         with:
           name: npm-tarball
           path: |
-            tsc-clean-*.tgz
+            tsc-after-*.tgz
             SHA256SUMS
           if-no-files-found: error
           retention-days: 7

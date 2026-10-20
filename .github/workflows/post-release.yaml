@@ -25,7 +25,7 @@ jobs:
 
             The release is available on:
 
-            * [GitHub releases](https://github.com/michal-kocarek/tsc-clean/releases/tag/{release_tag})
-            * [npm package (@latest dist-tag)](https://www.npmjs.com/package/tsc-clean/v/${{ env.npm_version }})
+            * [GitHub releases](https://github.com/michal-kocarek/tsc-after/releases/tag/{release_tag})
+            * [npm package (@latest dist-tag)](https://www.npmjs.com/package/tsc-after/v/${{ env.npm_version }})
 
             Cheers! 📦🚀

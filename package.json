@@ -1,7 +1,7 @@
 {
-	"name": "tsc-clean",
+	"name": "tsc-after",
 	"version": "0.1.0",
-	"description": "Remove stale build output that tsc leaves behind when you delete or rename source files. Tsconfig-aware: just run tsc && tsc-clean. 🧹",
+	"description": "Remove stale build output that tsc leaves behind when you delete or rename source files. Tsconfig-aware: just run tsc && tsc-after. 🧹",
 	"keywords": [
 		"build",
 		"clean",
@@ -15,7 +15,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/michal-kocarek/tsc-clean.git"
+		"url": "git+https://github.com/michal-kocarek/tsc-after.git"
 	},
 	"license": "MIT",
 	"author": {
@@ -25,7 +25,7 @@
 	"type": "module",
 	"exports": null,
 	"bin": {
-		"tsc-clean": "bin/tsc-clean"
+		"tsc-after": "bin/tsc-after"
 	},
 	"files": [
 		"dist/"

@@ -1,8 +1,8 @@
-<h1 align="center">tsc-clean</h1>
+<h1 align="center">tsc-after</h1>
 
 <p align="center">
 	Remove stale build output that tsc leaves behind when you delete or rename source files.
-	Tsconfig-aware. Just run <code>tsc &amp;&amp; tsc-clean</code>.
+	Tsconfig-aware. Just run <code>tsc &amp;&amp; tsc-after</code>.
 	🧹
 </p>
 
@@ -12,10 +12,10 @@
 	<a href="#contributors" target="_blank"><img alt="👪 All Contributors: 1" src="https://img.shields.io/badge/%F0%9F%91%AA_all_contributors-1-21bb42.svg" /></a>
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 	<!-- prettier-ignore-end -->
-	<a href="https://github.com/michal-kocarek/tsc-clean/blob/main/.github/CODE_OF_CONDUCT.md" target="_blank"><img alt="🤝 Code of Conduct: Kept" src="https://img.shields.io/badge/%F0%9F%A4%9D_code_of_conduct-kept-21bb42" /></a>
-	<a href="https://codecov.io/gh/michal-kocarek/tsc-clean" target="_blank"><img alt="🧪 Coverage" src="https://img.shields.io/codecov/c/github/michal-kocarek/tsc-clean?label=%F0%9F%A7%AA%20coverage" /></a>
-	<a href="https://github.com/michal-kocarek/tsc-clean/blob/main/LICENSE.md" target="_blank"><img alt="📝 License: MIT" src="https://img.shields.io/badge/%F0%9F%93%9D_license-MIT-21bb42.svg" /></a>
-	<a href="http://npmjs.com/package/tsc-clean" target="_blank"><img alt="📦 npm version" src="https://img.shields.io/npm/v/tsc-clean?color=21bb42&label=%F0%9F%93%A6%20npm" /></a>
+	<a href="https://github.com/michal-kocarek/tsc-after/blob/main/.github/CODE_OF_CONDUCT.md" target="_blank"><img alt="🤝 Code of Conduct: Kept" src="https://img.shields.io/badge/%F0%9F%A4%9D_code_of_conduct-kept-21bb42" /></a>
+	<a href="https://codecov.io/gh/michal-kocarek/tsc-after" target="_blank"><img alt="🧪 Coverage" src="https://img.shields.io/codecov/c/github/michal-kocarek/tsc-after?label=%F0%9F%A7%AA%20coverage" /></a>
+	<a href="https://github.com/michal-kocarek/tsc-after/blob/main/LICENSE.md" target="_blank"><img alt="📝 License: MIT" src="https://img.shields.io/badge/%F0%9F%93%9D_license-MIT-21bb42.svg" /></a>
+	<a href="http://npmjs.com/package/tsc-after" target="_blank"><img alt="📦 npm version" src="https://img.shields.io/npm/v/tsc-after?color=21bb42&label=%F0%9F%93%A6%20npm" /></a>
 	<img alt="💪 TypeScript: Strict" src="https://img.shields.io/badge/%F0%9F%92%AA_typescript-strict-21bb42.svg" />
 </p>
 
@@ -26,12 +26,16 @@
 > Do not rely on it for builds yet.
 
 ```sh
-tsc && tsc-clean
+tsc && tsc-after
 ```
+
+Cleaning is enabled by default.
+An opt-in `--copy` capability for copying additional artifacts into `outDir` (usually `dist`) is planned, but not implemented yet.
+See [`PRODUCT.md`](./PRODUCT.md#capabilities) for future work and open design questions.
 
 The planned cleaner treats `outDir` as dedicated to TypeScript.
 It may remove any regular file there that TypeScript would not emit from the current project, including copied assets.
-If your build copies assets into `dist`, run cleanup before the copy step (for example, `tsc && tsc-clean && cp assets/* dist/assets/`) or use a separate directory.
+Until `--copy` is available, if your build copies assets into `dist`, run cleanup before the copy step (for example, `tsc && tsc-after && cp assets/* dist/assets/`) or use a separate directory.
 An `--exclude` option may be added later.
 
 See [`PRODUCT.md`](./PRODUCT.md) for the planned CLI and feature set, and [`MARKET_RESEARCH.md`](./MARKET_RESEARCH.md) for the research behind it.
@@ -51,7 +55,7 @@ Thanks! 🧹
 <table>
   <tbody>
     <tr>
-      <td align="center"><a href="https://github.com/michal-kocarek"><img src="https://avatars.githubusercontent.com/u/762095?v=4?s=100" width="100px;" alt="Michal Kočárek"/><br /><sub><b>Michal Kočárek</b></sub></a><br /><a href="https://github.com/michal-kocarek/tsc-clean/commits?author=michal-kocarek" title="Code">💻</a> <a href="#content-michal-kocarek" title="Content">🖋</a> <a href="https://github.com/michal-kocarek/tsc-clean/commits?author=michal-kocarek" title="Documentation">📖</a> <a href="#ideas-michal-kocarek" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-michal-kocarek" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-michal-kocarek" title="Maintenance">🚧</a> <a href="#projectManagement-michal-kocarek" title="Project Management">📆</a> <a href="#tool-michal-kocarek" title="Tools">🔧</a></td>
+      <td align="center"><a href="https://github.com/michal-kocarek"><img src="https://avatars.githubusercontent.com/u/762095?v=4?s=100" width="100px;" alt="Michal Kočárek"/><br /><sub><b>Michal Kočárek</b></sub></a><br /><a href="https://github.com/michal-kocarek/tsc-after/commits?author=michal-kocarek" title="Code">💻</a> <a href="#content-michal-kocarek" title="Content">🖋</a> <a href="https://github.com/michal-kocarek/tsc-after/commits?author=michal-kocarek" title="Documentation">📖</a> <a href="#ideas-michal-kocarek" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-michal-kocarek" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-michal-kocarek" title="Maintenance">🚧</a> <a href="#projectManagement-michal-kocarek" title="Project Management">📆</a> <a href="#tool-michal-kocarek" title="Tools">🔧</a></td>
     </tr>
   </tbody>
 </table>

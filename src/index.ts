@@ -41,7 +41,7 @@ const argsConfig = {
 			/* eslint-enable perfectionist/sort-objects */
 		},
 	} as const,
-	BIN_NAME = "tsc-clean";
+	BIN_NAME = packageJson.name;
 
 // TODO: Fail on unknown arguments!
 
@@ -347,7 +347,7 @@ function main() {
 		);
 	}
 
-	// TODO: For tsc-clean, I’d make --dryRun print the files it would remove to stdout, followed by a count. A normal run
+	// TODO: For tsc-after, I’d make --dryRun print the files it would remove to stdout, followed by a count. A normal run
 	//  Can print a short count; --verbose can print each removed path. Keep debug objects such as the current print(tsconfig)
 	//  Out of normal output.
 	//  Exit with 0 for success, including a dry run or nothing to remove; 1 for a cleanup or config error; and 2 for invalid CLI arguments.

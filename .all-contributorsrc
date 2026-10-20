@@ -25,7 +25,7 @@
   "files": [
     "README.md"
   ],
-  "projectName": "tsc-clean",
+  "projectName": "tsc-after",
   "projectOwner": "michal-kocarek",
   "repoType": "github",
   "commitConvention": "angular"

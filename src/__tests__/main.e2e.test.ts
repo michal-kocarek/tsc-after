@@ -2,9 +2,9 @@ import { execa } from "execa";
 import { stripVTControlCharacters } from "node:util";
 import { describe, it } from "vitest";
 
-const binPath = require.resolve("../../bin/tsc-clean");
+const binPath = require.resolve("../../bin/tsc-after");
 
-async function runTscCleaner(
+async function runTscAfter(
 	args: string[],
 	opts: { allowFailure: boolean } = { allowFailure: false },
 ) {
@@ -22,9 +22,9 @@ async function runTscCleaner(
 	return result;
 }
 
-describe("tsc-clean", () => {
+describe("tsc-after", () => {
 	it("should print help", async ({ expect }) => {
-		const result = await runTscCleaner(["--help"]);
+		const result = await runTscAfter(["--help"]);
 
 		expect(result.exitCode).toBe(0);
 		expect(result.stderr).toBe("");
@@ -32,19 +32,19 @@ describe("tsc-clean", () => {
 	});
 
 	it("should print version", async ({ expect }) => {
-		const result = await runTscCleaner(["--version"]);
+		const result = await runTscAfter(["--version"]);
 
 		expect(result.exitCode).toBe(0);
 		expect(result.stderr).toBe("");
 		expect(result.stdout).toMatch(
-			/^tsc-clean\/\d+\.\d+\.\d+ [\w\-.]+ [\w\-.]+ [\w\-.]+$/v,
+			/^tsc-after\/\d+\.\d+\.\d+ [\w\-.]+ [\w\-.]+ [\w\-.]+$/v,
 		);
 	});
 
 	it("should fail nicely when called with unknown argument", async ({
 		expect,
 	}) => {
-		const result = await runTscCleaner(["--unknown"], {
+		const result = await runTscAfter(["--unknown"], {
 			allowFailure: true,
 		});
 
