@@ -1,6 +1,6 @@
 {
 	"name": "tsc-after",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Remove stale build output that tsc leaves behind when you delete or rename source files. Tsconfig-aware: just run tsc && tsc-after. 🧹",
 	"keywords": [
 		"build",
@@ -37,7 +37,8 @@
 		"lint:knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip",
 		"lint:spelling": "cspell --quiet --color .",
 		"prepare": "husky",
-		"test": "vitest --project unit",
+		"release": "release-it",
+		"test": "vitest",
 		"test:e2e": "vitest --project e2e",
 		"test:unit": "vitest --project unit"
 	},
@@ -54,7 +55,7 @@
 		"@tsconfig/node-ts": "23.6.4",
 		"@tsconfig/strictest": "2.0.8",
 		"@types/node": "26.6.2",
-		"@vitest/coverage-v8": "5.0.1",
+		"@vitest/coverage-v8": "5.0.5",
 		"@vitest/eslint-plugin": "1.6.27",
 		"console-fail-test": "0.9.0",
 		"cspell": "10.3.4",
@@ -82,12 +83,12 @@
 		"tsdown": "0.23.0",
 		"typescript": "6.0.3",
 		"typescript-eslint": "8.70.1",
-		"vitest": "5.0.1"
+		"vitest": "5.0.5"
 	},
 	"peerDependencies": {
 		"typescript": ">=6.0.0"
 	},
-	"packageManager": "pnpm@12.6.0",
+	"packageManager": "pnpm@12.14.0",
 	"engines": {
 		"node": ">=24.0.0"
 	}
