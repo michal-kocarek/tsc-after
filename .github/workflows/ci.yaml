@@ -53,6 +53,8 @@ jobs:
       - run: pnpm run test:unit --run --coverage
       - if: always()
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
       - run: pnpm build
       - run: node bin/tsc-after.js --help
       - run: pnpm run test:e2e --run
