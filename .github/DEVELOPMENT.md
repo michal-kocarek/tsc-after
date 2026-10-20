@@ -93,7 +93,10 @@ pnpm tsc --watch
 
 Run **Actions → Release → Run workflow** on `main`.
 [release-it](https://github.com/release-it/release-it) picks the next version from [Conventional Commits](https://www.conventionalcommits.org) since the last tag (`fix:` → patch, `feat:` → minor, breaking change → major), updates `package.json` and `CHANGELOG.md`, commits and tags `vX.Y.Z`, creates a GitHub Release, and stages the package on npm.
+See the preset's [default commit types](https://conventional-changelog.js.org/presets/conventional-commits/#default-commit-types) for which prefixes appear in the changelog.
 Approve the staged version on npm with 2FA to make it installable.
+
+Git hooks run [commitlint](https://commitlint.js.org) on every new commit message and on all commits pushed to `main`.
 
 npm authenticates the workflow through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (no token) and adds provenance automatically.
 The trusted publisher on npm must point to workflow `release.yaml` and environment `npm-release`.

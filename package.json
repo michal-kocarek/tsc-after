@@ -42,11 +42,18 @@
 		"test:e2e": "vitest --project e2e",
 		"test:unit": "vitest --project unit"
 	},
+	"commitlint": {
+		"extends": [
+			"@commitlint/config-conventional"
+		]
+	},
 	"lint-staged": {
 		"*": "prettier --ignore-unknown --write"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/core": "0.18.5",
+		"@commitlint/cli": "21.2.4",
+		"@commitlint/config-conventional": "21.2.4",
 		"@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
 		"@eslint/js": "10.0.1",
 		"@eslint/markdown": "8.0.3",

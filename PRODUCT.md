@@ -148,8 +148,6 @@ State these up front so nobody is surprised:
 
 ## Publishing Checklist
 
-- [ ] Verify that npm allows publishing package `tsc-after` and reserve the name.
-- [ ] Rename the GitHub repository to `tsc-after`.
 - [ ] Add `keywords` in `package.json`: `tsc`, `typescript`, `clean`, `outDir`, `dist`, `stale`, `orphan`, `build`, `watch`.
 - [ ] Post a short note in TypeScript issue #16057 once v1 ships — that thread is where the audience already gathers.
 
@@ -160,5 +158,4 @@ State these up front so nobody is surprised:
       Essentially limit to only process files
 - [ ] Use same logic to determine what's the absolute path from relative in tsconfig, like typescript does
 - [ ] Add conventional commits settings - IDEA, pre-commit, GitHub action
-- [ ] Make repository public
 - [ ] Publish correctly first version from github to npm directly with all bells and whistles to make it super secure

@@ -1,0 +1,8 @@
+# Lint every commit pushed to main, including ones created with --no-verify
+protected_ref=refs/heads/main
+
+while read -r _local_ref local_sha remote_ref remote_sha; do
+	if [ "$remote_ref" = "$protected_ref" ] && [ "$local_sha" != "$remote_sha" ]; then
+		pnpm exec commitlint --from "$remote_sha" --to "$local_sha" < /dev/null || exit 1
+	fi
+done
