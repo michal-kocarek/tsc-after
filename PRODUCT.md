@@ -154,9 +154,7 @@ State these up front so nobody is surprised:
 
 ## Additional random todo:
 
-- [ ] When implementing, use node:util.parseArgs/parseEnv, if needed
 - [ ] Re security, ban traversing above current tsconfig directory by default, also ban traversing symlinks and other filesystems if that's possible.
       Essentially limit to only process files
 - [ ] Use same logic to determine what's the absolute path from relative in tsconfig, like typescript does
-- [ ] Add conventional commits settings - IDEA, pre-commit, GitHub action
-- [ ] Publish correctly first version from github to npm directly with all bells and whistles to make it super secure
+- [ ] Add conventional commits settings - GitHub action PR checks
