@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.0](https://github.com/michal-kocarek/tsc-after/compare/v0.2.0...v1.0.0) (2026-10-20)
+
+### ⚠ BREAKING CHANGES
+
+* update command line options and syntax to resemble tsc options more closer
+
+### Features
+
+* update command line options and syntax to resemble tsc options more closer ([3990ee5](https://github.com/michal-kocarek/tsc-after/commit/3990ee5d6a68b3f7c749c488dbf5ae23096039e2))
+
 ## 0.2.0 (2026-10-20)
 
 ### Features
