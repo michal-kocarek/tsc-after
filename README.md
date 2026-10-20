@@ -1,8 +1,8 @@
 <h1 align="center">tsc-after</h1>
 
 <p align="center">
-	Remove stale build output that tsc leaves behind when you delete or rename source files.
-	Tsconfig-aware. Just run <code>tsc &amp;&amp; tsc-after</code>.
+	Your <code>dist</code>, as <code>tsc</code> should've left it.
+	<code>tsconfig</code>-aware. Just run <code>tsc &amp;&amp; tsc-after</code>.
 	🧹
 </p>
 

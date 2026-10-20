@@ -1,6 +1,6 @@
 # Product Brief: `tsc-after`
 
-> **What comes after `tsc`: clean by default, copy when asked.**
+> **Your `dist`, as `tsc` should've left it.**
 
 `tsc` compiles your files, but it never deletes anything.
 Rename `foo.ts` to `foo/index.ts` and `dist/foo.js` and `dist/foo.d.ts` live on forever — confusing your tests, your types, and your teammates. `tsc-after` reads your `tsconfig.json`, works out exactly which files `tsc` would emit today, and removes the ones it wouldn't.
@@ -37,7 +37,7 @@ Verify that npm allows publishing under this name before releasing.
 
 ### Tagline
 
-1. **"What comes after `tsc`: clean by default, copy when asked."** ← chosen
+1. **"Your `dist`, as `tsc` should've left it."** ← chosen
 2. "Your source moved on.
    Let your `outDir` do the same."
 3. "Deletes what `tsc` forgot to."
