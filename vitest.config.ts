@@ -14,7 +14,6 @@ export default defineConfig({
 		expect: {
 			requireAssertions: true,
 		},
-		isolate: false,
 		projects: [
 			{
 				extends: true,
