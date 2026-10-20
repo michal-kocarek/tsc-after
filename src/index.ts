@@ -80,10 +80,12 @@ function main() {
 
 		print(
 			[
-				`${styleText("bold", BIN_NAME)} - Remove stale TypeScript build output`,
+				`${styleText("bold", BIN_NAME)} - Your dist, as tsc should've left it.`,
+				"",
+				"A tsconfig-aware companion to tsc. Removes stale build output by default.",
 				"",
 				heading("USAGE"),
-				`  ${BIN_NAME} [options]`,
+				`  tsc && ${BIN_NAME} [options]`,
 				"",
 				heading("OPTIONS"),
 				...Object.entries(argsConfig.options).map(([name, opts]) => {

@@ -1,10 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`tsc-after > should print help 1`] = `
-"tsc-after - Remove stale TypeScript build output
+"tsc-after - Your dist, as tsc should've left it.
+
+A tsconfig-aware companion to tsc. Removes stale build output by default.
 
 USAGE
-  tsc-after [options]
+  tsc && tsc-after [options]
 
 OPTIONS
   --project, -p <path>   Path to configuration file for this project, or to a folder with a 'tsconfig.json'.
