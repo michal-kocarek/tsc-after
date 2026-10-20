@@ -4,7 +4,7 @@
 		"commitMessage": "chore: release v${version}",
 		"tagName": "v${version}"
 	},
-	"github": { "release": true },
+	"github": { "release": true, "releaseName": "${tagName}" },
 	"hooks": { "after:bump": "pnpm build" },
 	"npm": { "skipChecks": true, "stage": true },
 	"plugins": {
