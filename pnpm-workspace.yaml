@@ -1,10 +1,20 @@
 allowBuilds:
   unrs-resolver: false
 
+autoDedupe: true
+
 hoist: false
+
+lockfile:
+  includeResolutionSettings: true
 
 minimumReleaseAge: 1440
 
 trustPolicy: no-downgrade
 
 trustPolicyExcludePrune: true
+
+update:
+  githubActions: true
+  ignoreDeps:
+    - typescript
