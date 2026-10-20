@@ -75,13 +75,13 @@ Nothing here is dropped — it's just sequenced, so something useful ships soone
 
 ### v1 promise
 
-| #   | Feature                              | One-liner                                                                                                                                                                                                                           |
-| :-- | :----------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Zero-config `tsconfig` awareness** | Resolves `outDir`, `rootDir`, `declarationDir`, `include`/`exclude`/`files`, `extends`, `allowJs`, `emitDeclarationOnly`, `noEmit` — via the TypeScript API, so it agrees with `tsc` by construction.                               |
-| 2   | **Knows every emit**                 | `.ts/.tsx/.mts/.cts` (+ `.js/.jsx` with `allowJs`) → `.js/.mjs/.cjs`, `.d.ts/.d.mts/.d.cts`, `.js.map`, `.d.ts.map`.                                                                                                                |
-| 3   | **Handles incremental builds**       | Leaves `.tsbuildinfo` alone so incremental builds stay fast.                                                                                                                                                                        |
-| 4   | **Confined cleanup**                 | Treats `outDir` as TypeScript-owned: removes regular files outside the current emit set, while preserving compiler state such as `.tsbuildinfo`. Refuses unsafe output paths and source/output overlap; `--dry-run` shows the plan. |
-| 5   | **Tidies up after itself**           | Removes directories left empty by the cleanup.                                                                                                                                                                                      |
+| #   | Feature                              | One-liner                                                                                                                                                                                                                       |
+| :-- | :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **Zero-config `tsconfig` awareness** | Resolves `outDir`, `rootDir`, `declarationDir`, `include`/`exclude`/`files`, `extends`, `allowJs`, `emitDeclarationOnly`, `noEmit` — via the TypeScript API, so it agrees with `tsc` by construction.                           |
+| 2   | **Knows every emit**                 | `.ts/.tsx/.mts/.cts` (+ `.js/.jsx` with `allowJs`) → `.js/.mjs/.cjs`, `.d.ts/.d.mts/.d.cts`, `.js.map`, `.d.ts.map`.                                                                                                            |
+| 3   | **Handles incremental builds**       | Leaves `.tsbuildinfo` alone so incremental builds stay fast.                                                                                                                                                                    |
+| 4   | **Confined cleanup**                 | Treats `outDir` as TypeScript-owned: removes regular files outside the current emit set, while preserving compiler state such as `.tsbuildinfo`. Refuses unsafe output paths and source/output overlap; `--dry` shows the plan. |
+| 5   | **Tidies up after itself**           | Removes directories left empty by the cleanup.                                                                                                                                                                                  |
 
 ### vNEXT promise
 
@@ -115,12 +115,13 @@ A future `--exclude <glob>` option may support shared output directories; it is 
 
 ```sh
 tsc && tsc-after                 # one-shot, clean enabled by default
-tsc-after --dryRun               # show what would go, delete nothing
+tsc-after --dry                  # show what would go, delete nothing
 tsc-after -p tsconfig.build.json # pick a config
 tsc-after -b                     # planned: follow project references
 tsc-after --watch                # planned: companion to tsc --watch
 tsc-after --verbose              # list every removed file
 tsc-after --copy                 # planned: also copy additional artifacts; syntax TBD
+tsc-after --noClean --copy       # planned: copy additional artifacts only
 ```
 
 Typical `package.json` wiring:

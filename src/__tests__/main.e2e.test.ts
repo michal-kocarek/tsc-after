@@ -52,4 +52,32 @@ describe("tsc-after", () => {
 		expect(result.stderr).toBe("error: Unknown option '--unknown'.");
 		expect(result.stdout).toBe("");
 	});
+
+	it("should fail nicely when called with positional argument", async ({
+		expect,
+	}) => {
+		const result = await runTscAfter(["tsconfig.json"], {
+			allowFailure: true,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe(
+			"error: Unexpected argument 'tsconfig.json'. This command does not take positional arguments.",
+		);
+		expect(result.stdout).toBe("");
+	});
+
+	it("should fail nicely when called with option missing its value", async ({
+		expect,
+	}) => {
+		const result = await runTscAfter(["--project"], {
+			allowFailure: true,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe(
+			"error: Option '-p, --project <value>' argument missing.",
+		);
+		expect(result.stdout).toBe("");
+	});
 });

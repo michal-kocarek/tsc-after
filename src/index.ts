@@ -4,109 +4,36 @@ import { parseArgs, styleText } from "node:util";
 import ts from "typescript";
 
 import packageJson from "../package.json" with { type: "json" };
+import { print, printError } from "./common/console.ts";
+import { cliArgsOptions } from "./common/constants.ts";
+import { isNodeErrorOf } from "./common/errors.ts";
+import { help } from "./tasks/help.ts";
 
-const argsConfig = {
-		// NOTE: use camelCase notation for argument names (that's similar to `tsc`)
-		options: {
-			/* eslint-disable perfectionist/sort-objects */
-			project: {
-				default: "tsconfig.json",
-				helpDescription:
-					"Path to configuration file for this project, or to a folder with a 'tsconfig.json'.",
-				helpPlaceholder: "<path>",
-				short: "p",
-				type: "string",
-			},
-			dryRun: {
-				default: false,
-				helpDescription: "Do not delete any files.",
-				type: "boolean",
-			},
-			verbose: {
-				default: false,
-				helpDescription: "Print verbose output.",
-				type: "boolean",
-			},
-			version: {
-				default: false,
-				helpDescription: "Print version.",
-				type: "boolean",
-			},
-			help: {
-				default: false,
-				helpDescription: "Print this message.",
-				short: "h",
-				type: "boolean",
-			},
-			/* eslint-enable perfectionist/sort-objects */
-		},
-	} as const,
-	BIN_NAME = packageJson.name;
+const BIN_NAME = packageJson.name;
 
-// TODO: Fail on unknown arguments!
+const PARSE_ARGS_ERROR_CODES = [
+	"ERR_PARSE_ARGS_UNKNOWN_OPTION",
+	"ERR_PARSE_ARGS_UNEXPECTED_POSITIONAL",
+	"ERR_PARSE_ARGS_INVALID_OPTION_VALUE",
+] as const;
 
 // TODO: Project can be path to folder! Beware And read probably outcome from ts API
 
-function isNodeErrorOf<TError extends Error, TCode extends string>(
-	error: unknown,
-	errorClass: new () => TError,
-	code?: TCode,
-): error is TError & (typeof code extends undefined ? never : { code: TCode }) {
-	if (!(error instanceof errorClass)) {
-		return false;
-	}
-
-	return !(code !== undefined && "code" in error && error.code !== code);
+function isParseArgsError(error: unknown): error is TypeError {
+	return PARSE_ARGS_ERROR_CODES.some((code) =>
+		isNodeErrorOf(error, TypeError, code),
+	);
 }
 
 function main() {
-	let args: ReturnType<typeof parseArgs<typeof argsConfig>>;
-
-	try {
-		args = parseArgs(argsConfig);
-	} catch (error) {
-		if (isNodeErrorOf(error, TypeError, "ERR_PARSE_ARGS_UNKNOWN_OPTION")) {
-			printError(`${error.message}.`);
-			return;
-		}
-
-		throw error;
+	const args = tryParseArgs();
+	if (args === undefined) {
+		return;
 	}
 
 	if (args.values.help) {
-		const heading = (text: string) => styleText(["bold"], text),
-			option = (name: string, description: string) =>
-				`  ${styleText("blueBright", name.padEnd(23))}${description}`;
-
-		print(
-			[
-				`${styleText("bold", BIN_NAME)} - Your dist, as tsc should've left it.`,
-				"",
-				"A tsconfig-aware companion to tsc. Removes stale build output by default.",
-				"",
-				heading("USAGE"),
-				`  tsc && ${BIN_NAME} [options]`,
-				"",
-				heading("OPTIONS"),
-				...Object.entries(argsConfig.options).map(([name, opts]) => {
-					const keyParts = [`--${name}`];
-					if ("short" in opts) {
-						keyParts.push(`, -${opts.short}`);
-					}
-					switch (opts.type) {
-						case "boolean":
-							break;
-						case "string":
-							keyParts.push(` ${opts.helpPlaceholder}`);
-							break;
-					}
-
-					return option(keyParts.join(""), opts.helpDescription);
-				}),
-			].join("\n"),
-		);
-		// eslint-disable-next-line n/no-process-exit -- Help must stop before cleanup starts.
-		process.exit(0);
+		help();
+		return;
 	}
 
 	if (args.values.version) {
@@ -118,9 +45,9 @@ function main() {
 		process.exit(0);
 	}
 
-	const cwd = process.cwd(),
-		tsconfigAbsolutePath = path.resolve(cwd, args.values.project),
-		tsconfigRelativePath = path.relative(cwd, tsconfigAbsolutePath);
+	const cwd = process.cwd();
+	const tsconfigAbsolutePath = path.resolve(cwd, args.values.project);
+	const tsconfigRelativePath = path.relative(cwd, tsconfigAbsolutePath);
 	if (
 		tsconfigRelativePath === "" ||
 		tsconfigRelativePath === ".." ||
@@ -203,18 +130,22 @@ function main() {
 
 	// TODO: stat.dev for dist/ folder must equal stat.dev for each file!
 
+	if (args.values.noClean) {
+		return;
+	}
+
 	print(JSON.stringify(tsconfig));
 
 	const expectedOutDirPaths = new Set<string>();
 
 	for (const file of tsconfig.fileNames) {
 		const output = ts.getOutputFileNames(
-				tsconfig,
-				file,
-				!ts.sys.useCaseSensitiveFileNames,
-			),
-			// TODO: statSync is okay for source, but for dist use lstatSync
-			stat = fs.statSync(file);
+			tsconfig,
+			file,
+			!ts.sys.useCaseSensitiveFileNames,
+		);
+		// TODO: statSync is okay for source, but for dist use lstatSync
+		const stat = fs.statSync(file);
 
 		print(file, " => ", JSON.stringify(output), JSON.stringify(stat));
 
@@ -232,9 +163,9 @@ function main() {
 		dirIsEmpty: boolean;
 		verdicts: Verdict[];
 	} {
-		const verdicts: Verdict[] = [],
-			// TODO: Does this need to be here?
-			stat = fs.lstatSync(dirPath);
+		const verdicts: Verdict[] = [];
+		// TODO: Does this need to be here?
+		const stat = fs.lstatSync(dirPath);
 		if (!stat.isDirectory()) {
 			throw new Error(`Not a directory ${dirPath}!`);
 		}
@@ -242,8 +173,8 @@ function main() {
 		let dirIsEmpty = true;
 
 		for (const child of fs.readdirSync(dirPath)) {
-			const fullPath = path.join(dirPath, child),
-				fullPathStat = fs.lstatSync(fullPath);
+			const fullPath = path.join(dirPath, child);
+			const fullPathStat = fs.lstatSync(fullPath);
 
 			if (fullPathStat.dev !== stat.dev) {
 				if (args.values.verbose) {
@@ -304,7 +235,7 @@ function main() {
 
 	const result = readDir(tsconfig.options.outDir);
 
-	// TODO: Merge these two switches into single loop, and nest the verbose and dryRun conditions down
+	// TODO: Merge these two switches into single loop, and nest the verbose and dry conditions down
 	if (args.values.verbose) {
 		for (const verdict of result.verdicts) {
 			switch (verdict.type) {
@@ -323,10 +254,10 @@ function main() {
 
 	// TODO: Avoid running if any of src dirs is inside out dir - essentially so we don't wipe what we do have
 
-	let removedDirs = 0,
-		removedFiles = 0;
+	let removedDirs = 0;
+	let removedFiles = 0;
 
-	if (!args.values.dryRun) {
+	if (!args.values.dry) {
 		for (const verdict of result.verdicts) {
 			switch (verdict.type) {
 				case "removeDir":
@@ -343,13 +274,13 @@ function main() {
 		}
 	}
 
-	if (args.values.dryRun || removedDirs > 0 || removedFiles > 0) {
+	if (args.values.dry || removedDirs > 0 || removedFiles > 0) {
 		print(
-			`${BIN_NAME}: ${args.values.dryRun ? "Would remove" : "Removed"} ${removedFiles.toFixed()} files${removedDirs > 0 ? ` and ${removedDirs.toFixed()} empty directories` : ""} from ${styleText("italic", outDirRelativePath)}`,
+			`${BIN_NAME}: ${args.values.dry ? "Would remove" : "Removed"} ${removedFiles.toFixed()} files${removedDirs > 0 ? ` and ${removedDirs.toFixed()} empty directories` : ""} from ${styleText("italic", outDirRelativePath)}`,
 		);
 	}
 
-	// TODO: For tsc-after, I’d make --dryRun print the files it would remove to stdout, followed by a count. A normal run
+	// TODO: For tsc-after, I’d make --dry print the files it would remove to stdout, followed by a count. A normal run
 	//  Can print a short count; --verbose can print each removed path. Keep debug objects such as the current print(tsconfig)
 	//  Out of normal output.
 	//  Exit with 0 for success, including a dry run or nothing to remove; 1 for a cleanup or config error; and 2 for invalid CLI arguments.
@@ -360,15 +291,17 @@ function main() {
 	// TODO: On GHA, test it against different typescript versions installed. To make sure the API conforms!
 }
 
-function print(...messages: string[]) {
-	// eslint-disable-next-line no-console
-	console.log(messages.join(" "));
-}
+function tryParseArgs() {
+	try {
+		return parseArgs({ options: cliArgsOptions });
+	} catch (error) {
+		if (isParseArgsError(error)) {
+			printError(`${error.message}.`);
+			return;
+		}
 
-function printError(...messages: string[]): void {
-	// eslint-disable-next-line no-console
-	console.error(styleText("red", `error: ${messages.join(" ")}`));
-	process.exitCode = 1;
+		throw error;
+	}
 }
 
 main();

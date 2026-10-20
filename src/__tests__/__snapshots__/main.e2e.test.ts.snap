@@ -1,17 +1,30 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`tsc-after > should print help 1`] = `
-"tsc-after - Your dist, as tsc should've left it.
+"tsc-after: Your outDir, as tsc should've left it.
 
-A tsconfig-aware companion to tsc. Removes stale build output by default.
+COMMON COMMANDS
 
-USAGE
-  tsc && tsc-after [options]
+  tsc && tsc-after
+  Removes stale outputs of the current project (tsconfig.json in the working directory).
 
-OPTIONS
-  --project, -p <path>   Path to configuration file for this project, or to a folder with a 'tsconfig.json'.
-  --dryRun               Do not delete any files.
-  --verbose              Print verbose output.
-  --version              Print version.
-  --help, -h             Print this message."
+  tsc-after -p ./path/to/tsconfig.json
+  Removes stale outputs of the TypeScript project located at the specified path.
+
+  tsc-after --dry
+  Shows what would be deleted from 'outDir', without deleting anything.
+
+COMMAND LINE FLAGS
+
+     --help, -h  Print this message.
+
+      --version  Print the version.
+
+  --project, -p  Use the project given the path to its configuration file, or to a folder with a 'tsconfig.json'.
+
+      --noClean  Disable removing stale outputs from 'outDir'.
+
+      --dry, -d  Show what would be deleted.
+
+      --verbose  Enable verbose logging."
 `;
