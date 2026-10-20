@@ -2,6 +2,7 @@
 /.husky
 /.idea
 /.junie
+/CHANGELOG.md
 /coverage
 /lib
 /pnpm-lock.yaml

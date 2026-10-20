@@ -25,7 +25,7 @@ export default defineConfig(
 		name: "Global imported ignores",
 	}),
 	globalIgnores(
-		["src/**/__tests__/fixtures", "pnpm-lock.yaml"],
+		["CHANGELOG.md", "src/**/__tests__/fixtures", "pnpm-lock.yaml"],
 		"Additional global ignores",
 	),
 	{

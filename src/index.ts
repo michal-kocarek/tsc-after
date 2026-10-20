@@ -191,7 +191,7 @@ function main() {
 		throw new Error("Watch mode is not supported");
 	}
 
-	// TODO: Check for relative paths - are they normalized or whaat?
+	// TODO: Check for relative paths - are they normalized or what?
 
 	// I’d make the guard more precise than comparing directory names: require an
 	// Explicit outDir, then refuse if any source file in the TypeScript program is
@@ -201,7 +201,7 @@ function main() {
 	// Contain source files. Check path containment by directory boundaries and account for
 	// Symlinks before deleting.
 
-	// TODO: stat.dev pro dist/ slozku se musi rovnat stat.dev pro kazdy soubor!
+	// TODO: stat.dev for dist/ folder must equal stat.dev for each file!
 
 	print(JSON.stringify(tsconfig));
 
@@ -321,7 +321,7 @@ function main() {
 		}
 	}
 
-	// TODO: Avoid running if any of srcdirs is inside outdir - essentially so we don't wipe what we do have
+	// TODO: Avoid running if any of src dirs is inside out dir - essentially so we don't wipe what we do have
 
 	let removedDirs = 0,
 		removedFiles = 0;

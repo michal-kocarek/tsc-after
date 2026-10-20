@@ -2,26 +2,15 @@
 	"$schema": "https://raw.githubusercontent.com/release-it/release-it/refs/tags/21.1.0/schema/release-it.json",
 	"git": {
 		"commitMessage": "chore: release v${version}",
-		"requireCommits": true
+		"tagName": "v${version}"
 	},
-	"github": { "release": true, "releaseName": "v${version}" },
-	"npm": { "skipChecks": true },
+	"github": { "release": true },
+	"hooks": { "after:bump": "pnpm build" },
+	"npm": { "skipChecks": true, "stage": true },
 	"plugins": {
 		"@release-it/conventional-changelog": {
 			"infile": "CHANGELOG.md",
-			"preset": "conventionalcommits",
-			"types": [
-				{ "section": "Features", "type": "feat" },
-				{ "section": "Bug Fixes", "type": "fix" },
-				{ "section": "Performance Improvements", "type": "perf" },
-				{ "hidden": true, "type": "build" },
-				{ "hidden": true, "type": "chore" },
-				{ "hidden": true, "type": "ci" },
-				{ "hidden": true, "type": "docs" },
-				{ "hidden": true, "type": "refactor" },
-				{ "hidden": true, "type": "style" },
-				{ "hidden": true, "type": "test" }
-			]
+			"preset": "conventionalcommits"
 		}
 	}
 }

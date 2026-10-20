@@ -153,4 +153,4 @@ Issue titles themselves use the same vocabulary: _"Cleaning Target Files on Sour
 
 **Note on npm's moniker rule:** npm refuses unscoped names that differ from an existing package only by punctuation (`-`, `.`, `_`) or case.
 `tsc-clean` and `tsc_clean` differ only by punctuation, so a registry 404 for `tsc-clean` does not mean it can be published.
-The 404 checks above are a snapshot, not a guarantee of publishability or future availability.
+The 404 checks above are a snapshot, not a guarantee of package being published or future availability.
