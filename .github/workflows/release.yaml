@@ -25,8 +25,9 @@ jobs:
 
       - uses: ./.github/actions/prepare
 
+      # pnpm/setup installs only the node binary, so npm would come from the runner image
       - name: Install npm with staged publishing support
-        run: npm install --global npm@11.17.0
+        run: pnpm add --global npm@11.17.0
 
       - name: Configure Git author
         run: |
