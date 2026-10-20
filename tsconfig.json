@@ -8,7 +8,10 @@
 		"noEmit": true,
 		"declaration": true,
 		"rootDir": ".",
-		"outDir": "dist"
+		"outDir": "dist",
+
+		// Explicitly state to allow JetBrains autocomplete importing `.ts` extensions
+		"allowImportingTsExtensions": true
 	},
 	"include": ["src", "*.config.ts", "*.config.js"]
 }
