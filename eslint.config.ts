@@ -15,10 +15,10 @@ import { defineConfig, globalIgnores, includeIgnoreFile } from "eslint/config";
 import { fileURLToPath } from "node:url";
 import { configs as tsEslintConfigs } from "typescript-eslint";
 
-const TEST_FILES_GLOB = "**/__tests__/**.{js,ts}";
-const CONFIG_FILES_GLOB = "*.config.{js,ts}";
-const TSCONFIG_GLOB = "**/tsconfig*.json";
 const ALL_CODE_GLOB = ["**/*.{js,ts}", "bin/*"];
+const CONFIG_FILES_GLOB = "*.config.{js,ts}";
+const TEST_FILES_GLOB = "**/__tests__/**.{js,ts}";
+const TSCONFIG_GLOB = "**/tsconfig*.json";
 
 export default defineConfig(
 	includeIgnoreFile(fileURLToPath(new URL(".gitignore", import.meta.url)), {
@@ -88,9 +88,11 @@ export default defineConfig(
 			],
 			"n/no-sync": "off",
 			"no-console": "error",
+			"no-else-return": "error",
 			"no-shadow": "error",
 			"no-useless-rename": "error",
 			"object-shorthand": "error",
+			"one-var": ["error", "never"],
 			"operator-assignment": "error",
 		},
 		settings: {
