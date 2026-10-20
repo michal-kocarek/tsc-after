@@ -1,6 +1,6 @@
 {
 	"name": "tsc-after",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Remove stale build output that tsc leaves behind when you delete or rename source files. Tsconfig-aware: just run tsc && tsc-after. 🧹",
 	"keywords": [
 		"build",
