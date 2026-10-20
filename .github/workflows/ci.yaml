@@ -13,12 +13,46 @@ env:
   FORCE_COLOR: 1
 
 jobs:
-  build:
-    name: Build
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: prepare
+        uses: ./.github/actions/prepare
+      # Run every check even if an earlier one fails, so all problems are reported at once.
+      - name: Dedupe Check
+        if: &prepared ${{ !cancelled() && steps.prepare.conclusion == 'success' }}
+        run: pnpm dedupe --check
+      - name: Format Check
+        if: *prepared
+        run: pnpm exec prettier --check .
+      - name: Type Check
+        if: *prepared
+        run: pnpm tsc
+      - name: Lint Spelling
+        if: *prepared
+        run: pnpm lint:spelling
+      - name: Lint Knip
+        if: *prepared
+        run: pnpm lint:knip
+      - id: build
+        name: Build
+        if: *prepared
+        run: pnpm build
+      - name: Lint
+        if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
+        run: pnpm lint
+
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/prepare
+      - run: pnpm run test:unit --run --coverage
+      - if: always()
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
       - run: pnpm build
       - run: node bin/tsc-after.js --help
       - run: pnpm run test:e2e --run
@@ -45,61 +79,16 @@ jobs:
       - run: node bin/tsc-after.js --help
       - run: node bin/tsc-after.js --dry
 
-  dedupe_check:
-    name: Dedupe Check
+  # Single stable job to mark as required in branch protection; add every new job to `needs`.
+  gate:
+    name: CI Gate
+    if: always()
+    needs:
+      - check
+      - node_compatibility
+      - test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm dedupe --check
-
-  format_check:
-    name: Format Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm exec prettier --check .
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm build
-      - run: pnpm lint
-
-  lint_knip:
-    name: Lint Knip
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm lint:knip
-
-  lint_spelling:
-    name: Lint Spelling
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm lint:spelling
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm run test:unit --run --coverage
-      - if: always()
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-
-  type_check:
-    name: Type Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm tsc
+      - name: Fail if any job did not succeed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
+        run: exit 1
