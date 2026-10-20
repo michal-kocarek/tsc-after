@@ -80,6 +80,34 @@ _(Note: Tools like `knip` or `ts-prune` identify unused **source** code, not orp
 5. **DIY Watch Scripts (`chokidar-cli`, `onchange`)**
    - _Drawback:_ Fragile bash one-liners, high CPU usage, race conditions on rapid file rename/move operations.
 
+### Which wipe command people use (GitHub code search, 2026-10-21)
+
+Number of `package.json` files on GitHub containing each phrase (`gh api search/code`, query `"<phrase>" filename:package.json`):
+
+| Phrase                | `package.json` files | With `typescript` in the same file |
+| :-------------------- | -------------------: | ---------------------------------: |
+| `rm -rf dist`         |                 274k |                               224k |
+| `rimraf dist`         |                 199k |                               150k |
+| `rm -rf dist && tsc`  |                  16k |                                  — |
+| `rimraf dist && tsc`  |                  12k |                                  — |
+| `shx rm -rf dist`     |                   9k |                                  — |
+| `del-cli dist`        |                   8k |                                  — |
+| `tsc --build --clean` |                   8k |                                  — |
+| `rimraf lib`          |                 143k |                                  — |
+| `rm -rf lib`          |                  19k |                                  — |
+| `rimraf build`        |                  25k |                                  — |
+| `rm -rf build`        |                  22k |                                  — |
+
+**Takeaway:** for `dist`, `rm -rf` is somewhat more common than `rimraf` (~1.4×), both overall and in files mentioning `typescript`; for `lib` (the older library convention), `rimraf` dominates (~7×).
+Neither is a niche habit, so user-facing docs should name both.
+npm downloads can't answer this: `rimraf` (~672M/month) is mostly pulled in transitively, and `rm -rf` has no package.
+
+**Caveats:**
+
+- Counts are GitHub's approximate `total_count`, cover indexed default branches only, and include forks and copies of the same template.
+- The legacy code search matches tokens, not exact strings, so `rm -rf dist` also matches `shx rm -rf dist` and similar variants.
+- A phrase may appear in a `clean` script rather than in `build`, so this measures how often each command is used for wiping, not only wiping before `tsc`.
+
 ---
 
 ## Market Opportunity & Key Differentiators

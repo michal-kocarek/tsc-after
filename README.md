@@ -30,6 +30,33 @@ Copy assets _after_ cleanup (`tsc && tsc-after && cp assets/* dist/assets/`), or
 Planned: `--copy`, `--exclude`, `--watch`, and project references.
 See [`PRODUCT.md`](./PRODUCT.md) for the roadmap.
 
+## Why not `rm -rf dist && tsc`?
+
+Wiping `outDir` before every build (`rm -rf dist && tsc`, `rimraf dist && tsc`, or a `prebuild` script) is the usual fix for stale outputs.
+On GitHub, about 274k `package.json` files run `rm -rf dist` and another 199k run `rimraf dist` (see [`MARKET_RESEARCH.md`](./MARKET_RESEARCH.md)).
+It works, but it costs more than it needs to:
+
+|                           | `rm -rf dist && tsc`                                                                                                 | `tsc && tsc-after`                                             |
+| :------------------------ | :------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------- |
+| Stale outputs             | Removed                                                                                                              | Removed                                                        |
+| `incremental` builds      | Every file is emitted again; with `tsBuildInfoFile` outside `outDir`, `tsc` may even skip emitting the deleted files | Stay incremental: only changed files are emitted               |
+| `outDir` during the build | Empty or half-written until `tsc` finishes, so anything reading it meanwhile breaks                                  | Complete: only stale outputs are removed, after `tsc` succeeds |
+| Preview                   | None, everything goes                                                                                                | `tsc-after --dry` lists the stale outputs                      |
+
+So if your `build` script starts with `rm -rf dist &&` or `rimraf dist &&`, drop it and add `&& tsc-after` at the end instead:
+
+```diff
+ {
+ 	"scripts": {
+-		"build": "rm -rf dist && tsc"
++		"build": "tsc && tsc-after"
+ 	}
+ }
+```
+
+Using a bundler such as tsup, Vite, or esbuild?
+They already clean up after themselves, so you probably don't need `tsc-after`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](./.github/CONTRIBUTING.md) and [`DEVELOPMENT.md`](./.github/DEVELOPMENT.md).
