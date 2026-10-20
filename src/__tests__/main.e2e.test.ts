@@ -2,7 +2,9 @@ import { execa } from "execa";
 import { stripVTControlCharacters } from "node:util";
 import { describe, it } from "vitest";
 
-const binPath = require.resolve("../../bin/tsc-after");
+import packageJson from "../../package.json" with { type: "json" };
+
+const binPath = require.resolve("../../bin/tsc-after.js");
 
 async function runTscAfter(
 	args: string[],
@@ -21,6 +23,18 @@ async function runTscAfter(
 
 	return result;
 }
+
+describe("package.json", () => {
+	it("has expected bin", ({ expect }) => {
+		expect(packageJson.bin).toStrictEqual({
+			"tsc-after": "bin/tsc-after.js",
+		});
+	});
+
+	it("does not export anything", ({ expect }) => {
+		expect(packageJson.exports).toBeNull();
+	});
+});
 
 describe("tsc-after", () => {
 	it("should print help", async ({ expect }) => {

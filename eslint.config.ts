@@ -12,11 +12,15 @@ import { configs as perfectionistConfigs } from "eslint-plugin-perfectionist";
 import { configs as regexpConfigs } from "eslint-plugin-regexp";
 import { configs as ymlConfigs } from "eslint-plugin-yml";
 import { defineConfig, globalIgnores, includeIgnoreFile } from "eslint/config";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { configs as tsEslintConfigs } from "typescript-eslint";
 
-const ALL_CODE_GLOB = ["**/*.{js,ts}", "bin/*"];
+const ALL_CODE_GLOB = ["**/*.{js,ts}"];
+const BIN_FILES_GLOB = "bin/*.js";
 const CONFIG_FILES_GLOB = "*.config.{js,ts}";
+// Node.js used for development (`.nvmrc`), as opposed to `engines.node` for users
+const DEV_NODE_VERSION = `>=${readFileSync(new URL(".nvmrc", import.meta.url), "utf8").trim()}`;
 const TEST_FILES_GLOB = "**/__tests__/**.{js,ts}";
 const TSCONFIG_GLOB = "**/tsconfig*.json";
 
@@ -61,7 +65,7 @@ export default defineConfig(
 		languageOptions: {
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: [],
+					allowDefaultProject: [BIN_FILES_GLOB],
 				},
 			},
 		},
@@ -118,6 +122,11 @@ export default defineConfig(
 				},
 			],
 		},
+	},
+	{
+		files: [TEST_FILES_GLOB, CONFIG_FILES_GLOB],
+		name: "Dev-only code",
+		settings: { n: { version: DEV_NODE_VERSION } },
 	},
 	{
 		extends: [jsoncConfigs["flat/recommended-with-json"]],

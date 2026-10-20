@@ -25,14 +25,15 @@
 	"type": "module",
 	"exports": null,
 	"bin": {
-		"tsc-after": "bin/tsc-after"
+		"tsc-after": "bin/tsc-after.js"
 	},
 	"files": [
+		"bin/",
 		"dist/"
 	],
 	"scripts": {
 		"build": "tsdown",
-		"dev": "node src/index.ts",
+		"dev": "node src/entrypoints/tscAfter.ts",
 		"format": "prettier --write .",
 		"lint": "eslint . --max-warnings 0",
 		"lint:knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip",
@@ -52,7 +53,6 @@
 		"*": "prettier --ignore-unknown --write"
 	},
 	"devDependencies": {
-		"@arethetypeswrong/core": "0.18.5",
 		"@commitlint/cli": "21.2.4",
 		"@commitlint/config-conventional": "21.2.4",
 		"@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
@@ -99,6 +99,6 @@
 	},
 	"packageManager": "pnpm@12.14.0",
 	"engines": {
-		"node": ">=24.0.0"
+		"node": "^16.19.0 || >=18.11.0"
 	}
 }

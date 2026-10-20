@@ -1,7 +1,5 @@
-import { styleText } from "node:util";
-
-import { print } from "../common/console.ts";
 import { binName, cliArgsOptions } from "../common/constants.ts";
+import { print, styleText } from "../common/util.ts";
 
 const FLAG_INDENT = 2;
 const FLAG_GAP = "  ";

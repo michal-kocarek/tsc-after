@@ -1,50 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parseArgs, styleText } from "node:util";
 import ts from "typescript";
 
-import packageJson from "../package.json" with { type: "json" };
-import { print, printError } from "./common/console.ts";
-import { cliArgsOptions } from "./common/constants.ts";
-import { isNodeErrorOf } from "./common/errors.ts";
-import { help } from "./tasks/help.ts";
+import { binName } from "../common/constants.ts";
+import {
+	type ParsedCliArgs,
+	print,
+	printError,
+	styleText,
+} from "../common/util.ts";
 
-const BIN_NAME = packageJson.name;
-
-const PARSE_ARGS_ERROR_CODES = [
-	"ERR_PARSE_ARGS_UNKNOWN_OPTION",
-	"ERR_PARSE_ARGS_UNEXPECTED_POSITIONAL",
-	"ERR_PARSE_ARGS_INVALID_OPTION_VALUE",
-] as const;
-
-// TODO: Project can be path to folder! Beware And read probably outcome from ts API
-
-function isParseArgsError(error: unknown): error is TypeError {
-	return PARSE_ARGS_ERROR_CODES.some((code) =>
-		isNodeErrorOf(error, TypeError, code),
-	);
-}
-
-function main() {
-	const args = tryParseArgs();
-	if (args === undefined) {
-		return;
-	}
-
-	if (args.values.help) {
-		help();
-		return;
-	}
-
-	if (args.values.version) {
-		print(
-			`${BIN_NAME}/${packageJson.version} ${process.platform}-${process.arch} node-${process.versions.node} typescript-${ts.version}`,
-		);
-
-		// eslint-disable-next-line n/no-process-exit -- Help must stop before cleanup starts.
-		process.exit(0);
-	}
-
+export function mainAction(args: ParsedCliArgs) {
 	const cwd = process.cwd();
 	const tsconfigAbsolutePath = path.resolve(cwd, args.values.project);
 	const tsconfigRelativePath = path.relative(cwd, tsconfigAbsolutePath);
@@ -58,6 +24,8 @@ function main() {
 			`Refusing to traverse outside current working directory to read tsconfig!`,
 		);
 	}
+
+	// TODO: Project can be path to folder! Beware And read probably outcome from ts API
 
 	print(`Using tsconfig: ${tsconfigRelativePath}`);
 
@@ -276,7 +244,7 @@ function main() {
 
 	if (args.values.dry || removedDirs > 0 || removedFiles > 0) {
 		print(
-			`${BIN_NAME}: ${args.values.dry ? "Would remove" : "Removed"} ${removedFiles.toFixed()} files${removedDirs > 0 ? ` and ${removedDirs.toFixed()} empty directories` : ""} from ${styleText("italic", outDirRelativePath)}`,
+			`${binName}: ${args.values.dry ? "Would remove" : "Removed"} ${removedFiles.toFixed()} files${removedDirs > 0 ? ` and ${removedDirs.toFixed()} empty directories` : ""} from ${styleText("italic", outDirRelativePath)}`,
 		);
 	}
 
@@ -290,18 +258,3 @@ function main() {
 
 	// TODO: On GHA, test it against different typescript versions installed. To make sure the API conforms!
 }
-
-function tryParseArgs() {
-	try {
-		return parseArgs({ options: cliArgsOptions });
-	} catch (error) {
-		if (isParseArgsError(error)) {
-			printError(`${error.message}.`);
-			return;
-		}
-
-		throw error;
-	}
-}
-
-main();
