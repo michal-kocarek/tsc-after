@@ -174,6 +174,7 @@ export default defineConfig(
 			],
 			"vitest/no-hooks": "off",
 			"vitest/prefer-expect-assertions": "off",
+			"vitest/prefer-importing-vitest-globals": "off",
 		},
 		settings: { vitest: { typecheck: true } },
 	},
