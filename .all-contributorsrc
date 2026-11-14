@@ -19,6 +19,7 @@
       ]
     }
   ],
+  "contributorTemplate": "<% const escapeHtml = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\"', '&quot;').replaceAll(\"'\", '&#39;'); %><li><a href=\"<%= escapeHtml(contributor.profile || 'https://github.com/' + contributor.login) %>\"><%= escapeHtml(contributor.name || contributor.login) %></a> <%= contributions %></li>",
   "contributorsPerLine": 7,
   "contributorsSortAlphabetically": true,
   "files": [
@@ -27,5 +28,6 @@
   "projectName": "tsc-after",
   "projectOwner": "michal-kocarek",
   "repoType": "github",
-  "commitConvention": "angular"
+  "commitConvention": "angular",
+  "wrapperTemplate": "<%= '<ul>\\n' + bodyContent.replace(/<\\/?(?:tr|td)\\b[^>]*>|<br \\/>/g, '').replace(/\\s*(<li>)/g, '$1').replace(/(<\\/li>)\\s*/g, '$1\\n').trim() + '\\n</ul>' %>"
 }

@@ -67,14 +67,9 @@ See [`CONTRIBUTING.md`](./.github/CONTRIBUTING.md) and [`DEVELOPMENT.md`](./.git
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
-<table>
-  <tbody>
-    <tr>
-      <td align="center"><a href="https://github.com/michal-kocarek"><img src="https://avatars.githubusercontent.com/u/762095?v=4?s=100" width="100px;" alt="Michal Kočárek"/><br /><sub><b>Michal Kočárek</b></sub></a><br /><a href="https://github.com/michal-kocarek/tsc-after/commits?author=michal-kocarek" title="Code">💻</a> <a href="#content-michal-kocarek" title="Content">🖋</a> <a href="https://github.com/michal-kocarek/tsc-after/commits?author=michal-kocarek" title="Documentation">📖</a> <a href="#ideas-michal-kocarek" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-michal-kocarek" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-michal-kocarek" title="Maintenance">🚧</a> <a href="#projectManagement-michal-kocarek" title="Project Management">📆</a> <a href="#tool-michal-kocarek" title="Tools">🔧</a></td>
-    </tr>
-  </tbody>
-</table>
-
+<ul>
+<li><a href="https://github.com/michal-kocarek">Michal Kočárek</a> <a href="https://github.com/michal-kocarek/tsc-after/commits?author=michal-kocarek" title="Code">💻</a> <a href="#content-michal-kocarek" title="Content">🖋</a> <a href="https://github.com/michal-kocarek/tsc-after/commits?author=michal-kocarek" title="Documentation">📖</a> <a href="#ideas-michal-kocarek" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-michal-kocarek" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-michal-kocarek" title="Maintenance">🚧</a> <a href="#projectManagement-michal-kocarek" title="Project Management">📆</a> <a href="#tool-michal-kocarek" title="Tools">🔧</a></li>
+</ul>
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
 
