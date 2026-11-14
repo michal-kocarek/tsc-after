@@ -75,26 +75,32 @@ Nothing here is dropped — it's just sequenced, so something useful ships soone
 
 ### v1 promise
 
-| #   | Feature                              | One-liner                                                                                                                                                                                                                       |
-| :-- | :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **Zero-config `tsconfig` awareness** | Resolves `outDir`, `rootDir`, `declarationDir`, `include`/`exclude`/`files`, `extends`, `allowJs`, `emitDeclarationOnly`, `noEmit` — via the TypeScript API, so it agrees with `tsc` by construction.                           |
-| 2   | **Knows every emit**                 | `.ts/.tsx/.mts/.cts` (+ `.js/.jsx` with `allowJs`) → `.js/.mjs/.cjs`, `.d.ts/.d.mts/.d.cts`, `.js.map`, `.d.ts.map`.                                                                                                            |
-| 3   | **Handles incremental builds**       | Leaves `.tsbuildinfo` alone so incremental builds stay fast.                                                                                                                                                                    |
-| 4   | **Confined cleanup**                 | Treats `outDir` as TypeScript-owned: removes regular files outside the current emit set, while preserving compiler state such as `.tsbuildinfo`. Refuses unsafe output paths and source/output overlap; `--dry` shows the plan. |
-| 5   | **Tidies up after itself**           | Removes directories left empty by the cleanup.                                                                                                                                                                                  |
-| 6   | **Artifact copying**                 | An opt-in `--copy` capability will copy additional artifacts into `outDir`; selection, destination mapping, overwrite behavior, and interaction with cleaning still need design.                                                |
+| #   | Feature                              | One-liner                                                                                                                                                                                                                                                                                                                                                    |
+| :-- | :----------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Functional e2e coverage**          | Add built-CLI e2e tests for existing functionality, including cleanup and dry-run behavior.                                                                                                                                                                                                                                                                  |
+| 2   | **Zero-config `tsconfig` awareness** | Resolves `outDir`, `rootDir`, `declarationDir`, `include`/`exclude`/`files`, `extends`, `allowJs`, `emitDeclarationOnly`, `noEmit` — via the TypeScript API, so it agrees with `tsc` by construction.                                                                                                                                                        |
+| 3   | **Knows every emit**                 | `.ts/.tsx/.mts/.cts` (+ `.js/.jsx` with `allowJs`) → `.js/.mjs/.cjs`, `.d.ts/.d.mts/.d.cts`, `.js.map`, `.d.ts.map`.                                                                                                                                                                                                                                         |
+| 4   | **Handles incremental builds**       | Leaves `.tsbuildinfo` alone so incremental builds stay fast.                                                                                                                                                                                                                                                                                                 |
+| 5   | **Confined cleanup**                 | Treats `outDir` as TypeScript-owned: removes regular files outside the current emit set, while preserving compiler state such as `.tsbuildinfo`. Resolves config paths as TypeScript does, confines cleanup to the selected project's directory, refuses source/output overlap, and does not traverse symlinks or other filesystems; `--dry` shows the plan. |
+| 6   | **Tidies up after itself**           | Removes directories left empty by the cleanup.                                                                                                                                                                                                                                                                                                               |
+| 7   | **Artifact copying**                 | An opt-in `--copy` capability will copy additional artifacts into `outDir`; selection, destination mapping, overwrite behavior, and interaction with cleaning still need design.                                                                                                                                                                             |
+
+### v1 release follow-ups
+
+- [ ] Investigate whether TypeScript declarations are appropriate for this CLI-only package and would provide npm's TypeScript indicator.
+- [ ] After v1 ships, post a short note in [TypeScript issue #16057](https://github.com/microsoft/TypeScript/issues/16057).
 
 ### vNEXT promise
 
 | #                                     | Feature                            | One-liner                                                                                                                                                                                  |
 | :------------------------------------ | :--------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 7                                     | **Watch mode**                     | `tsc-after --watch` runs next to `tsc --watch` (or `concurrently` / `tsc-watch --onSuccess` / `tsc-after -- ...` or script-friendly way), and survives rename/move storms with debouncing. |
-| 8                                     | **Project references & monorepos** | `tsc-after -b` follows `references`/`composite` like `tsc -b`, cleaning every referenced project's `outDir`.                                                                               |
-| 9                                     | **Boring where it matters**        | Cross-platform (Linux/macOS/Windows), Node LTS, tiny dependency footprint, MIT.                                                                                                            |
+| 8                                     | **Watch mode**                     | `tsc-after --watch` runs next to `tsc --watch` (or `concurrently` / `tsc-watch --onSuccess` / `tsc-after -- ...` or script-friendly way), and survives rename/move storms with debouncing. |
+| 9                                     | **Project references & monorepos** | `tsc-after -b` follows `references`/`composite` like `tsc -b`, cleaning every referenced project's `outDir`.                                                                               |
+| 10                                    | **Boring where it matters**        | Cross-platform (Linux/macOS/Windows), Node LTS, tiny dependency footprint, MIT.                                                                                                            |
 | Cross-tested with different versions. |
-| 10                                    | **Fast**                           | Optimized for large codebases, huge amount of files                                                                                                                                        |
-| 11                                    | **Programmatic API**               | `clean()`, `plan()`, `watch()` for custom build scripts and plugins — exposed once the internals are stable enough to promise.                                                             |
-| 12                                    | **Explicit exclusions**            | A future `--exclude <glob>` option can protect selected paths in an otherwise TypeScript-owned `outDir`.                                                                                   |
+| 11                                    | **Fast**                           | Optimized for large codebases, huge amount of files                                                                                                                                        |
+| 12                                    | **Programmatic API**               | `clean()`, `plan()`, `watch()` for custom build scripts and plugins — exposed once the internals are stable enough to promise.                                                             |
+| 13                                    | **Explicit exclusions**            | A future `--exclude <glob>` option can protect selected paths in an otherwise TypeScript-owned `outDir`.                                                                                   |
 
 ---
 
@@ -146,16 +152,3 @@ State these up front so nobody is surprised:
 - **Not a bundler.** If you use tsup, Vite or esbuild, they already clean up after themselves — you probably don't need this.
 
 ---
-
-## Publishing Checklist
-
-- [ ] Add `keywords` in `package.json`: `tsc`, `typescript`, `clean`, `outDir`, `dist`, `stale`, `orphan`, `build`, `watch`.
-- [ ] Post a short note in TypeScript issue #16057 once v1 ships — that thread is where the audience already gathers.
-
-## Additional random todo:
-
-- [ ] Re security, ban traversing above current tsconfig directory by default, also ban traversing symlinks and other filesystems if that's possible.
-      Essentially limit to only process files
-- [ ] Use same logic to determine what's the absolute path from relative in tsconfig, like TypeScript does
-- [ ] Add conventional commits settings - GitHub Action PR checks
-- [ ] Investigate how to build also some TypeScript declarations so we get blue "TS" icon on npmjs.com!
