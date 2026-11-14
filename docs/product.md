@@ -4,11 +4,11 @@
 
 `tsc` compiles your files, but it never deletes anything.
 Rename `foo.ts` to `foo/index.ts` and `dist/foo.js` and `dist/foo.d.ts` live on forever — confusing your tests, your types, and your teammates. `tsc-after` reads your `tsconfig.json`, works out exactly which files `tsc` would emit today, and removes the ones it wouldn't.
-Cleaning is enabled by default; a planned, opt-in `--copy` capability will copy additional artifacts into `outDir` (commonly `dist`).
+Cleaning is enabled by default; an opt-in `--copy` capability to copy additional artifacts into `outDir` (commonly `dist`) is planned for v1.
 Runs once after a build, or alongside `tsc --watch`.
 
 This document captures the naming decision, positioning, and the full feature vision — sequenced into a **v1** that is worth shipping on its own and a **vNEXT** that follows.
-It is a roadmap, not a list of implemented features; `--copy` is future work, not an available CLI option.
+It is a roadmap, not a list of implemented features; `--copy` is planned for v1, but is not an available CLI option yet.
 For the underlying market research, see [`market-research.md`](./market-research.md).
 
 ---
@@ -52,7 +52,7 @@ Verify that npm allows publishing under this name before releasing.
 
 > `tsc` compiles your files, but it never deletes anything.
 > Rename `foo.ts` to `foo/index.ts` and `dist/foo.js` and `dist/foo.d.ts` live on forever — confusing your tests, your types, and your teammates. `tsc-after` reads your `tsconfig.json`, works out exactly which files `tsc` would emit today, and removes the ones it wouldn't.
-> Cleaning is enabled by default; opt-in artifact copying via `--copy` is planned.
+> Cleaning is enabled by default; opt-in artifact copying via `--copy` is planned for v1.
 > Runs once after a build, or alongside `tsc --watch`.
 
 ### Tone
@@ -70,7 +70,7 @@ Nothing here is dropped — it's just sequenced, so something useful ships soone
 ### Capabilities
 
 - **Clean (enabled by default):** Remove stale TypeScript build output using the selected tsconfig.
-- **Copy (planned, opt-in via `--copy`):** Copy additional artifacts into the configured `outDir`, commonly `dist`.
+- **Copy (planned for v1, opt-in via `--copy`):** Copy additional artifacts into the configured `outDir`, commonly `dist`.
   Artifact selection, configuration, destination mapping, overwrite behavior, and interaction with cleaning still need design before implementation.
 
 ### v1 promise
@@ -82,19 +82,19 @@ Nothing here is dropped — it's just sequenced, so something useful ships soone
 | 3   | **Handles incremental builds**       | Leaves `.tsbuildinfo` alone so incremental builds stay fast.                                                                                                                                                                    |
 | 4   | **Confined cleanup**                 | Treats `outDir` as TypeScript-owned: removes regular files outside the current emit set, while preserving compiler state such as `.tsbuildinfo`. Refuses unsafe output paths and source/output overlap; `--dry` shows the plan. |
 | 5   | **Tidies up after itself**           | Removes directories left empty by the cleanup.                                                                                                                                                                                  |
+| 6   | **Artifact copying**                 | An opt-in `--copy` capability will copy additional artifacts into `outDir`; selection, destination mapping, overwrite behavior, and interaction with cleaning still need design.                                                |
 
 ### vNEXT promise
 
 | #                                     | Feature                            | One-liner                                                                                                                                                                                  |
 | :------------------------------------ | :--------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 6                                     | **Watch mode**                     | `tsc-after --watch` runs next to `tsc --watch` (or `concurrently` / `tsc-watch --onSuccess` / `tsc-after -- ...` or script-friendly way), and survives rename/move storms with debouncing. |
-| 7                                     | **Project references & monorepos** | `tsc-after -b` follows `references`/`composite` like `tsc -b`, cleaning every referenced project's `outDir`.                                                                               |
-| 8                                     | **Boring where it matters**        | Cross-platform (Linux/macOS/Windows), Node LTS, tiny dependency footprint, MIT.                                                                                                            |
+| 7                                     | **Watch mode**                     | `tsc-after --watch` runs next to `tsc --watch` (or `concurrently` / `tsc-watch --onSuccess` / `tsc-after -- ...` or script-friendly way), and survives rename/move storms with debouncing. |
+| 8                                     | **Project references & monorepos** | `tsc-after -b` follows `references`/`composite` like `tsc -b`, cleaning every referenced project's `outDir`.                                                                               |
+| 9                                     | **Boring where it matters**        | Cross-platform (Linux/macOS/Windows), Node LTS, tiny dependency footprint, MIT.                                                                                                            |
 | Cross-tested with different versions. |
-| 9                                     | **Fast**                           | Optimized for large codebases, huge amount of files                                                                                                                                        |
-| 10                                    | **Programmatic API**               | `clean()`, `plan()`, `watch()` for custom build scripts and plugins — exposed once the internals are stable enough to promise.                                                             |
-| 11                                    | **Explicit exclusions**            | A future `--exclude <glob>` option can protect selected paths in an otherwise TypeScript-owned `outDir`.                                                                                   |
-| 12                                    | **Artifact copying**               | An opt-in `--copy` capability will copy additional artifacts into `outDir`; selection and cleanup interaction are still to be designed.                                                    |
+| 10                                    | **Fast**                           | Optimized for large codebases, huge amount of files                                                                                                                                        |
+| 11                                    | **Programmatic API**               | `clean()`, `plan()`, `watch()` for custom build scripts and plugins — exposed once the internals are stable enough to promise.                                                             |
+| 12                                    | **Explicit exclusions**            | A future `--exclude <glob>` option can protect selected paths in an otherwise TypeScript-owned `outDir`.                                                                                   |
 
 ---
 
@@ -102,7 +102,7 @@ Nothing here is dropped — it's just sequenced, so something useful ships soone
 
 `outDir` must be dedicated to TypeScript output.
 A stateless cleaner cannot tell an old compiler emit from an asset copied into the same directory: either file may be removed when it is absent from the current emit set.
-Until `--copy` is implemented, copy assets **after** running `tsc-after`, or keep them in another directory.
+Until the planned v1 `--copy` capability is implemented, copy assets **after** running `tsc-after`, or keep them in another directory.
 A future `--exclude <glob>` option may support shared output directories; it is not part of v1.
 
 ```json
