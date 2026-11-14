@@ -19,7 +19,7 @@
       ]
     }
   ],
-  "contributorTemplate": "<% const escapeHtml = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\"', '&quot;').replaceAll(\"'\", '&#39;'); %><li><a href=\"<%= escapeHtml(contributor.profile || 'https://github.com/' + contributor.login) %>\"><%= escapeHtml(contributor.name || contributor.login) %></a> <%= contributions %></li>",
+  "contributorTemplate": "<% const escapeHtml = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\"', '&quot;').replaceAll(\"'\", '&#39;'); const plainContributions = contributions.replace(/<a\\b([^>]*)>(.*?)<\\/a>/g, (_, attributes, content) => '<span' + attributes.replace(/\\s+href=\"[^\"]*\"/g, '') + '>' + content + '</span>'); %><li><a href=\"<%= escapeHtml(contributor.profile || 'https://github.com/' + contributor.login) %>\"><%= escapeHtml(contributor.name || contributor.login) %></a> <%= plainContributions %></li>",
   "contributorsPerLine": 7,
   "contributorsSortAlphabetically": true,
   "files": [

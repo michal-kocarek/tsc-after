@@ -68,7 +68,7 @@ See [`CONTRIBUTING.md`](./.github/CONTRIBUTING.md) and [`DEVELOPMENT.md`](./.git
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 <ul>
-<li><a href="https://github.com/michal-kocarek">Michal Kočárek</a> <a href="https://github.com/michal-kocarek/tsc-after/commits?author=michal-kocarek" title="Code">💻</a> <a href="#content-michal-kocarek" title="Content">🖋</a> <a href="https://github.com/michal-kocarek/tsc-after/commits?author=michal-kocarek" title="Documentation">📖</a> <a href="#ideas-michal-kocarek" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-michal-kocarek" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-michal-kocarek" title="Maintenance">🚧</a> <a href="#projectManagement-michal-kocarek" title="Project Management">📆</a> <a href="#tool-michal-kocarek" title="Tools">🔧</a></li>
+<li><a href="https://github.com/michal-kocarek">Michal Kočárek</a> <span title="Code">💻</span> <span title="Content">🖋</span> <span title="Documentation">📖</span> <span title="Ideas, Planning, & Feedback">🤔</span> <span title="Infrastructure (Hosting, Build-Tools, etc)">🚇</span> <span title="Maintenance">🚧</span> <span title="Project Management">📆</span> <span title="Tools">🔧</span></li>
 </ul>
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
