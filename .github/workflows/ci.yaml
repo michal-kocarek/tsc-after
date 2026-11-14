@@ -56,7 +56,6 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - run: pnpm build
-      - run: node bin/tsc-after.js --help
       - run: pnpm run test:e2e --run
 
   node_compatibility:
@@ -70,6 +69,8 @@ jobs:
           - 18.11.0
           - 20.0.0
           - 22.0.0
+          - 24.0.0
+          - 26.0.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/prepare
@@ -78,8 +79,8 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: node bin/tsc-after.js --version
-      - run: node bin/tsc-after.js --help
-      - run: node bin/tsc-after.js --dry
+      - run: pnpm run test:unit --run
+      - run: pnpm run test:e2e --run
 
   # Single stable job to mark as required in branch protection; add every new job to `needs`.
   gate:
