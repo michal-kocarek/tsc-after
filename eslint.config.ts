@@ -172,6 +172,7 @@ export default defineConfig(
 					],
 				},
 			],
+			"vitest/no-hooks": "off",
 			"vitest/prefer-expect-assertions": "off",
 		},
 		settings: { vitest: { typecheck: true } },

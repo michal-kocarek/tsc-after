@@ -6,6 +6,13 @@ import packageJson from "../../package.json" with { type: "json" };
 
 const binPath = require.resolve("../../bin/tsc-after.js");
 
+// Sanity check as this needs full build
+try {
+	require.resolve("../../dist/tscAfter.js");
+} catch (e) {
+	throw new Error("dist entry point not found", { cause: e });
+}
+
 async function runTscAfter(
 	args: string[],
 	opts: { allowFailure: boolean } = { allowFailure: false },
