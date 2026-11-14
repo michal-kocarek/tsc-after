@@ -1,1 +1,4 @@
-pnpx lint-staged
+#!/usr/bin/env bash
+set -eu
+
+lint-staged

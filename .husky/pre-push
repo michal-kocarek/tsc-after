@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -eu
+
 # Lint every commit pushed to main, including ones created with --no-verify
 protected_ref=refs/heads/main
 
