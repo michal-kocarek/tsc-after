@@ -28,12 +28,12 @@ tsc-after -p tsconfig.build.json
 Copy assets _after_ cleanup (`tsc && tsc-after && cp assets/* dist/assets/`), or keep them in a separate directory.
 
 Planned: `--copy`, `--exclude`, `--watch`, and project references.
-See [`PRODUCT.md`](./PRODUCT.md) for the roadmap.
+See [`product.md`](./docs/product.md) for the roadmap.
 
 ## Why not `rm -rf dist && tsc`?
 
 Wiping `outDir` before every build (`rm -rf dist && tsc`, `rimraf dist && tsc`, or a `prebuild` script) is the usual fix for stale outputs.
-On GitHub, about 274k `package.json` files run `rm -rf dist` and another 199k run `rimraf dist` (see [`MARKET_RESEARCH.md`](./MARKET_RESEARCH.md)).
+On GitHub, about 274k `package.json` files run `rm -rf dist` and another 199k run `rimraf dist` (see [`market-research.md`](./docs/market-research.md)).
 It works, but it costs more than it needs to:
 
 |                           | `rm -rf dist && tsc`                                                                                                 | `tsc && tsc-after`                                             |

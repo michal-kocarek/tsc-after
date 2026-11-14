@@ -9,7 +9,7 @@ Runs once after a build, or alongside `tsc --watch`.
 
 This document captures the naming decision, positioning, and the full feature vision — sequenced into a **v1** that is worth shipping on its own and a **vNEXT** that follows.
 It is a roadmap, not a list of implemented features; `--copy` is future work, not an available CLI option.
-For the underlying market research, see [`MARKET_RESEARCH.md`](./MARKET_RESEARCH.md).
+For the underlying market research, see [`market-research.md`](./market-research.md).
 
 ---
 
@@ -28,7 +28,7 @@ tsc && tsc-after
 - **It's a compiler companion.** The `tsc-*` prefix places it next to `tsc-watch` (~3M downloads/month) and `tsc-alias` — tools people already reach for right after `tsc`.
 
 The package and executable are both named `tsc-after`.
-The earlier `tsc-clean` proposal and historical availability checks remain in [`MARKET_RESEARCH.md`](./MARKET_RESEARCH.md); they do not establish availability of `tsc-after`.
+The earlier `tsc-clean` proposal and historical availability checks remain in [`market-research.md`](./market-research.md); they do not establish availability of `tsc-after`.
 Verify that npm allows publishing under this name before releasing.
 
 ---
@@ -64,7 +64,7 @@ A cleanup tool earns trust by being clear, not clever.
 
 ## Key Features
 
-The list below is the whole picture, split into what a first release has to do to be worth installing (**v1**) and what makes it the obvious choice afterwards (**vNEXT**).
+The list below is the whole picture, split into what a first release has to do to be worth installing (**v1**) and what makes it the obvious choice afterward (**vNEXT**).
 Nothing here is dropped — it's just sequenced, so something useful ships sooner.
 
 ### Capabilities
@@ -156,5 +156,6 @@ State these up front so nobody is surprised:
 
 - [ ] Re security, ban traversing above current tsconfig directory by default, also ban traversing symlinks and other filesystems if that's possible.
       Essentially limit to only process files
-- [ ] Use same logic to determine what's the absolute path from relative in tsconfig, like typescript does
-- [ ] Add conventional commits settings - GitHub action PR checks
+- [ ] Use same logic to determine what's the absolute path from relative in tsconfig, like TypeScript does
+- [ ] Add conventional commits settings - GitHub Action PR checks
+- [ ] Investigate how to build also some TypeScript declarations so we get blue "TS" icon on npmjs.com!
