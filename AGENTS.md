@@ -49,9 +49,11 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
   Reuse a `tsc` flag name or short alias only when the meaning is the same (`--project`/`-p`, `--help`/`-h`, `--verbose`, `--watch`/`-w`), and never give a `tsc` flag name a different behavior.
 - Write help descriptions the way `tsc` does: one imperative sentence ending with a period, e.g. "Print this message.".
 
-## Linting
+## Formatting and linting
 
-- When running ESLint during development, use `pnpm lint --fix` to apply automatic fixes and review the resulting changes.
+- After editing files, fix them instead of only checking them: run `pnpm exec prettier --write <files>` and `pnpm exec eslint --fix <files>` on the files you changed, then review the diff and resolve the remaining ESLint errors.
+  Pass only the files you changed; `pnpm lint --fix` fixes the whole repository.
+- Try to write Markdown with one sentence per line; `prettier-plugin-sentences-per-line` reformats it anyway.
 
 ## Testing
 
@@ -69,6 +71,12 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 - Test files are isolated (own modules and globals); tests within a file run concurrently (`sequence.concurrent`).
 - For snapshots of CLI output, strip colors with `stripVTControlCharacters` from `node:util`.
 - `CI=1` is set, so Vitest won't write new snapshots; create or update them explicitly with `vitest run -u` and review the result.
+
+## Commits
+
+When committing, follow the [Conventional Commit guidance](.github/CONTRIBUTING.md#sending-a-pull-request) and [formatting and hook guidance](.github/DEVELOPMENT.md#formatting).
+Let Git hooks run, then review any formatting changes they make.
+Bypass hooks (`--no-verify`, `HUSKY=0`) only with the user's explicit permission.
 
 ## Agent skills
 
