@@ -9,7 +9,7 @@ import {
 	symlink,
 	writeFile,
 } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { describe, it } from "vitest";
 
 import {
@@ -45,6 +45,7 @@ describe("e2e projects", () => {
 			"src/__tests__/fixtures/simple",
 			sourceFile,
 		);
+		const prefix = `isolated-${randomUUID()}-`;
 		const fixtureContents = await readFile(fixtureSource, "utf8");
 
 		let secondProjectDir = "";
@@ -57,15 +58,19 @@ describe("e2e projects", () => {
 		const secondMayFinish = new Promise<void>((resolve) => {
 			releaseSecondProject = resolve;
 		});
-		const secondProject = withProject(task, async (projectDir) => {
-			secondProjectDir = projectDir;
-			signalSecondReady();
-			await secondMayFinish;
-			secondProjectContents = await readFile(
-				join(projectDir, sourceFile),
-				"utf8",
-			);
-		});
+		const secondProject = withProject(
+			task,
+			async (projectDir) => {
+				secondProjectDir = projectDir;
+				signalSecondReady();
+				await secondMayFinish;
+				secondProjectContents = await readFile(
+					join(projectDir, sourceFile),
+					"utf8",
+				);
+			},
+			{ prefix },
+		);
 
 		await secondReady;
 
@@ -78,24 +83,31 @@ describe("e2e projects", () => {
 		};
 		let secondProjectExistsAfterFirst: boolean;
 		try {
-			firstProjectState = await withProject(task, async (projectDir) => {
-				firstProjectDir = projectDir;
+			firstProjectState = await withProject(
+				task,
+				async (projectDir) => {
+					firstProjectDir = projectDir;
 
-				await writeFile(join(projectDir, sourceFile), "modified fixture copy");
-
-				return {
-					firstProjectParent: dirname(projectDir),
-					fixtureContents: await readFile(fixtureSource, "utf8"),
-					modifiedContents: await readFile(
+					await writeFile(
 						join(projectDir, sourceFile),
-						"utf8",
-					),
-					secondContents: await readFile(
-						join(secondProjectDir, sourceFile),
-						"utf8",
-					),
-				};
-			});
+						"modified fixture copy",
+					);
+
+					return {
+						firstProjectParent: dirname(projectDir),
+						fixtureContents: await readFile(fixtureSource, "utf8"),
+						modifiedContents: await readFile(
+							join(projectDir, sourceFile),
+							"utf8",
+						),
+						secondContents: await readFile(
+							join(secondProjectDir, sourceFile),
+							"utf8",
+						),
+					};
+				},
+				{ prefix },
+			);
 
 			secondProjectExistsAfterFirst = await pathExists(secondProjectDir);
 		} finally {
@@ -109,21 +121,27 @@ describe("e2e projects", () => {
 		expect({
 			firstProjectExistsAfterCallback,
 			firstProjectParent: firstProjectState.firstProjectParent,
+			firstProjectUsesPrefix: basename(firstProjectDir).startsWith(prefix),
 			fixtureContents: firstProjectState.fixtureContents,
 			modifiedContents: firstProjectState.modifiedContents,
+			projectDirsAreUnique: firstProjectDir !== secondProjectDir,
 			secondContentsAfterFirst: secondProjectContents,
 			secondContentsDuringFirst: firstProjectState.secondContents,
 			secondProjectExistsAfterCallback,
 			secondProjectExistsAfterFirst,
+			secondProjectUsesPrefix: basename(secondProjectDir).startsWith(prefix),
 		}).toStrictEqual({
 			firstProjectExistsAfterCallback: true,
 			firstProjectParent: e2eDir,
+			firstProjectUsesPrefix: true,
 			fixtureContents,
 			modifiedContents: "modified fixture copy",
+			projectDirsAreUnique: true,
 			secondContentsAfterFirst: fixtureContents,
 			secondContentsDuringFirst: fixtureContents,
 			secondProjectExistsAfterCallback: true,
 			secondProjectExistsAfterFirst: true,
+			secondProjectUsesPrefix: true,
 		});
 	});
 
@@ -179,16 +197,25 @@ describe("e2e projects", () => {
 		const retainedProjects = (await readdir(e2eDir)).filter((name) =>
 			name.startsWith(prefix),
 		);
-		const retainedProjectDir = join(e2eDir, retainedProjects[0] ?? "");
+		const [retainedProject] = retainedProjects;
+		const retainedProjectDir =
+			retainedProjects.length === 1 && retainedProject !== undefined
+				? join(e2eDir, retainedProject)
+				: undefined;
 
 		expect({
 			callbackCalled,
-			retainedProjectExists: await pathExists(retainedProjectDir),
+			retainedProjectIsDirectory:
+				retainedProjectDir !== undefined &&
+				(await lstat(retainedProjectDir)).isDirectory(),
 			retainedProjects,
-			setupFailed: setupError instanceof Error,
+			setupFailed:
+				setupError instanceof Error &&
+				"code" in setupError &&
+				setupError.code === "ENOENT",
 		}).toStrictEqual({
 			callbackCalled: false,
-			retainedProjectExists: true,
+			retainedProjectIsDirectory: true,
 			retainedProjects: [expect.stringMatching(prefix)],
 			setupFailed: true,
 		});
@@ -239,6 +266,70 @@ describe("e2e projects", () => {
 			staleOutputExistsAfterCleanup: false,
 			staleSourceExistsAfterCleanup: false,
 		});
+	});
+
+	it("refuses missing or invalid configs without changing project files", async ({
+		expect,
+		task,
+	}) => {
+		const invalidConfigs = [
+			{ config: undefined, diagnostic: "TS5083" },
+			{ config: "", diagnostic: "outDir is not set in tsconfig.json" },
+			{ config: "{}", diagnostic: "outDir is not set in tsconfig.json" },
+			{
+				config: JSON.stringify({ compilerOptions: { rootDir: "src" } }),
+				diagnostic: "outDir is not set in tsconfig.json",
+			},
+			{
+				config: JSON.stringify({
+					compilerOptions: { outDir: "src" },
+					include: ["src"],
+				}),
+				diagnostic: "TS18003",
+			},
+		];
+
+		for (const { config, diagnostic } of invalidConfigs) {
+			for (const dry of [false, true]) {
+				const cleanupState = await withProject(task, async (projectDir) => {
+					const configPath = join(projectDir, "tsconfig.json");
+					const sourcePath = join(projectDir, "src/index.ts");
+					const extraFilePath = join(projectDir, "src/README.md");
+					if (config === undefined) {
+						await rm(configPath);
+					} else {
+						await writeFile(configPath, config);
+					}
+					await writeFile(sourcePath, "export const source = true;\n");
+					await writeFile(extraFilePath, "Keep this project file.\n");
+
+					const cleanup = await runTscAfter(dry ? ["--dry"] : [], {
+						allowFailure: true,
+						cwd: projectDir,
+					});
+
+					return {
+						cleanup,
+						configContentsAfter: (await pathExists(configPath))
+							? await readFile(configPath, "utf8")
+							: undefined,
+						extraFileContentsAfter: await readFile(extraFilePath, "utf8"),
+						sourceContentsAfter: await readFile(sourcePath, "utf8"),
+					};
+				});
+
+				expect(cleanupState.cleanup.exitCode).toBe(1);
+				expect(cleanupState.cleanup.stderr).toContain(diagnostic);
+				expect(cleanupState.cleanup.stderr).not.toContain("    at ");
+				expect(cleanupState.configContentsAfter).toBe(config);
+				expect(cleanupState.extraFileContentsAfter).toBe(
+					"Keep this project file.\n",
+				);
+				expect(cleanupState.sourceContentsAfter).toBe(
+					"export const source = true;\n",
+				);
+			}
+		}
 	});
 
 	it("treats missing output directories as a no-op in normal and dry modes", async ({

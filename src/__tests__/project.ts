@@ -73,7 +73,9 @@ export async function withProject<T>(
 
 	await mkdir(e2eDir, { recursive: true });
 
-	const projectDir = await mkdtemp(join(e2eDir, folderPrefix));
+	const projectDir = await mkdtemp(
+		join(e2eDir, options.prefix ?? folderPrefix),
+	);
 
 	await cp(options.fixtureDir ?? simpleFixtureDir, projectDir, {
 		recursive: true,
