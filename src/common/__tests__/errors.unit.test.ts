@@ -1,6 +1,30 @@
 import { describe, it } from "vitest";
 
-import { isNodeErrorOf } from "../errors.ts";
+import { assertUnreachable, isNodeErrorOf } from "../errors.ts";
+
+describe(assertUnreachable, () => {
+	it("should throw an error with the unreachable value as its cause", ({
+		expect,
+	}) => {
+		const value = "unexpected value";
+		let thrownError: unknown;
+
+		try {
+			assertUnreachable(value as never);
+		} catch (error) {
+			thrownError = error;
+		}
+
+		expect(thrownError).toBeInstanceOf(Error);
+		expect(thrownError).toMatchObject({ cause: value });
+	});
+
+	it("should accept a never value and return never", ({ expect }) => {
+		const assertNever: (value: never) => never = assertUnreachable;
+
+		expect(assertNever).toBe(assertUnreachable);
+	});
+});
 
 describe(isNodeErrorOf, () => {
 	it("should return true for expected instance", ({ expect }) => {

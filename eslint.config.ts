@@ -97,6 +97,19 @@ export default defineConfig(
 			"n/no-sync": "off",
 			"no-console": "error",
 			"no-else-return": "error",
+			"no-restricted-syntax": [
+				"error",
+				{
+					message: "Every switch statement must have a default case.",
+					selector: "SwitchStatement:not(:has(SwitchCase[test=null]))",
+				},
+				{
+					message:
+						"Every switch default case must call assertUnreachable directly.",
+					selector:
+						"SwitchCase[test=null]:not([consequent.0.expression.callee.name='assertUnreachable']):not([consequent.0.argument.callee.name='assertUnreachable'])",
+				},
+			],
 			"no-shadow": "error",
 			"no-useless-rename": "error",
 			"object-shorthand": "error",

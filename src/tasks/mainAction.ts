@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { binName } from "../common/constants.ts";
-import { isNodeErrorOf, UserError } from "../common/errors.ts";
+import {
+	assertUnreachable,
+	isNodeErrorOf,
+	UserError,
+} from "../common/errors.ts";
 import { isPathInside } from "../common/paths.ts";
 import { loadCompiler } from "../common/typescript/loadCompiler.ts";
 import { type ParsedCliArgs, print, styleText } from "../common/util.ts";
@@ -256,6 +260,8 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 					print(`Skipped (${verdict.reason}): ${displayPath}`);
 				}
 				break;
+			default:
+				assertUnreachable(verdict);
 		}
 	}
 
