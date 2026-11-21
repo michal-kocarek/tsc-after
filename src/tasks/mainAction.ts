@@ -266,13 +266,4 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 			`${binName}: ${args.values.dry ? "Would remove" : "Removed"} ${removedFiles.toFixed()} files${removedDirs > 0 ? ` and ${removedDirs.toFixed()} empty directories` : ""} from ${styleText("italic", outDirRelativePath)}`,
 		);
 	}
-
-	// TODO: For tsc-after, I’d make --dry print the files it would remove to stdout, followed by a count. A normal run
-	//  Can print a short count; --verbose can print each removed path. Keep debug objects such as the current print(tsconfig)
-	//  Out of normal output.
-	//  If you later want scripts to consume the file list, add a dedicated machine-readable option so the human summary does not get mixed into it.
-
-	// TODO: Consider adding --all? To just wipe entire outDir?
-
-	// TODO: On GHA, test it against different typescript versions installed. To make sure the API conforms!
 }
