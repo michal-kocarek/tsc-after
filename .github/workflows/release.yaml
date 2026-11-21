@@ -1,7 +1,18 @@
 name: Release
 
 on:
-  workflow_dispatch: ~
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Optional version to release, such as 0.3.0. Leave blank for the commit-based recommendation."
+        required: false
+        type: string
+        default: ""
+      dry_run:
+        description: Preview the selected version and release actions without publishing.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -11,7 +22,7 @@ env:
 
 jobs:
   release:
-    name: Release
+    name: "Release${{ inputs.release_version && format(' ({0})', inputs.release_version) || '' }}${{ inputs.dry_run && ' (dry run)' || '' }}"
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: npm-release
@@ -35,7 +46,23 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - run: pnpm release --ci
+      - name: Release
+        run: |
+          release_args=(--ci)
+          if [[ "$DRY_RUN" == "true" ]]; then
+            release_args+=(--dry-run)
+          fi
+
+          if [[ -z "$RELEASE_VERSION" ]]; then
+            pnpm release "${release_args[@]}"
+          elif [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            pnpm release "$RELEASE_VERSION" "${release_args[@]}"
+          else
+            echo "::error::Release version must contain three numeric components (for example, 0.3.0)."
+            exit 1
+          fi
         env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUSKY: 0

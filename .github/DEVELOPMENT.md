@@ -102,7 +102,18 @@ pnpm tsc --watch
 ## Releasing
 
 Run **Actions → Release → Run workflow** on `main`.
-[release-it](https://github.com/release-it/release-it) picks the next version from [Conventional Commits](https://www.conventionalcommits.org) since the last tag (`fix:` → patch, `feat:` → minor, breaking change → major), updates `package.json` and `CHANGELOG.md`, commits and tags `vX.Y.Z`, creates a GitHub Release, and stages the package on npm.
+Leave **Release version** blank to let [release-it](https://github.com/release-it/release-it) use the version from `package.json` as its current version and recommend an increment from [Conventional Commits](https://www.conventionalcommits.org) since the latest Git tag (`fix:` → patch, `feat:` → minor, breaking change → major).
+The conventional-changelog plugin uses Git commits and tags for this recommendation; GitHub Releases are not its input.
+The workflow keeps `package.json` at its current version until release-it updates it during a release.
+To choose a version yourself, enter three numeric components such as `0.3.0` in **Release version**; prerelease and build metadata suffixes are not supported.
+The workflow validates it and passes it to release-it as an explicit override.
+The job name includes the supplied version.
+An override controls the version number, not the changelog contents: review the commits and breaking changes regardless, and ensure the requested version is appropriate relative to the published package and Git tags.
+Select **Dry run** to preview the version release-it selects and the actions it would perform without publishing; the job name marks the preview.
+This uses the same branch and environment protections as a release.
+To publish after reviewing the preview, run the workflow again with **Dry run** unchecked.
+For a local, non-publishing preview, run `pnpm release 0.3.0 --ci --dry-run` with the version you intend to use; omit `0.3.0` to preview automatic selection.
+The workflow updates `package.json` and `CHANGELOG.md`, commits and tags `vX.Y.Z`, creates a GitHub Release, and stages the package on npm.
 See the preset's [default commit types](https://conventional-changelog.js.org/presets/conventional-commits/#default-commit-types) for which prefixes appear in the changelog.
 Approve the staged version on npm with 2FA to make it installable.
 
