@@ -42,6 +42,8 @@ This behavior and its safety limits are not yet verified for every TypeScript co
 - By default, `tsc-after` reads `tsconfig.json` from the current directory and does not search parent directories.
 - `incremental`, `tsBuildInfoFile`, `composite`, `declarationDir`, and watch configurations are rejected.
   Project references are not followed.
+- Source files reached only through imports or `paths` aliases are not included when checking source/output overlap or expected outputs.
+  Cleanup may delete those sources if they are inside `outDir`, or delete their emitted files as stale ([issue #2](https://github.com/michal-kocarek/tsc-after/issues/2)).
 - Cleanup confinement and source/output overlap checks are incomplete.
   Do not rely on the current checks to protect valuable files.
 - Handling of TypeScript configurations and emitted file types is incomplete and still needs verification.
@@ -68,8 +70,7 @@ Wiping `outDir` before every build (`rm -rf dist && tsc`, `rimraf dist && tsc`, 
 On GitHub, about 274k `package.json` files run `rm -rf dist` and another 199k run `rimraf dist` (see [`market-research.md`](./docs/market-research.md)).
 
 `tsc-after` is intended to remove only stale outputs rather than wiping `outDir` and rebuilding everything.
-The prototype is not yet a safe replacement for that workflow: configuration support and cleanup safeguards are incomplete, and incremental builds are not supported.
-Do not add it to a build script yet.
+Incremental builds are not supported.
 
 **Using a bundler such as tsup, Vite, or esbuild?**<br>
 They already clean up after themselves, so you probably don't need `tsc-after`.
