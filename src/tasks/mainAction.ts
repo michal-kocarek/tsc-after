@@ -158,6 +158,18 @@ export function mainAction(args: ParsedCliArgs) {
 				continue;
 			}
 
+			if (fullPathStat.isSymbolicLink()) {
+				if (args.values.verbose) {
+					verdicts.push({
+						path: fullPath,
+						reason: "symbolic link",
+						type: "skipped",
+					});
+				}
+				dirIsEmpty = false;
+				continue;
+			}
+
 			if (fullPathStat.isFile()) {
 				if (expectedOutDirPaths.has(fullPath)) {
 					if (args.values.verbose) {
@@ -212,6 +224,12 @@ export function mainAction(args: ParsedCliArgs) {
 		}
 
 		outDirExists = false;
+	}
+
+	if (outDirExists && fs.realpathSync(outDir) !== path.resolve(outDir)) {
+		throw new Error(
+			`Refusing to clean outDir through a symbolic link: ${outDirRelativePath}!`,
+		);
 	}
 
 	const result = outDirExists ? readDir(outDir) : { verdicts: [] };

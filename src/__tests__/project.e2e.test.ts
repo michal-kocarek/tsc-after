@@ -1,5 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { access, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+	access,
+	lstat,
+	mkdir,
+	readdir,
+	readFile,
+	rm,
+	symlink,
+	writeFile,
+} from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { describe, it } from "vitest";
 
@@ -386,5 +395,90 @@ describe("e2e projects", () => {
 				cleanupState.sourceContents,
 			);
 		}
+	});
+
+	it("refuses to clean an outDir reached through a symbolic link", async ({
+		expect,
+		task,
+	}) => {
+		const cleanupState = await withProject(task, async (projectDir) => {
+			const linkTarget = join(projectDir, "link-target");
+			const staleOutput = join(linkTarget, "dist/stale.js");
+			await mkdir(dirname(staleOutput), { recursive: true });
+			await writeFile(staleOutput, "stale output");
+			await symlink(linkTarget, join(projectDir, "linked"), "dir");
+			await writeFile(
+				join(projectDir, "tsconfig.json"),
+				JSON.stringify({
+					compilerOptions: { outDir: "linked/dist", rootDir: "src" },
+				}),
+			);
+
+			const cleanup = await runTscAfter([], {
+				allowFailure: true,
+				cwd: projectDir,
+			});
+
+			return {
+				exitCode: cleanup.exitCode,
+				staleOutputExists: await pathExists(staleOutput),
+				stderr: cleanup.stderr,
+			};
+		});
+
+		expect(cleanupState).toStrictEqual({
+			exitCode: 1,
+			staleOutputExists: true,
+			stderr: expect.stringContaining(
+				"Refusing to clean outDir through a symbolic link: linked/dist!",
+			),
+		});
+	});
+
+	it("skips symbolic links inside outDir without following them", async ({
+		expect,
+		task,
+	}) => {
+		const cleanupState = await withProject(task, async (projectDir) => {
+			const linkTarget = join(projectDir, "link-target");
+			const linkTargetFile = join(linkTarget, "stale.js");
+			const staleOutput = join(projectDir, "dist/stale.js");
+			const links = ["dist/dir-link", "dist/file-link.js", "dist/dangling.js"];
+			await mkdir(linkTarget);
+			await mkdir(dirname(staleOutput));
+			await writeFile(linkTargetFile, "stale-looking file behind a link");
+			await writeFile(staleOutput, "stale output");
+			await symlink(linkTarget, join(projectDir, "dist/dir-link"), "dir");
+			await symlink(linkTargetFile, join(projectDir, "dist/file-link.js"));
+			await symlink(
+				join(linkTarget, "missing.js"),
+				join(projectDir, "dist/dangling.js"),
+			);
+
+			const cleanup = await runTscAfter([], {
+				allowFailure: true,
+				cwd: projectDir,
+			});
+
+			return {
+				exitCode: cleanup.exitCode,
+				linksAreKept: await Promise.all(
+					links.map(async (link) =>
+						(await lstat(join(projectDir, link))).isSymbolicLink(),
+					),
+				),
+				linkTargetFileExists: await pathExists(linkTargetFile),
+				staleOutputExists: await pathExists(staleOutput),
+				stderr: cleanup.stderr,
+			};
+		});
+
+		expect(cleanupState).toStrictEqual({
+			exitCode: 0,
+			linksAreKept: [true, true, true],
+			linkTargetFileExists: true,
+			staleOutputExists: false,
+			stderr: "",
+		});
 	});
 });
