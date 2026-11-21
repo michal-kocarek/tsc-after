@@ -125,6 +125,8 @@ export default defineConfig(
 					],
 				},
 			],
+			// The v flag requires Node.js 20; engines.node also supports Node.js 16 and 18.
+			"regexp/require-unicode-sets-regexp": "off",
 		},
 	},
 	{
