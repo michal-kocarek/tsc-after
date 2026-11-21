@@ -7,17 +7,17 @@ import path from "node:path";
 // The supported TS 7 layouts must match tsc --listEmittedFiles, as checked by
 // src/__tests__/emittedLayouts.e2e.test.ts. This is not a general emit API.
 export interface OutputOptions {
-	allowJs?: boolean;
-	composite?: boolean;
+	allowJs?: boolean | undefined;
+	composite?: boolean | undefined;
 	configFilePath: string;
-	declaration?: boolean;
-	declarationDir?: string;
-	declarationMap?: boolean;
-	emitDeclarationOnly?: boolean;
-	jsx?: string;
-	outDir?: string;
-	rootDir?: string;
-	sourceMap?: boolean;
+	declaration?: boolean | undefined;
+	declarationDir?: string | undefined;
+	declarationMap?: boolean | undefined;
+	emitDeclarationOnly?: boolean | undefined;
+	jsx?: string | undefined;
+	outDir?: string | undefined;
+	rootDir?: string | undefined;
+	sourceMap?: boolean | undefined;
 }
 
 export function getOutputFileNames(

@@ -10,7 +10,7 @@ describe(assertUnreachable, () => {
 		let thrownError: unknown;
 
 		try {
-			assertUnreachable(value as never);
+			Reflect.apply(assertUnreachable, undefined, [value]);
 		} catch (error) {
 			thrownError = error;
 		}
@@ -42,15 +42,17 @@ describe(isNodeErrorOf, () => {
 	it("should return true for NodeJS errors with expected code", ({
 		expect,
 	}) => {
-		const error = new TypeError("Test error");
-		(error as unknown as Record<string, string>)["code"] = "TEST";
+		const error = Object.assign(new TypeError("Test error"), {
+			code: "TEST",
+		});
 
 		expect(isNodeErrorOf(error, Error, "TEST")).toBe(true);
 	});
 
 	it("should return false for unexpected code", ({ expect }) => {
-		const error = new TypeError("Test error");
-		(error as unknown as Record<string, string>)["code"] = "TEST";
+		const error = Object.assign(new TypeError("Test error"), {
+			code: "TEST",
+		});
 
 		expect(isNodeErrorOf(error, Error, "UNEXPECTED")).toBe(false);
 	});

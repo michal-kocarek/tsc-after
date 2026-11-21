@@ -9,6 +9,23 @@ import { UserError } from "../errors.ts";
 import { getOutputFileNames, type OutputOptions } from "./outputPaths.ts";
 
 const syncModuleSpecifier = "typescript/sync";
+type TypeScript7Api = Pick<
+	InstanceType<typeof TypeScript7Sync.API>,
+	| "close"
+	| "createProgram"
+	| "getCanonicalFileName"
+	| "getCurrentDirectory"
+	| "getNewLine"
+	| "parseCommandLine"
+	| "parseConfigFile"
+	| "readConfigFile"
+>;
+type TypeScript7SyncModule = Pick<
+	typeof TypeScript7Sync,
+	"formatDiagnosticsWithColorAndContext" | "JsxEmit"
+> & {
+	API: new () => unknown;
+};
 
 /**
  * Uses the `typescript/sync` API for TypeScript 7.1 and later.
@@ -16,7 +33,7 @@ const syncModuleSpecifier = "typescript/sync";
  */
 export class TypeScript7Compiler implements Compiler {
 	readonly useCaseSensitiveFileNames: boolean;
-	private readonly api: InstanceType<typeof TypeScript7Sync.API>;
+	private readonly api: TypeScript7Api;
 	private cachedProject: Project | undefined;
 	private isClosed = false;
 	private program: TypeScript7Sync.Program | undefined;
@@ -24,11 +41,11 @@ export class TypeScript7Compiler implements Compiler {
 		Project,
 		TypeScript7Sync.ParsedCommandLine
 	>();
-	private readonly typescriptSync: typeof TypeScript7Sync;
+	private readonly typescriptSync: TypeScript7SyncModule;
 
 	private constructor(
-		typescriptSync: typeof TypeScript7Sync,
-		api: InstanceType<typeof TypeScript7Sync.API>,
+		typescriptSync: TypeScript7SyncModule,
+		api: TypeScript7Api,
 	) {
 		this.typescriptSync = typescriptSync;
 		this.api = api;
@@ -37,10 +54,20 @@ export class TypeScript7Compiler implements Compiler {
 	}
 
 	static async create(): Promise<TypeScript7Compiler> {
-		const typescriptSync = (await import(
-			syncModuleSpecifier
-		)) as unknown as typeof TypeScript7Sync;
-		const api = new typescriptSync.API();
+		const typescriptSyncModule: unknown = await import(syncModuleSpecifier);
+		if (!isTypeScript7SyncModule(typescriptSyncModule)) {
+			throw new UserError("Could not load the TypeScript 7.1 synchronous API.");
+		}
+
+		const apiValue: unknown = new typescriptSyncModule.API();
+		if (!isTypeScript7Api(apiValue)) {
+			throw new UserError(
+				"Could not initialize the TypeScript 7.1 synchronous API.",
+			);
+		}
+
+		const typescriptSync = typescriptSyncModule;
+		const api = apiValue;
 		try {
 			// Initialize the API before querying its filesystem case sensitivity.
 			api.parseCommandLine([]);
@@ -92,14 +119,14 @@ export class TypeScript7Compiler implements Compiler {
 			throw new Error("Project has no config file path.");
 		}
 
-		const outputOptions = {
+		const outputOptions: OutputOptions = {
 			...config.options,
 			configFilePath,
 			jsx:
 				config.options.jsx === this.typescriptSync.JsxEmit.Preserve
 					? "preserve"
 					: undefined,
-		} as OutputOptions;
+		};
 		const outputPaths = program
 			.getSourceFileNames()
 			.filter((fileName) => {
@@ -129,7 +156,12 @@ export class TypeScript7Compiler implements Compiler {
 		if (config.errors.length > 0) {
 			throw new UserError(
 				this.typescriptSync
-					.formatDiagnosticsWithColorAndContext(config.errors, this.api)
+					.formatDiagnosticsWithColorAndContext(config.errors, {
+						getCanonicalFileName: (fileName) =>
+							this.api.getCanonicalFileName(fileName),
+						getCurrentDirectory: () => this.api.getCurrentDirectory(),
+						getNewLine: () => this.api.getNewLine(),
+					})
 					.trimEnd(),
 			);
 		}
@@ -157,7 +189,7 @@ export class TypeScript7Compiler implements Compiler {
 }
 
 function getExtendedConfigInfo(
-	api: InstanceType<typeof TypeScript7Sync.API>,
+	api: TypeScript7Api,
 	configFilePath: string,
 	rootConfig: unknown,
 ): { configFilePaths: string[]; hasWatchOptions: boolean } {
@@ -172,16 +204,15 @@ function getExtendedConfigInfo(
 
 		configFilePaths.add(normalizedConfigFilePath);
 
-		if (typeof rawConfig !== "object" || rawConfig === null) {
+		if (!isRecord(rawConfig)) {
 			throw new UserError(
 				`Could not safely read TypeScript config '${normalizedConfigFilePath}'.`,
 			);
 		}
 
-		const rawConfigRecord = rawConfig as Record<string, unknown>;
-		hasWatchOptions ||= rawConfigRecord["watchOptions"] !== undefined;
+		hasWatchOptions ||= rawConfig["watchOptions"] !== undefined;
 
-		const extendsValue = rawConfigRecord["extends"];
+		const extendsValue = rawConfig["extends"];
 		if (extendsValue === undefined) {
 			return;
 		}
@@ -211,6 +242,40 @@ function getExtendedConfigInfo(
 		configFilePaths: [...configFilePaths],
 		hasWatchOptions,
 	};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isTypeScript7Api(value: unknown): value is TypeScript7Api {
+	return (
+		isRecord(value) &&
+		typeof value["close"] === "function" &&
+		typeof value["createProgram"] === "function" &&
+		typeof value["getCanonicalFileName"] === "function" &&
+		typeof value["getCurrentDirectory"] === "function" &&
+		typeof value["getNewLine"] === "function" &&
+		typeof value["parseCommandLine"] === "function" &&
+		typeof value["parseConfigFile"] === "function" &&
+		typeof value["readConfigFile"] === "function"
+	);
+}
+
+function isTypeScript7SyncModule(
+	value: unknown,
+): value is TypeScript7SyncModule {
+	if (!isRecord(value)) {
+		return false;
+	}
+
+	const jsxEmit = value["JsxEmit"];
+	return (
+		typeof value["API"] === "function" &&
+		isRecord(jsxEmit) &&
+		typeof jsxEmit["Preserve"] === "number" &&
+		typeof value["formatDiagnosticsWithColorAndContext"] === "function"
+	);
 }
 
 function resolveExtendedConfigPath(

@@ -90,6 +90,10 @@ export default defineConfig(
 		},
 		name: "All source code",
 		rules: {
+			"@typescript-eslint/consistent-type-assertions": [
+				"error",
+				{ assertionStyle: "never" },
+			],
 			"@typescript-eslint/consistent-type-imports": "error",
 			"@typescript-eslint/default-param-last": "error",
 			"@typescript-eslint/strict-boolean-expressions": "error",

@@ -4,6 +4,11 @@ import type { Compiler, Project } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
 
+type ConfigFileMetadata = Pick<
+	ts.TsConfigSourceFile,
+	"extendedSourceFiles" | "fileName"
+>;
+
 /** Uses the `typescript` API for TypeScript 3.9 through 6.x. */
 export class TypeScriptPre7Compiler implements Compiler {
 	readonly useCaseSensitiveFileNames: boolean;
@@ -69,8 +74,10 @@ export class TypeScriptPre7Compiler implements Compiler {
 			);
 		}
 
-		const configFile = parsedCommandLine.options["configFile"] as
-			ts.TsConfigSourceFile | undefined;
+		const configFileOption = parsedCommandLine.options["configFile"];
+		const configFile = isConfigFileMetadata(configFileOption)
+			? configFileOption
+			: undefined;
 		const project: Project = {
 			configFilePaths: [
 				configFile?.fileName ?? configFilePath,
@@ -84,4 +91,29 @@ export class TypeScriptPre7Compiler implements Compiler {
 		this.parsedCommandLines.set(project, parsedCommandLine);
 		return project;
 	}
+}
+
+function isConfigFileMetadata(value: unknown): value is ConfigFileMetadata {
+	if (
+		typeof value !== "object" ||
+		value === null ||
+		!("fileName" in value) ||
+		typeof value.fileName !== "string"
+	) {
+		return false;
+	}
+
+	if (
+		"extendedSourceFiles" in value &&
+		value.extendedSourceFiles !== undefined
+	) {
+		return (
+			Array.isArray(value.extendedSourceFiles) &&
+			value.extendedSourceFiles.every(
+				(fileName: unknown) => typeof fileName === "string",
+			)
+		);
+	}
+
+	return true;
 }

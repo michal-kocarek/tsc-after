@@ -8,10 +8,6 @@ import {
 	typescriptVersion,
 } from "./version.ts";
 
-interface TypeScript7CompilerModule {
-	TypeScript7Compiler: { create(): Promise<Compiler> };
-}
-
 export async function loadCompiler(): Promise<Compiler> {
 	if (typescriptVersion < TYPESCRIPT_3_9) {
 		throw new UserError(
@@ -31,7 +27,6 @@ export async function loadCompiler(): Promise<Compiler> {
 		);
 	}
 
-	const compilerModule =
-		(await import("./typescript7Compiler.ts")) as unknown as TypeScript7CompilerModule;
+	const compilerModule = await import("./typescript7Compiler.ts");
 	return compilerModule.TypeScript7Compiler.create();
 }
