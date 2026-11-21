@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0](https://github.com/michal-kocarek/tsc-after/compare/v0.3.0...v0.4.0) (2026-11-21)
+
+### Features
+
+* clean outputs using program-aware project configuration ([26c301e](https://github.com/michal-kocarek/tsc-after/commit/26c301eb7be6c28e255b55cc1a6cb50e15d0d77c))
+* expand TypeScript compatibility and streamline CI matrix ([3922f20](https://github.com/michal-kocarek/tsc-after/commit/3922f20217b56fb94e90d85468e56656f3dcc5aa))
+* list planned removals and accurate summary in --dry output ([8a7e8ba](https://github.com/michal-kocarek/tsc-after/commit/8a7e8ba643517a1cff0751002f1efbb1f596682c)), closes [#8](https://github.com/michal-kocarek/tsc-after/issues/8)
+* support TypeScript 7.1 with compiler adapters ([8898ee2](https://github.com/michal-kocarek/tsc-after/commit/8898ee2427e8982f423118121ec33f3473771608))
+
+### Bug Fixes
+
+* require rootDir for TypeScript 3.9 through 4.1 ([f18acde](https://github.com/michal-kocarek/tsc-after/commit/f18acde6b726d720674826f7485ce69fa406d0d3))
+* synchronize shell lint dependencies in lockfile ([a87db44](https://github.com/michal-kocarek/tsc-after/commit/a87db4429e63e20567a1fb46d5f628e2d4c1f35e))
+
 ## [0.3.0](https://github.com/michal-kocarek/tsc-after/compare/v0.2.0...v0.3.0) (2026-11-21)
 
 ### ⚠ BREAKING CHANGES
