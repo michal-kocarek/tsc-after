@@ -3,25 +3,22 @@ import path from "node:path";
 import ts from "typescript";
 
 import { binName } from "../common/constants.ts";
-import { isNodeErrorOf } from "../common/errors.ts";
-import {
-	type ParsedCliArgs,
-	print,
-	printError,
-	styleText,
-} from "../common/util.ts";
+import { isNodeErrorOf, UserError } from "../common/errors.ts";
+import { isPathInside } from "../common/paths.ts";
+import { type ParsedCliArgs, print, styleText } from "../common/util.ts";
+
+const MISSING_OUT_DIR_ERROR =
+	'outDir is not set in tsconfig.json; tsc-after only cleans a dedicated outDir. Set compilerOptions.outDir, e.g. "dist".';
 
 export function mainAction(args: ParsedCliArgs) {
 	const cwd = process.cwd();
 	const tsconfigAbsolutePath = path.resolve(cwd, args.values.project);
 	const tsconfigRelativePath = path.relative(cwd, tsconfigAbsolutePath);
 	if (
-		tsconfigRelativePath === "" ||
-		tsconfigRelativePath === ".." ||
-		tsconfigRelativePath.startsWith(`..${path.sep}`) ||
-		path.isAbsolute(tsconfigRelativePath)
+		!isPathInside(cwd, tsconfigAbsolutePath) ||
+		isPathInside(tsconfigAbsolutePath, cwd)
 	) {
-		throw new Error(
+		throw new UserError(
 			`Refusing to traverse outside current working directory to read tsconfig!`,
 		);
 	}
@@ -29,6 +26,11 @@ export function mainAction(args: ParsedCliArgs) {
 	// TODO: Project can be path to folder! Beware And read probably outcome from ts API
 
 	print(`Using tsconfig: ${tsconfigRelativePath}`);
+	const formatHost: ts.FormatDiagnosticsHost = {
+		getCanonicalFileName: (fileName) => fileName,
+		getCurrentDirectory: () => cwd,
+		getNewLine: () => ts.sys.newLine,
+	};
 
 	const tsconfig = ts.getParsedCommandLineOfConfigFile(
 		args.values.project,
@@ -36,75 +38,95 @@ export function mainAction(args: ParsedCliArgs) {
 		{
 			...ts.sys,
 			onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
-				printError(JSON.stringify(diagnostic));
-				throw new Error("Unrecoverable config file diagnostic");
+				throw new UserError(
+					ts.formatDiagnostics([diagnostic], formatHost).trimEnd(),
+				);
 			},
 		},
 	);
 
-	// TODO: What if there is error in tsconfig? How to handle?
+	if (tsconfig === undefined) {
+		throw new UserError("Could not read tsconfig.json.");
+	}
 
-	if (tsconfig?.options.outDir === undefined) {
-		throw new Error("outDir is required");
+	if (tsconfig.errors.length > 0) {
+		throw new UserError(
+			ts.formatDiagnostics(tsconfig.errors, formatHost).trimEnd(),
+		);
+	}
+
+	if (tsconfig.options.outDir === undefined) {
+		throw new UserError(MISSING_OUT_DIR_ERROR);
 	}
 	const outDir = tsconfig.options.outDir;
+	const outDirAbsolutePath = path.resolve(outDir);
 
-	const outDirRelativePath = path.relative(
-		path.dirname(tsconfigAbsolutePath),
-		outDir,
-	);
+	const outDirRelativePath = path.relative(cwd, outDirAbsolutePath);
 	if (
-		outDirRelativePath === "" ||
-		outDirRelativePath === ".." ||
-		outDirRelativePath.startsWith(`..${path.sep}`) ||
-		path.isAbsolute(outDirRelativePath)
+		!isPathInside(cwd, outDirAbsolutePath) ||
+		isPathInside(outDirAbsolutePath, cwd)
 	) {
-		throw new Error(
+		throw new UserError(
 			`Refusing to traverse outside safe paths containing tsconfig to process outDir!`,
 		);
 	}
 
 	if (tsconfig.options.incremental === true) {
-		throw new Error("Incremental mode is not supported");
+		throw new UserError("Incremental mode is not supported");
 	}
 
 	if (tsconfig.options.tsBuildInfoFile !== undefined) {
-		throw new Error("tsBuildInfoFile is not supported");
+		throw new UserError("tsBuildInfoFile is not supported");
 	}
 
 	if (tsconfig.options.composite === true) {
-		throw new Error("Composite mode is not supported");
+		throw new UserError("Composite mode is not supported");
 	}
 
 	if (tsconfig.options.project !== undefined) {
-		throw new Error("Project mode is not supported");
+		throw new UserError("Project mode is not supported");
 	}
 
 	if (tsconfig.options.declarationDir !== undefined) {
-		throw new Error("declarationDir is not supported");
+		throw new UserError("declarationDir is not supported");
 	}
 
 	if (tsconfig.watchOptions) {
-		throw new Error("Watch mode is not supported");
+		throw new UserError("Watch mode is not supported");
 	}
 
-	// TODO: Check for relative paths - are they normalized or what?
+	const isInsideOutDir = (filePath: string) =>
+		isPathInside(outDirAbsolutePath, filePath) ||
+		isPathInside(outDirAbsolutePath, fs.realpathSync(filePath));
 
-	// I’d make the guard more precise than comparing directory names: require an
-	// Explicit outDir, then refuse if any source file in the TypeScript program is
-	// Inside a directory the cleaner would scan. Apply the same check to declarationDir
-	// If it is separate. This allows a normal src/ → dist/ project even when both sit
-	// Under the project root, while rejecting in-place emission and output directories that
-	// Contain source files. Check path containment by directory boundaries and account for
-	// Symlinks before deleting.
+	for (const file of tsconfig.fileNames) {
+		if (isInsideOutDir(path.resolve(file))) {
+			throw new UserError(
+				`Refusing to clean outDir '${outDirRelativePath}': it contains source file '${path.relative(cwd, file)}'.`,
+			);
+		}
+	}
+
+	const configFile = tsconfig.options["configFile"] as
+		ts.TsConfigSourceFile | undefined;
+
+	const configFilePaths: string[] = [
+		configFile?.fileName ?? tsconfigAbsolutePath,
+		...(configFile?.extendedSourceFiles ?? []),
+	];
+	for (const file of configFilePaths) {
+		if (isInsideOutDir(path.resolve(file))) {
+			throw new UserError(
+				`Refusing to clean outDir '${outDirRelativePath}': it contains config file '${path.relative(cwd, file)}'.`,
+			);
+		}
+	}
 
 	// TODO: stat.dev for dist/ folder must equal stat.dev for each file!
 
 	if (args.values.noClean) {
 		return;
 	}
-
-	print(JSON.stringify(tsconfig));
 
 	const expectedOutDirPaths = new Set<string>();
 
@@ -114,15 +136,9 @@ export function mainAction(args: ParsedCliArgs) {
 			file,
 			!ts.sys.useCaseSensitiveFileNames,
 		);
-		// TODO: statSync is okay for source, but for dist use lstatSync
-		const stat = fs.statSync(file);
-
-		print(file, " => ", JSON.stringify(output), JSON.stringify(stat));
 
 		output.forEach((fiePath) => expectedOutDirPaths.add(fiePath));
 	}
-
-	print(JSON.stringify(expectedOutDirPaths));
 
 	type Verdict =
 		| { path: string; reason: string; type: "skipped" }
@@ -137,7 +153,7 @@ export function mainAction(args: ParsedCliArgs) {
 		const stat = fs.lstatSync(dirPath);
 
 		if (!stat.isDirectory()) {
-			throw new Error(`Not a directory ${dirPath}!`);
+			throw new UserError(`Not a directory ${dirPath}!`);
 		}
 
 		let dirIsEmpty = true;
@@ -227,7 +243,7 @@ export function mainAction(args: ParsedCliArgs) {
 	}
 
 	if (outDirExists && fs.realpathSync(outDir) !== path.resolve(outDir)) {
-		throw new Error(
+		throw new UserError(
 			`Refusing to clean outDir through a symbolic link: ${outDirRelativePath}!`,
 		);
 	}
@@ -250,8 +266,6 @@ export function mainAction(args: ParsedCliArgs) {
 			}
 		}
 	}
-
-	// TODO: Avoid running if any of src dirs is inside out dir - essentially so we don't wipe what we do have
 
 	let removedDirs = 0;
 	let removedFiles = 0;

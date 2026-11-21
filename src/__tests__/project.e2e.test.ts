@@ -318,16 +318,21 @@ describe("e2e projects", () => {
 					};
 				});
 
-				expect(cleanupState.cleanup.exitCode).toBe(1);
-				expect(cleanupState.cleanup.stderr).toContain(diagnostic);
-				expect(cleanupState.cleanup.stderr).not.toContain("    at ");
-				expect(cleanupState.configContentsAfter).toBe(config);
-				expect(cleanupState.extraFileContentsAfter).toBe(
-					"Keep this project file.\n",
-				);
-				expect(cleanupState.sourceContentsAfter).toBe(
-					"export const source = true;\n",
-				);
+				expect({
+					configContentsAfter: cleanupState.configContentsAfter,
+					diagnosticFound: cleanupState.cleanup.stderr.includes(diagnostic),
+					exitCode: cleanupState.cleanup.exitCode,
+					extraFileContentsAfter: cleanupState.extraFileContentsAfter,
+					hasNoStackTrace: !cleanupState.cleanup.stderr.includes("    at "),
+					sourceContentsAfter: cleanupState.sourceContentsAfter,
+				}).toStrictEqual({
+					configContentsAfter: config,
+					diagnosticFound: true,
+					exitCode: 1,
+					extraFileContentsAfter: "Keep this project file.\n",
+					hasNoStackTrace: true,
+					sourceContentsAfter: "export const source = true;\n",
+				});
 			}
 		}
 	});
@@ -571,5 +576,245 @@ describe("e2e projects", () => {
 			staleOutputExists: false,
 			stderr: "",
 		});
+	});
+
+	it("refuses to clean when outDir contains a listed source file", async ({
+		expect,
+		task,
+	}) => {
+		for (const dry of [false, true]) {
+			const cleanupState = await withProject(task, async (projectDir) => {
+				const configContents = JSON.stringify({
+					compilerOptions: { outDir: "src", rootDir: "src" },
+					files: ["src/index.ts"],
+				});
+				const configPath = join(projectDir, "tsconfig.json");
+				const sourcePath = join(projectDir, "src/index.ts");
+				const extraFilePath = join(projectDir, "src/README.md");
+				const sourceContents = "export const source = true;\n";
+				const extraFileContents = "Keep this project file.\n";
+				await writeFile(configPath, configContents);
+				await writeFile(sourcePath, sourceContents);
+				await writeFile(extraFilePath, extraFileContents);
+
+				const cleanup = await runTscAfter(dry ? ["--dry"] : [], {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				return {
+					cleanup,
+					configContentsAfter: await readFile(configPath, "utf8"),
+					extraFileContentsAfter: (await pathExists(extraFilePath))
+						? await readFile(extraFilePath, "utf8")
+						: undefined,
+					sourceContentsAfter: (await pathExists(sourcePath))
+						? await readFile(sourcePath, "utf8")
+						: undefined,
+				};
+			});
+
+			expect({
+				configContentsAfter: cleanupState.configContentsAfter,
+				errorMessageFound: cleanupState.cleanup.stderr.includes(
+					"Refusing to clean outDir 'src': it contains source file 'src/index.ts'.",
+				),
+				exitCode: cleanupState.cleanup.exitCode,
+				extraFileContentsAfter: cleanupState.extraFileContentsAfter,
+				hasNoStackTrace: !cleanupState.cleanup.stderr.includes("    at "),
+				sourceContentsAfter: cleanupState.sourceContentsAfter,
+			}).toStrictEqual({
+				configContentsAfter: JSON.stringify({
+					compilerOptions: { outDir: "src", rootDir: "src" },
+					files: ["src/index.ts"],
+				}),
+				errorMessageFound: true,
+				exitCode: 1,
+				extraFileContentsAfter: "Keep this project file.\n",
+				hasNoStackTrace: true,
+				sourceContentsAfter: "export const source = true;\n",
+			});
+		}
+	});
+
+	it("refuses to clean when a source file resolves into outDir", async ({
+		expect,
+		task,
+	}) => {
+		for (const dry of [false, true]) {
+			const cleanupState = await withProject(task, async (projectDir) => {
+				const sourceDir = join(projectDir, "src");
+				const realSourceDir = join(projectDir, "out/real");
+				const sourcePath = join(sourceDir, "index.ts");
+				const realSourcePath = join(realSourceDir, "index.ts");
+				const configContents = JSON.stringify({
+					compilerOptions: {
+						outDir: "out",
+						preserveSymlinks: true,
+						rootDir: "src",
+					},
+					files: ["src/index.ts"],
+				});
+				const configPath = join(projectDir, "tsconfig.json");
+				const sourceContents = "export const source = true;\n";
+				await rm(sourceDir, { recursive: true });
+				await mkdir(realSourceDir, { recursive: true });
+				await writeFile(realSourcePath, sourceContents);
+				await symlink(realSourceDir, sourceDir, "dir");
+				await writeFile(configPath, configContents);
+
+				const cleanup = await runTscAfter(dry ? ["--dry"] : [], {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				return {
+					cleanup,
+					configContentsAfter: await readFile(configPath, "utf8"),
+					realSourceContentsAfter: (await pathExists(realSourcePath))
+						? await readFile(realSourcePath, "utf8")
+						: undefined,
+					sourceContentsAfter: (await pathExists(sourcePath))
+						? await readFile(sourcePath, "utf8")
+						: undefined,
+				};
+			});
+
+			expect({
+				configContentsAfter: cleanupState.configContentsAfter,
+				errorMessageFound: cleanupState.cleanup.stderr.includes(
+					"Refusing to clean outDir 'out': it contains source file",
+				),
+				exitCode: cleanupState.cleanup.exitCode,
+				hasNoStackTrace: !cleanupState.cleanup.stderr.includes("    at "),
+				realSourceContentsAfter: cleanupState.realSourceContentsAfter,
+				sourceContentsAfter: cleanupState.sourceContentsAfter,
+			}).toStrictEqual({
+				configContentsAfter: JSON.stringify({
+					compilerOptions: {
+						outDir: "out",
+						preserveSymlinks: true,
+						rootDir: "src",
+					},
+					files: ["src/index.ts"],
+				}),
+				errorMessageFound: true,
+				exitCode: 1,
+				hasNoStackTrace: true,
+				realSourceContentsAfter: "export const source = true;\n",
+				sourceContentsAfter: "export const source = true;\n",
+			});
+		}
+	});
+
+	it("refuses to clean when outDir contains an extended config", async ({
+		expect,
+		task,
+	}) => {
+		for (const dry of [false, true]) {
+			const cleanupState = await withProject(task, async (projectDir) => {
+				const extendedConfigPath = join(projectDir, "dist/base.json");
+				const configPath = join(projectDir, "tsconfig.json");
+				const sourcePath = join(projectDir, "src/index.ts");
+				const extendedConfigContents = JSON.stringify({ compilerOptions: {} });
+				const configContents = JSON.stringify({
+					compilerOptions: { outDir: "dist", rootDir: "src" },
+					extends: "./dist/base.json",
+				});
+				const sourceContents = await readFile(sourcePath, "utf8");
+				await mkdir(dirname(extendedConfigPath), { recursive: true });
+				await writeFile(extendedConfigPath, extendedConfigContents);
+				await writeFile(configPath, configContents);
+
+				const cleanup = await runTscAfter(dry ? ["--dry"] : [], {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				return {
+					cleanup,
+					configContentsAfter: await readFile(configPath, "utf8"),
+					extendedConfigContentsAfter: (await pathExists(extendedConfigPath))
+						? await readFile(extendedConfigPath, "utf8")
+						: undefined,
+					sourceContents,
+					sourceContentsAfter: await readFile(sourcePath, "utf8"),
+				};
+			});
+
+			expect({
+				configContentsAfter: cleanupState.configContentsAfter,
+				errorMessageFound: cleanupState.cleanup.stderr.includes(
+					"Refusing to clean outDir 'dist': it contains config file 'dist/base.json'.",
+				),
+				exitCode: cleanupState.cleanup.exitCode,
+				extendedConfigContentsAfter: cleanupState.extendedConfigContentsAfter,
+				hasNoStackTrace: !cleanupState.cleanup.stderr.includes("    at "),
+				sourceContents: cleanupState.sourceContents,
+				sourceContentsAfter: cleanupState.sourceContentsAfter,
+			}).toStrictEqual({
+				configContentsAfter: JSON.stringify({
+					compilerOptions: { outDir: "dist", rootDir: "src" },
+					extends: "./dist/base.json",
+				}),
+				errorMessageFound: true,
+				exitCode: 1,
+				extendedConfigContentsAfter: JSON.stringify({ compilerOptions: {} }),
+				hasNoStackTrace: true,
+				sourceContents: cleanupState.sourceContents,
+				sourceContentsAfter: cleanupState.sourceContents,
+			});
+		}
+	});
+
+	it("cleans a nested outDir without removing source files", async ({
+		expect,
+		task,
+	}) => {
+		for (const dry of [false, true]) {
+			const cleanupState = await withProject(task, async (projectDir) => {
+				const configPath = join(projectDir, "tsconfig.json");
+				const sourcePath = join(projectDir, "src/index.ts");
+				const staleOutputPath = join(projectDir, "src/out/stale.js");
+				const configContents = JSON.stringify({
+					compilerOptions: { outDir: "src/out", rootDir: "src" },
+				});
+				const sourceContents = await readFile(sourcePath, "utf8");
+				await writeFile(configPath, configContents);
+				await mkdir(dirname(staleOutputPath), { recursive: true });
+				await writeFile(staleOutputPath, "stale output");
+
+				const cleanup = await runTscAfter(dry ? ["--dry"] : [], {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				return {
+					cleanup,
+					configContentsAfter: await readFile(configPath, "utf8"),
+					sourceContents,
+					sourceContentsAfter: await readFile(sourcePath, "utf8"),
+					staleOutputExists: await pathExists(staleOutputPath),
+				};
+			});
+
+			expect({
+				configContentsAfter: cleanupState.configContentsAfter,
+				exitCode: cleanupState.cleanup.exitCode,
+				sourceContents: cleanupState.sourceContents,
+				sourceContentsAfter: cleanupState.sourceContentsAfter,
+				staleOutputExists: cleanupState.staleOutputExists,
+				stderr: cleanupState.cleanup.stderr,
+			}).toStrictEqual({
+				configContentsAfter: JSON.stringify({
+					compilerOptions: { outDir: "src/out", rootDir: "src" },
+				}),
+				exitCode: 0,
+				sourceContents: cleanupState.sourceContents,
+				sourceContentsAfter: cleanupState.sourceContents,
+				staleOutputExists: dry,
+				stderr: "",
+			});
+		}
 	});
 });

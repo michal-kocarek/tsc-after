@@ -1,3 +1,6 @@
+/** Error whose message is human-readable and printed to the user without a stack trace. */
+export class UserError extends Error {}
+
 export function isNodeErrorOf<TError extends Error, TCode extends string>(
 	error: unknown,
 	errorClass: new () => TError,
