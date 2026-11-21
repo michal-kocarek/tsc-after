@@ -12,8 +12,18 @@ const MISSING_OUT_DIR_ERROR =
 
 export function mainAction(args: ParsedCliArgs) {
 	const cwd = process.cwd();
-	const tsconfigAbsolutePath = path.resolve(cwd, args.values.project);
-	const tsconfigRelativePath = path.relative(cwd, tsconfigAbsolutePath);
+	const projectAbsolutePath = path.resolve(cwd, args.values.project);
+	if (!isPathInside(cwd, projectAbsolutePath)) {
+		throw new UserError(
+			`Refusing to traverse outside current working directory to read tsconfig!`,
+		);
+	}
+
+	const tsconfigAbsolutePath =
+		fs.existsSync(projectAbsolutePath) &&
+		fs.statSync(projectAbsolutePath).isDirectory()
+			? path.join(projectAbsolutePath, "tsconfig.json")
+			: projectAbsolutePath;
 	if (
 		!isPathInside(cwd, tsconfigAbsolutePath) ||
 		isPathInside(tsconfigAbsolutePath, cwd)
@@ -22,8 +32,7 @@ export function mainAction(args: ParsedCliArgs) {
 			`Refusing to traverse outside current working directory to read tsconfig!`,
 		);
 	}
-
-	// TODO: Project can be path to folder! Beware And read probably outcome from ts API
+	const tsconfigRelativePath = path.relative(cwd, tsconfigAbsolutePath);
 
 	print(`Using tsconfig: ${tsconfigRelativePath}`);
 	const formatHost: ts.FormatDiagnosticsHost = {
@@ -33,7 +42,7 @@ export function mainAction(args: ParsedCliArgs) {
 	};
 
 	const tsconfig = ts.getParsedCommandLineOfConfigFile(
-		args.values.project,
+		tsconfigAbsolutePath,
 		undefined,
 		{
 			...ts.sys,

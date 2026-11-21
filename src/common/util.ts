@@ -39,11 +39,11 @@ const PARSE_ARGS_ERROR_CODES = [
 
 export type ParsedCliArgs = ReturnType<typeof parseArgs>;
 
-export function parseArgs() {
+export function parseArgs(args: string[]) {
 	try {
 		// Node.js 16.19 / 18.11 added `default` to `util.parseArgs()`, which sets the `engines.node` floor.
 		// eslint-disable-next-line n/no-unsupported-features/node-builtins -- Experimental there, but behaves the same.
-		return util.parseArgs({ options: cliArgsOptions });
+		return util.parseArgs({ args, options: cliArgsOptions });
 	} catch (error) {
 		if (isParseArgsError(error)) {
 			process.exitCode = EXIT_CODE_INVALID_ARGUMENTS;

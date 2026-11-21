@@ -40,5 +40,6 @@ export default defineConfig({
 		},
 		setupFiles: ["console-fail-test/setup"],
 		strictTags: true,
+		unstubGlobals: true,
 	},
 });

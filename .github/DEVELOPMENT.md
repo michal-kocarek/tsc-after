@@ -80,6 +80,9 @@ pnpm run test:unit --coverage
 Note that [console-fail-test](https://github.com/JoshuaKGoldberg/console-fail-test) is enabled for all test runs.
 Calls to `console.log`, `console.warn`, and other console methods will cause a test to fail.
 
+Pass argument arrays directly to argument-parsing functions in tests instead of stubbing `process.argv` or making production parameters optional for test convenience.
+When a test needs isolated process state, use `vi.stubGlobal("process", { ...process, ... })`; Vitest is configured to restore stubbed globals between tests, so keep the stub and code under test synchronous because tests in a file can run concurrently.
+
 ## Type Checking
 
 You should be able to see suggestions from [TypeScript](https://typescriptlang.org) in your editor for all open files.

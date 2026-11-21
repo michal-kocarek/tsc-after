@@ -41,6 +41,7 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 
 ## Testing
 
+- For development or testing workflow details, consult [`.github/DEVELOPMENT.md`](.github/DEVELOPMENT.md).
 - Run `pnpm typecheck` when validating code changes; `pnpm build` uses tsdown and does not typecheck.
 - Tests use Vitest and live in `__tests__` next to the code: `*.unit.test.ts` for unit tests, `*.e2e.test.ts` for end-to-end tests.
 - Use `expect` from the test context (`it("...", ({ expect }) => { ... })`), not the global one.
@@ -48,6 +49,7 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 - Avoid excessive mocking; prefer testing real behavior.
   Mock only at the boundaries (e.g. `console.*`, filesystem, process), not the project's own modules.
   If you see too much of mocks, stop and propose to convert test case to higher-level tests.
+- Don't make production arguments optional solely to simplify tests; pass test inputs explicitly.
 - Tests fail on any console output (`console-fail-test`).
   To test printed output, spy on the console method and capture it: `using log = vi.spyOn(console, "log").mockReturnValue();`.
 - Test files are isolated (own modules and globals); tests within a file run concurrently (`sequence.concurrent`).

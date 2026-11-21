@@ -6,7 +6,7 @@ import { version } from "../tasks/version.ts";
 
 function main(): void {
 	try {
-		const args = parseArgs();
+		const args = parseArgs(process.argv.slice(2));
 
 		if (args.values.version) {
 			version();
