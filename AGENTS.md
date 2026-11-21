@@ -4,6 +4,17 @@
 - Avoid duplication, extract magic constants.
 - When creating a new file, `git add` it.
 
+## Code layout
+
+- `src/entrypoints/`: command-line entrypoints.
+- `src/tasks/`: main actions an entrypoint runs (`mainAction`, `help`, `version`).
+- `src/common/`: shared helpers and everything else.
+
+## Issues
+
+- Issues and milestones are tracked in [GitHub](https://github.com/michal-kocarek/tsc-after) (the `origin` remote).
+- Treat references such as `#14` as GitHub issue numbers; read them with GitHub tools or `gh issue view <number>`.
+
 ## Naming
 
 This tool is a companion to `tsc`, so mirror its vocabulary in identifiers, CLI flags, help text, messages, and docs.
