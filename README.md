@@ -30,6 +30,11 @@ Copy assets _after_ cleanup (`tsc && tsc-after && cp assets/* dist/assets/`), or
 Planned: `--copy`, `--exclude`, `--watch`, and project references.
 See [`product.md`](./docs/product.md) for the roadmap.
 
+## Requirements
+
+- `tsconfig.json` must be present (unlike `tsc`, it does not search parent directories for `tsconfig.json`)
+- source code must be compiled in dedicated `outDir` path
+
 ## Why not `rm -rf dist && tsc`?
 
 Wiping `outDir` before every build (`rm -rf dist && tsc`, `rimraf dist && tsc`, or a `prebuild` script) is the usual fix for stale outputs.
@@ -54,7 +59,7 @@ So if your `build` script starts with `rm -rf dist &&` or `rimraf dist &&`, drop
  }
 ```
 
-Using a bundler such as tsup, Vite, or esbuild?
+**Using a bundler such as tsup, Vite, or esbuild?**<br>
 They already clean up after themselves, so you probably don't need `tsc-after`.
 
 ## Contributing
