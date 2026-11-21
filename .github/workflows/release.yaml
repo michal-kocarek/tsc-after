@@ -21,9 +21,17 @@ env:
   FORCE_COLOR: 1
 
 jobs:
+  ci:
+    name: CI
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yaml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   release:
     name: "Release${{ inputs.release_version && format(' ({0})', inputs.release_version) || '' }}${{ inputs.dry_run && ' (dry run)' || '' }}"
     if: github.ref == 'refs/heads/main'
+    needs: ci
     runs-on: ubuntu-latest
     environment: npm-release
     permissions:
