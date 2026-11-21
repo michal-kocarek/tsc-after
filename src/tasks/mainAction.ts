@@ -131,8 +131,6 @@ export function mainAction(args: ParsedCliArgs) {
 		}
 	}
 
-	// TODO: stat.dev for dist/ folder must equal stat.dev for each file!
-
 	if (args.values.noClean) {
 		return;
 	}
