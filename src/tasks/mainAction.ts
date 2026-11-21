@@ -3,6 +3,7 @@ import path from "node:path";
 import ts from "typescript";
 
 import { binName } from "../common/constants.ts";
+import { isNodeErrorOf } from "../common/errors.ts";
 import {
 	type ParsedCliArgs,
 	print,
@@ -46,10 +47,11 @@ export function mainAction(args: ParsedCliArgs) {
 	if (tsconfig?.options.outDir === undefined) {
 		throw new Error("outDir is required");
 	}
+	const outDir = tsconfig.options.outDir;
 
 	const outDirRelativePath = path.relative(
 		path.dirname(tsconfigAbsolutePath),
-		tsconfig.options.outDir,
+		outDir,
 	);
 	if (
 		outDirRelativePath === "" ||
@@ -132,8 +134,8 @@ export function mainAction(args: ParsedCliArgs) {
 		verdicts: Verdict[];
 	} {
 		const verdicts: Verdict[] = [];
-		// TODO: Does this need to be here?
 		const stat = fs.lstatSync(dirPath);
+
 		if (!stat.isDirectory()) {
 			throw new Error(`Not a directory ${dirPath}!`);
 		}
@@ -201,7 +203,18 @@ export function mainAction(args: ParsedCliArgs) {
 		return { dirIsEmpty, verdicts };
 	}
 
-	const result = readDir(tsconfig.options.outDir);
+	let outDirExists = true;
+	try {
+		fs.lstatSync(outDir);
+	} catch (error) {
+		if (!isNodeErrorOf(error, Error, "ENOENT")) {
+			throw error;
+		}
+
+		outDirExists = false;
+	}
+
+	const result = outDirExists ? readDir(outDir) : { verdicts: [] };
 
 	// TODO: Merge these two switches into single loop, and nest the verbose and dry conditions down
 	if (args.values.verbose) {

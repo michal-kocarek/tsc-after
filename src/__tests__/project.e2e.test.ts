@@ -231,4 +231,160 @@ describe("e2e projects", () => {
 			staleSourceExistsAfterCleanup: false,
 		});
 	});
+
+	it("treats missing output directories as a no-op in normal and dry modes", async ({
+		expect,
+		task,
+	}) => {
+		for (const outDir of ["dist", "missing-parent/dist"]) {
+			for (const dry of [false, true]) {
+				const cleanupState = await withProject(task, async (projectDir) => {
+					await writeFile(
+						join(projectDir, "tsconfig.json"),
+						JSON.stringify({
+							compilerOptions: { outDir, rootDir: "src" },
+						}),
+					);
+
+					const sourceContents = await readFile(
+						join(projectDir, sourceFile),
+						"utf8",
+					);
+					const cleanup = await runTscAfter(dry ? ["--dry"] : [], {
+						allowFailure: true,
+						cwd: projectDir,
+					});
+
+					return {
+						cleanup,
+						outDirExists: await pathExists(join(projectDir, outDir)),
+						sourceUnchanged:
+							(await readFile(join(projectDir, sourceFile), "utf8")) ===
+							sourceContents,
+					};
+				});
+
+				expect({
+					exitCode: cleanupState.cleanup.exitCode,
+					expectedOutput:
+						cleanupState.cleanup.stdout.includes(
+							"Using tsconfig: tsconfig.json",
+						) &&
+						(!dry ||
+							cleanupState.cleanup.stdout.includes(
+								`tsc-after: Would remove 0 files from ${outDir}`,
+							)),
+					outDirExists: cleanupState.outDirExists,
+					sourceUnchanged: cleanupState.sourceUnchanged,
+					stderr: cleanupState.cleanup.stderr,
+				}).toStrictEqual({
+					exitCode: 0,
+					expectedOutput: true,
+					outDirExists: false,
+					sourceUnchanged: true,
+					stderr: "",
+				});
+			}
+		}
+	});
+
+	it("does not treat a non-directory outDir as missing in normal or dry modes", async ({
+		expect,
+		task,
+	}) => {
+		for (const dry of [false, true]) {
+			const cleanupState = await withProject(task, async (projectDir) => {
+				const outDir = "not-a-directory";
+				await writeFile(join(projectDir, outDir), "not a directory");
+				await writeFile(
+					join(projectDir, "tsconfig.json"),
+					JSON.stringify({
+						compilerOptions: { outDir, rootDir: "src" },
+					}),
+				);
+
+				const sourceContents = await readFile(
+					join(projectDir, sourceFile),
+					"utf8",
+				);
+				const cleanup = await runTscAfter(dry ? ["--dry"] : [], {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				return {
+					cleanup,
+					sourceContents,
+					sourceContentsAfter: await readFile(
+						join(projectDir, sourceFile),
+						"utf8",
+					),
+				};
+			});
+
+			expect(cleanupState.cleanup.exitCode).toBe(1);
+			expect(cleanupState.cleanup.stderr).toContain("Not a directory");
+			expect(cleanupState.cleanup.stdout).toContain(
+				"Using tsconfig: tsconfig.json",
+			);
+			expect(cleanupState.sourceContentsAfter).toBe(
+				cleanupState.sourceContents,
+			);
+		}
+	});
+
+	it("does not treat an outDir below a file as missing in normal or dry modes", async ({
+		expect,
+		task,
+	}) => {
+		for (const dry of [false, true]) {
+			const cleanupState = await withProject(task, async (projectDir) => {
+				const parentFile = "not-a-directory";
+				const parentContents = "not a directory";
+				const outDir = join(parentFile, "dist");
+				await writeFile(join(projectDir, parentFile), parentContents);
+				await writeFile(
+					join(projectDir, "tsconfig.json"),
+					JSON.stringify({
+						compilerOptions: { outDir, rootDir: "src" },
+					}),
+				);
+
+				const sourceContents = await readFile(
+					join(projectDir, sourceFile),
+					"utf8",
+				);
+				const cleanup = await runTscAfter(dry ? ["--dry"] : [], {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				return {
+					cleanup,
+					parentContents,
+					parentContentsAfter: await readFile(
+						join(projectDir, parentFile),
+						"utf8",
+					),
+					sourceContents,
+					sourceContentsAfter: await readFile(
+						join(projectDir, sourceFile),
+						"utf8",
+					),
+				};
+			});
+
+			expect(cleanupState.cleanup.exitCode).toBe(1);
+			expect(cleanupState.cleanup.stderr).toContain("ENOTDIR");
+			expect(cleanupState.cleanup.stdout).toContain(
+				"Using tsconfig: tsconfig.json",
+			);
+			expect(cleanupState.parentContentsAfter).toBe(
+				cleanupState.parentContents,
+			);
+			expect(cleanupState.sourceContentsAfter).toBe(
+				cleanupState.sourceContents,
+			);
+		}
+	});
 });
