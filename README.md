@@ -30,8 +30,8 @@ Additional usage:
 # Clean after compile; run after tsc build.
 tsc-after
 
-# Preview for tsconfig.json; --verbose lists individual paths.
-tsc-after --dry --verbose
+# Preview planned removals for tsconfig.json.
+tsc-after --dry
 
 # Select a tsconfig file instead of the default.
 tsc-after --project tsconfig.build.json
@@ -47,7 +47,8 @@ For a basic project with a dedicated `outDir`, `tsc-after` uses TypeScript to id
 It skips symbolic links and entries on other devices.
 This behavior and its safety limits are not yet verified for every TypeScript configuration or output type.
 
-`--dry` leaves files unchanged, but individual paths are currently printed only with `--verbose`; its summary also reports zero files removed rather than counting planned removals ([issue #8](https://github.com/michal-kocarek/tsc-after/issues/8)).
+`--dry` lists planned removals without changing files.
+Use `--verbose` to add individual removed and skipped entries.
 
 ## Limitations
 

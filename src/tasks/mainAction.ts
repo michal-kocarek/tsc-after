@@ -132,7 +132,7 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 
 		let dirIsEmpty = true;
 
-		for (const child of fs.readdirSync(dirPath)) {
+		for (const child of fs.readdirSync(dirPath).sort()) {
 			const fullPath = path.join(dirPath, child);
 			const fullPathStat = fs.lstatSync(fullPath);
 
@@ -224,46 +224,60 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 
 	const result = outDirExists ? readDir(outDir) : { verdicts: [] };
 
-	// TODO: Merge these two switches into single loop, and nest the verbose and dry conditions down
-	if (args.values.verbose) {
-		for (const verdict of result.verdicts) {
-			switch (verdict.type) {
-				case "removeDir":
-					print(`Remove empty directory: ${verdict.path}`);
-					break;
-				case "removeFile":
-					print(`Remove file: ${verdict.path}`);
-					break;
-				case "skipped":
-					print(`Skipped (${verdict.reason}): ${verdict.path}`);
-					break;
-			}
-		}
-	}
+	const { dry, verbose } = args.values;
+	const removeVerb = dry ? "Would remove" : "Removed";
+	let fileCount = 0;
+	let dirCount = 0;
 
-	let removedDirs = 0;
-	let removedFiles = 0;
+	for (const verdict of result.verdicts) {
+		const displayPath = path.relative(cwd, verdict.path);
 
-	if (!args.values.dry) {
-		for (const verdict of result.verdicts) {
-			switch (verdict.type) {
-				case "removeDir":
+		switch (verdict.type) {
+			case "removeDir":
+				if (!dry) {
 					fs.rmdirSync(verdict.path);
-					removedDirs++;
-					break;
-				case "removeFile":
+				}
+				dirCount++;
+				if (dry || verbose) {
+					print(`${removeVerb} empty directory: ${displayPath}`);
+				}
+				break;
+			case "removeFile":
+				if (!dry) {
 					fs.rmSync(verdict.path, { recursive: false });
-					removedFiles++;
-					break;
-				case "skipped":
-					break;
-			}
+				}
+				fileCount++;
+				if (dry || verbose) {
+					print(`${removeVerb} file: ${displayPath}`);
+				}
+				break;
+			case "skipped":
+				if (verbose) {
+					print(`Skipped (${verdict.reason}): ${displayPath}`);
+				}
+				break;
 		}
 	}
 
-	if (args.values.dry || removedDirs > 0 || removedFiles > 0) {
+	const parts: string[] = [];
+	if (fileCount > 0) {
+		parts.push(formatCount(fileCount, "file", "files"));
+	}
+	if (dirCount > 0) {
+		parts.push(formatCount(dirCount, "empty directory", "empty directories"));
+	}
+
+	if (parts.length > 0) {
 		print(
-			`${binName}: ${args.values.dry ? "Would remove" : "Removed"} ${removedFiles.toFixed()} files${removedDirs > 0 ? ` and ${removedDirs.toFixed()} empty directories` : ""} from ${styleText("italic", outDirRelativePath)}`,
+			`${binName}: ${removeVerb} ${parts.join(" and ")} from ${styleText("italic", outDirRelativePath)}`,
+		);
+	} else if (dry) {
+		print(
+			`${binName}: Nothing to remove from ${styleText("italic", outDirRelativePath)}`,
 		);
 	}
+}
+
+function formatCount(count: number, singular: string, plural: string): string {
+	return `${count.toFixed()} ${count === 1 ? singular : plural}`;
 }

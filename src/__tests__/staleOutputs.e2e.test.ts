@@ -246,7 +246,7 @@ describe("stale outputs", () => {
 					) &&
 					(mode !== "dry" ||
 						cleanupState.cleanup.stdout.includes(
-							`tsc-after: Would remove 0 files from ${outDir}`,
+							`tsc-after: Nothing to remove from ${outDir}`,
 						)),
 				outDirExists: cleanupState.outDirExists,
 				sourceUnchanged: cleanupState.sourceUnchanged,
