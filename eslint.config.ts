@@ -174,6 +174,7 @@ export default defineConfig(
 					],
 				},
 			],
+			"vitest/max-expects": ["warn", { max: 10 }],
 			"vitest/no-hooks": "off",
 			"vitest/prefer-expect-assertions": "off",
 			"vitest/prefer-importing-vitest-globals": "off",
