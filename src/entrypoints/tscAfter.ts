@@ -4,7 +4,7 @@ import { help } from "../tasks/help.ts";
 import { mainAction } from "../tasks/mainAction.ts";
 import { version } from "../tasks/version.ts";
 
-function main(): void {
+async function main(): Promise<void> {
 	try {
 		const args = parseArgs(process.argv.slice(2));
 
@@ -13,7 +13,7 @@ function main(): void {
 		} else if (args.values.help) {
 			help();
 		} else {
-			mainAction(args);
+			await mainAction(args);
 		}
 	} catch (error) {
 		if (!(error instanceof UserError)) {
@@ -24,4 +24,4 @@ function main(): void {
 	}
 }
 
-main();
+void main();

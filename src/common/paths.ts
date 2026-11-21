@@ -1,11 +1,14 @@
 import path from "node:path";
-import ts from "typescript";
 
-export function isPathInside(dirPath: string, filePath: string): boolean {
-	const normalizedDirPath = ts.sys.useCaseSensitiveFileNames
+export function isPathInside(
+	dirPath: string,
+	filePath: string,
+	useCaseSensitiveFileNames: boolean,
+): boolean {
+	const normalizedDirPath = useCaseSensitiveFileNames
 		? dirPath
 		: dirPath.toLowerCase();
-	const normalizedFilePath = ts.sys.useCaseSensitiveFileNames
+	const normalizedFilePath = useCaseSensitiveFileNames
 		? filePath
 		: filePath.toLowerCase();
 	const relativePath = path.relative(normalizedDirPath, normalizedFilePath);

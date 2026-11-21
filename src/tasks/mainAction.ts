@@ -1,150 +1,117 @@
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
 
 import { binName } from "../common/constants.ts";
 import { isNodeErrorOf, UserError } from "../common/errors.ts";
 import { isPathInside } from "../common/paths.ts";
+import { loadCompiler } from "../common/typescript/loadCompiler.ts";
 import { type ParsedCliArgs, print, styleText } from "../common/util.ts";
 
 const MISSING_OUT_DIR_ERROR =
 	'outDir is not set in tsconfig.json; tsc-after only cleans a dedicated outDir. Set compilerOptions.outDir, e.g. "dist".';
 
-export function mainAction(args: ParsedCliArgs) {
+export async function mainAction(args: ParsedCliArgs): Promise<void> {
 	const cwd = process.cwd();
-	const projectAbsolutePath = path.resolve(cwd, args.values.project);
-	if (!isPathInside(cwd, projectAbsolutePath)) {
-		throw new UserError(
-			`Refusing to traverse outside current working directory to read tsconfig!`,
-		);
-	}
+	const compiler = await loadCompiler();
+	let outDir: string;
+	let outDirRelativePath: string;
+	let expectedOutDirPaths: Set<string>;
 
-	const tsconfigAbsolutePath =
-		fs.existsSync(projectAbsolutePath) &&
-		fs.statSync(projectAbsolutePath).isDirectory()
-			? path.join(projectAbsolutePath, "tsconfig.json")
-			: projectAbsolutePath;
-	if (
-		!isPathInside(cwd, tsconfigAbsolutePath) ||
-		isPathInside(tsconfigAbsolutePath, cwd)
-	) {
-		throw new UserError(
-			`Refusing to traverse outside current working directory to read tsconfig!`,
-		);
-	}
-	const tsconfigRelativePath = path.relative(cwd, tsconfigAbsolutePath);
+	try {
+		const isPathInsideWithCompiler = (dirPath: string, filePath: string) =>
+			isPathInside(dirPath, filePath, compiler.useCaseSensitiveFileNames);
+		const projectAbsolutePath = path.resolve(cwd, args.values.project);
+		if (!isPathInsideWithCompiler(cwd, projectAbsolutePath)) {
+			throw new UserError(
+				`Refusing to traverse outside current working directory to read tsconfig!`,
+			);
+		}
 
-	print(`Using tsconfig: ${tsconfigRelativePath}`);
-	const formatHost: ts.FormatDiagnosticsHost = {
-		getCanonicalFileName: (fileName) => fileName,
-		getCurrentDirectory: () => cwd,
-		getNewLine: () => ts.sys.newLine,
-	};
+		const tsconfigAbsolutePath =
+			fs.existsSync(projectAbsolutePath) &&
+			fs.statSync(projectAbsolutePath).isDirectory()
+				? path.join(projectAbsolutePath, "tsconfig.json")
+				: projectAbsolutePath;
+		if (
+			!isPathInsideWithCompiler(cwd, tsconfigAbsolutePath) ||
+			isPathInsideWithCompiler(tsconfigAbsolutePath, cwd)
+		) {
+			throw new UserError(
+				`Refusing to traverse outside current working directory to read tsconfig!`,
+			);
+		}
+		const tsconfigRelativePath = path.relative(cwd, tsconfigAbsolutePath);
 
-	const tsconfig = ts.getParsedCommandLineOfConfigFile(
-		tsconfigAbsolutePath,
-		undefined,
-		{
-			...ts.sys,
-			onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+		print(`Using tsconfig: ${tsconfigRelativePath}`);
+		const project = compiler.parseProject(tsconfigAbsolutePath);
+
+		if (project.options.outDir === undefined) {
+			throw new UserError(MISSING_OUT_DIR_ERROR);
+		}
+		outDir = project.options.outDir;
+		const outDirAbsolutePath = path.resolve(outDir);
+
+		outDirRelativePath = path.relative(cwd, outDirAbsolutePath);
+		if (
+			!isPathInsideWithCompiler(cwd, outDirAbsolutePath) ||
+			isPathInsideWithCompiler(outDirAbsolutePath, cwd)
+		) {
+			throw new UserError(
+				`Refusing to traverse outside safe paths containing tsconfig to process outDir!`,
+			);
+		}
+
+		if (project.options.incremental === true) {
+			throw new UserError("Incremental mode is not supported");
+		}
+
+		if (project.options.tsBuildInfoFile !== undefined) {
+			throw new UserError("tsBuildInfoFile is not supported");
+		}
+
+		if (project.options.composite === true) {
+			throw new UserError("Composite mode is not supported");
+		}
+
+		if (project.options.project !== undefined) {
+			throw new UserError("Project mode is not supported");
+		}
+
+		if (project.options.declarationDir !== undefined) {
+			throw new UserError("declarationDir is not supported");
+		}
+
+		if (project.hasWatchOptions) {
+			throw new UserError("Watch mode is not supported");
+		}
+
+		const isInsideOutDir = (filePath: string) =>
+			isPathInsideWithCompiler(outDirAbsolutePath, filePath) ||
+			isPathInsideWithCompiler(outDirAbsolutePath, fs.realpathSync(filePath));
+
+		for (const file of project.fileNames) {
+			if (isInsideOutDir(path.resolve(file))) {
 				throw new UserError(
-					ts.formatDiagnostics([diagnostic], formatHost).trimEnd(),
+					`Refusing to clean outDir '${outDirRelativePath}': it contains source file '${path.relative(cwd, file)}'.`,
 				);
-			},
-		},
-	);
-
-	if (tsconfig === undefined) {
-		throw new UserError("Could not read tsconfig.json.");
-	}
-
-	if (tsconfig.errors.length > 0) {
-		throw new UserError(
-			ts.formatDiagnostics(tsconfig.errors, formatHost).trimEnd(),
-		);
-	}
-
-	if (tsconfig.options.outDir === undefined) {
-		throw new UserError(MISSING_OUT_DIR_ERROR);
-	}
-	const outDir = tsconfig.options.outDir;
-	const outDirAbsolutePath = path.resolve(outDir);
-
-	const outDirRelativePath = path.relative(cwd, outDirAbsolutePath);
-	if (
-		!isPathInside(cwd, outDirAbsolutePath) ||
-		isPathInside(outDirAbsolutePath, cwd)
-	) {
-		throw new UserError(
-			`Refusing to traverse outside safe paths containing tsconfig to process outDir!`,
-		);
-	}
-
-	if (tsconfig.options.incremental === true) {
-		throw new UserError("Incremental mode is not supported");
-	}
-
-	if (tsconfig.options.tsBuildInfoFile !== undefined) {
-		throw new UserError("tsBuildInfoFile is not supported");
-	}
-
-	if (tsconfig.options.composite === true) {
-		throw new UserError("Composite mode is not supported");
-	}
-
-	if (tsconfig.options.project !== undefined) {
-		throw new UserError("Project mode is not supported");
-	}
-
-	if (tsconfig.options.declarationDir !== undefined) {
-		throw new UserError("declarationDir is not supported");
-	}
-
-	if (tsconfig.watchOptions) {
-		throw new UserError("Watch mode is not supported");
-	}
-
-	const isInsideOutDir = (filePath: string) =>
-		isPathInside(outDirAbsolutePath, filePath) ||
-		isPathInside(outDirAbsolutePath, fs.realpathSync(filePath));
-
-	for (const file of tsconfig.fileNames) {
-		if (isInsideOutDir(path.resolve(file))) {
-			throw new UserError(
-				`Refusing to clean outDir '${outDirRelativePath}': it contains source file '${path.relative(cwd, file)}'.`,
-			);
+			}
 		}
-	}
 
-	const configFile = tsconfig.options["configFile"] as
-		ts.TsConfigSourceFile | undefined;
-
-	const configFilePaths: string[] = [
-		configFile?.fileName ?? tsconfigAbsolutePath,
-		...(configFile?.extendedSourceFiles ?? []),
-	];
-	for (const file of configFilePaths) {
-		if (isInsideOutDir(path.resolve(file))) {
-			throw new UserError(
-				`Refusing to clean outDir '${outDirRelativePath}': it contains config file '${path.relative(cwd, file)}'.`,
-			);
+		for (const file of project.configFilePaths) {
+			if (isInsideOutDir(path.resolve(file))) {
+				throw new UserError(
+					`Refusing to clean outDir '${outDirRelativePath}': it contains config file '${path.relative(cwd, file)}'.`,
+				);
+			}
 		}
-	}
 
-	if (args.values.noClean) {
-		return;
-	}
+		if (args.values.noClean) {
+			return;
+		}
 
-	const expectedOutDirPaths = new Set<string>();
-
-	for (const file of tsconfig.fileNames) {
-		const output = ts.getOutputFileNames(
-			tsconfig,
-			file,
-			!ts.sys.useCaseSensitiveFileNames,
-		);
-
-		output.forEach((fiePath) => expectedOutDirPaths.add(fiePath));
+		expectedOutDirPaths = compiler.getOutputPaths(project);
+	} finally {
+		compiler.close();
 	}
 
 	type Verdict =
