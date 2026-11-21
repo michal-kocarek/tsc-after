@@ -15,6 +15,11 @@
 - For compiler or cleanup changes, follow the [Design standards](.github/DEVELOPMENT.md#design-standards).
 - Initialize the TypeScript 7.1 beta `typescript/sync` API (for example, with `api.parseCommandLine([])`) before calling `getCanonicalFileName`; otherwise it throws `API has not been initialized` instead of providing case-sensitivity information.
 
+## Type assertions
+
+- Avoid TypeScript type assertions, including `as Type`, angle-bracket assertions, and chained assertions such as `as unknown as Type`; use narrowing, correctly typed values, or runtime validation instead. `as const` is allowed because it preserves literal types without claiming a different runtime shape.
+  If an assertion seems unavoidable, pause and explain to the user why, which safer alternatives you considered, and how the design could avoid it; ask how to proceed before adding it.
+
 ## Issues
 
 - Issues and milestones are tracked in [GitHub](https://github.com/michal-kocarek/tsc-after) (the `origin` remote).
