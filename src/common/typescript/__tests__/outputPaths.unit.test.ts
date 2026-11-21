@@ -28,6 +28,15 @@ describe(getOutputFileNames, () => {
 			outputFileNames: [path.join(outputDir, "src/component.jsx")],
 		},
 		{
+			fileName: path.join(projectDir, "src/component.tsx"),
+			name: "maps source maps for preserved JSX files",
+			options: { jsx: "preserve", sourceMap: true },
+			outputFileNames: [
+				path.join(outputDir, "src/component.jsx"),
+				path.join(outputDir, "src/component.jsx.map"),
+			],
+		},
+		{
 			fileName: path.join(projectDir, "src/index.ts"),
 			name: "does not preserve JSX for TypeScript files",
 			options: { jsx: "preserve" },
@@ -52,10 +61,40 @@ describe(getOutputFileNames, () => {
 			outputFileNames: [path.join(outputDir, "src/module.mjs")],
 		},
 		{
+			fileName: path.join(projectDir, "src/module.mts"),
+			name: "maps .mts JavaScript, declarations, and maps",
+			options: {
+				declaration: true,
+				declarationMap: true,
+				sourceMap: true,
+			},
+			outputFileNames: [
+				path.join(outputDir, "src/module.mjs"),
+				path.join(outputDir, "src/module.mjs.map"),
+				path.join(outputDir, "src/module.d.mts"),
+				path.join(outputDir, "src/module.d.mts.map"),
+			],
+		},
+		{
 			fileName: path.join(projectDir, "src/module.cts"),
 			name: "maps .cts files",
 			options: {},
 			outputFileNames: [path.join(outputDir, "src/module.cjs")],
+		},
+		{
+			fileName: path.join(projectDir, "src/module.cts"),
+			name: "maps .cts JavaScript, declarations, and maps",
+			options: {
+				declaration: true,
+				declarationMap: true,
+				sourceMap: true,
+			},
+			outputFileNames: [
+				path.join(outputDir, "src/module.cjs"),
+				path.join(outputDir, "src/module.cjs.map"),
+				path.join(outputDir, "src/module.d.cts"),
+				path.join(outputDir, "src/module.d.cts.map"),
+			],
 		},
 		{
 			fileName: path.join(projectDir, "src/helper.js"),
@@ -90,6 +129,12 @@ describe(getOutputFileNames, () => {
 			outputFileNames: [path.join(outputDir, "src/data.json")],
 		},
 		{
+			fileName: path.join(projectDir, "src/data.json"),
+			name: "does not copy JSON with emitDeclarationOnly",
+			options: { emitDeclarationOnly: true },
+			outputFileNames: [],
+		},
+		{
 			fileName: path.join(projectDir, "src/index.ts"),
 			name: "maps source and declaration files",
 			options: {
@@ -118,6 +163,20 @@ describe(getOutputFileNames, () => {
 		},
 		{
 			fileName: path.join(projectDir, "src/index.ts"),
+			name: "maps declarations in declarationDir",
+			options: {
+				declaration: true,
+				declarationDir: "types",
+				declarationMap: true,
+			},
+			outputFileNames: [
+				path.join(outputDir, "src/index.js"),
+				path.join(projectDir, "types/src/index.d.ts"),
+				path.join(projectDir, "types/src/index.d.ts.map"),
+			],
+		},
+		{
+			fileName: path.join(projectDir, "src/index.ts"),
 			name: "omits JavaScript with emitDeclarationOnly",
 			options: {
 				declaration: true,
@@ -128,6 +187,12 @@ describe(getOutputFileNames, () => {
 		{
 			fileName: path.join(projectDir, "src/index.d.ts"),
 			name: "skips declaration inputs",
+			options: { declaration: true },
+			outputFileNames: [],
+		},
+		{
+			fileName: path.join(projectDir, "src/app.d.css.ts"),
+			name: "skips declaration files with arbitrary extensions",
 			options: { declaration: true },
 			outputFileNames: [],
 		},

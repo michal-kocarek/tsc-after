@@ -3,6 +3,7 @@ import ts from "typescript";
 // Oldest supported version: 3.7 added `getOutputFileNames`, 3.8 `watchOptions`;
 // 3.9 is the oldest that passes the test suite unchanged (verified in CI).
 export const TYPESCRIPT_3_9 = 3_009_000;
+export const TYPESCRIPT_4_0 = 4_000_000;
 export const TYPESCRIPT_4_2 = 4_002_000;
 export const TYPESCRIPT_7_0 = 7_000_000;
 export const TYPESCRIPT_7_1 = 7_001_000;

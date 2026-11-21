@@ -3,7 +3,11 @@ import ts from "typescript";
 import type { Compiler, Project } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
-import { TYPESCRIPT_4_2, typescriptVersion } from "./version.ts";
+import {
+	TYPESCRIPT_4_0,
+	TYPESCRIPT_4_2,
+	typescriptVersion,
+} from "./version.ts";
 
 type ConfigFileMetadata = Pick<
 	ts.TsConfigSourceFile,
@@ -44,6 +48,28 @@ export class TypeScriptPre7Compiler implements Compiler {
 		const emittableFileNames = project.programFileNames.filter(
 			(fileName) => !isDeclarationFileName(fileName),
 		);
+		if (
+			typescriptVersion < TYPESCRIPT_4_0 &&
+			parsedCommandLine.options.emitDeclarationOnly === true &&
+			parsedCommandLine.options.resolveJsonModule === true &&
+			emittableFileNames.some((fileName) => fileName.endsWith(".json"))
+		) {
+			throw new UserError(
+				"Refusing to clean outDir: TypeScript 3.9 cannot safely determine outputs for emitDeclarationOnly with resolveJsonModule.",
+			);
+		}
+		if (
+			typescriptVersion < TYPESCRIPT_4_0 &&
+			parsedCommandLine.options.allowJs === true &&
+			parsedCommandLine.options.jsx === ts.JsxEmit.Preserve &&
+			parsedCommandLine.options.declaration === true &&
+			emittableFileNames.some((fileName) => fileName.endsWith(".jsx"))
+		) {
+			throw new UserError(
+				"Refusing to clean outDir: TypeScript 3.9 cannot safely determine outputs for allowJs JSX preserve with declaration.",
+			);
+		}
+
 		const outputCommandLine = {
 			...parsedCommandLine,
 			fileNames: emittableFileNames,

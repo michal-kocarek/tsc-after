@@ -53,9 +53,10 @@ Use `--verbose` to add individual removed and skipped entries.
 - Cleanup is refused when `outDir` or `declarationDir` contains a source file or tsconfig file of the project.
 - The project must be inside the current working directory, and parent directories are not searched for `tsconfig.json`.
 - `noEmit`, `outFile`, `composite`, watch options, `incremental`, and `tsBuildInfoFile` ([#4](https://github.com/michal-kocarek/tsc-after/issues/4)) are rejected, and project references are not followed.
-- TypeScript 3.9 through 4.1 require `rootDir`.
+- TypeScript 3.9 through 4.1 require `rootDir` ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
+- TypeScript 3.9 support is limited: `emitDeclarationOnly` with `resolveJsonModule` and JSON source files, and `allowJs` with `jsx: preserve`, `declaration`, and `.jsx` source files are refused ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
 - TypeScript 7.1 beta support is experimental, and `extends` there must be a file path, not a package name.
-- Safety checks ([#6](https://github.com/michal-kocarek/tsc-after/issues/6)) and output coverage ([#7](https://github.com/michal-kocarek/tsc-after/issues/7)) are incomplete, so keep valuable files out of `outDir`.
+- Cleanup safety checks ([#6](https://github.com/michal-kocarek/tsc-after/issues/6)) are incomplete, so keep valuable files out of `outDir`.
 
 Planned: `--copy`, `--exclude`, and `--watch`.
 See [`product.md`](./docs/product.md) for the roadmap.

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { describe, it } from "vitest";
 
 import {
+	TYPESCRIPT_4_0,
 	TYPESCRIPT_4_2,
 	typescriptVersion,
 } from "../common/typescript/version.ts";
@@ -27,6 +28,7 @@ interface EmittedLayout {
 	name: string;
 	sourceFiles: Record<string, string>;
 	staleFiles?: string[];
+	typescript39Refusal?: string;
 }
 
 const defaultRootDirLayouts: EmittedLayout[] = [
@@ -69,6 +71,67 @@ const defaultRootDirLayouts: EmittedLayout[] = [
 		name: "declaration, declarationMap, and sourceMap",
 		sourceFiles: { "src/lib.ts": "export const value = 1;" },
 	},
+	{
+		compilerOptions: { allowJs: true, declaration: true, jsx: "react" },
+		files: ["src/component.jsx"],
+		name: "allowJs JSX transformed with declarations",
+		sourceFiles: { "src/component.jsx": "export const view = <div />;" },
+		staleFiles: ["dist/stale.jsx"],
+	},
+	{
+		compilerOptions: { allowJs: true, declaration: true, jsx: "preserve" },
+		files: ["src/component.jsx"],
+		name: "allowJs JSX preserved with declarations",
+		sourceFiles: { "src/component.jsx": "export const view = <div />;" },
+		staleFiles: ["dist/stale.jsx", "dist/stale.jsx.map"],
+		typescript39Refusal:
+			"Refusing to clean outDir: TypeScript 3.9 cannot safely determine outputs for allowJs JSX preserve with declaration.",
+	},
+	{
+		compilerOptions: { jsx: "preserve", sourceMap: true },
+		files: ["src/component.tsx"],
+		name: "TSX preserved with sourceMap",
+		sourceFiles: { "src/component.tsx": "export const view = <div />;" },
+		staleFiles: ["dist/stale.jsx", "dist/stale.jsx.map"],
+	},
+	{
+		compilerOptions: {
+			declaration: true,
+			jsx: "react",
+			sourceMap: true,
+		},
+		files: ["src/component.tsx"],
+		name: "TSX transformed with declarations and sourceMap",
+		sourceFiles: { "src/component.tsx": "export const view = <div />;" },
+	},
+	{
+		compilerOptions: {
+			allowJs: true,
+			declaration: true,
+			declarationMap: true,
+			sourceMap: true,
+		},
+		files: ["src/lib.js"],
+		name: "allowJs declarations and maps",
+		sourceFiles: { "src/lib.js": "export const value = 1;" },
+		staleFiles: ["dist/stale.d.ts.map"],
+	},
+	{
+		compilerOptions: { inlineSourceMap: true },
+		include: ["src"],
+		name: "inlineSourceMap",
+		sourceFiles: { "src/lib.ts": "export const value = 1;" },
+		staleFiles: ["dist/src/lib.js.map"],
+	},
+	{
+		files: ["src/types.d.ts", "src/lib.ts"],
+		name: "declaration source emits nothing",
+		sourceFiles: {
+			"src/lib.ts": "export const value = 1;",
+			"src/types.d.ts": "export interface Types { value: string; }",
+		},
+		staleFiles: ["dist/types.js"],
+	},
 ];
 
 const emittedLayouts: EmittedLayout[] = [
@@ -89,6 +152,19 @@ const emittedLayouts: EmittedLayout[] = [
 		name: "declarationDir outside outDir",
 		sourceFiles: { "src/lib.ts": "export const value = 1;" },
 		staleFiles: ["types/.tsc-after-stale.d.ts"],
+	},
+	{
+		cleanupRoots: ["dist", "types"],
+		compilerOptions: {
+			declaration: true,
+			declarationDir: "types",
+			declarationMap: true,
+			rootDir: "src",
+		},
+		include: ["src"],
+		name: "declarationDir with declarationMap",
+		sourceFiles: { "src/lib.ts": "export const value = 1;" },
+		staleFiles: ["types/.tsc-after-stale.d.ts.map"],
 	},
 	{
 		cleanupRoots: ["dist"],
@@ -224,6 +300,38 @@ const emittedLayouts: EmittedLayout[] = [
 						"src/module.mjs": "export const esm = true;",
 					},
 				},
+				{
+					compilerOptions: {
+						declaration: true,
+						declarationMap: true,
+						sourceMap: true,
+					},
+					files: ["src/module.mts", "src/module.cts"],
+					name: ".mts and .cts with declarations and maps",
+					sourceFiles: {
+						"src/module.cts": "export const commonJs = true;",
+						"src/module.mts": "export const esm = true;",
+					},
+					staleFiles: [
+						"dist/stale.d.mts",
+						"dist/stale.d.cts",
+						"dist/stale.mjs.map",
+						"dist/stale.cjs.map",
+					],
+				},
+			]
+		: []),
+	...(typescriptVersion >= 5_000_000
+		? [
+				{
+					files: ["src/app.d.css.ts", "src/lib.ts"],
+					name: "declaration source with arbitrary extension",
+					sourceFiles: {
+						"src/app.d.css.ts": "export interface CssModule { value: string; }",
+						"src/lib.ts": "export const value = 1;",
+					},
+					staleFiles: ["dist/app.d.css.js"],
+				},
 			]
 		: []),
 	{
@@ -236,6 +344,45 @@ const emittedLayouts: EmittedLayout[] = [
 		name: "emitDeclarationOnly removes previous JavaScript",
 		sourceFiles: { "src/lib.ts": "export const value = 1;" },
 		staleFiles: ["dist/lib.js"],
+	},
+	{
+		compilerOptions: {
+			declaration: true,
+			declarationMap: true,
+			emitDeclarationOnly: true,
+			rootDir: "src",
+		},
+		include: ["src"],
+		name: "emitDeclarationOnly with declarationMap",
+		sourceFiles: { "src/lib.ts": "export const value = 1;" },
+		staleFiles: ["dist/lib.js", "dist/lib.js.map"],
+	},
+	{
+		compilerOptions: {
+			declaration: true,
+			declarationMap: true,
+			emitDeclarationOnly: true,
+			esModuleInterop: true,
+			module: "commonjs",
+			moduleResolution: "node",
+			resolveJsonModule: true,
+			rootDir: ".",
+		},
+		files: ["src/index.ts", "src/lib.ts"],
+		name: "emitDeclarationOnly with imported JSON",
+		sourceFiles: {
+			"data/config.json": '{"value":1}',
+			"src/index.ts":
+				'import config from "../data/config.json"; export default config;',
+			"src/lib.ts": "export const value = 1;",
+		},
+		staleFiles: [
+			"dist/data/config.json",
+			"dist/src/index.js",
+			"dist/src/lib.js",
+		],
+		typescript39Refusal:
+			"Refusing to clean outDir: TypeScript 3.9 cannot safely determine outputs for emitDeclarationOnly with resolveJsonModule.",
 	},
 ];
 
@@ -299,8 +446,6 @@ describe("emitted output layouts", () => {
 
 					const emittedFiles = await listEmittedFiles(projectDir);
 
-					expect(emittedFiles.length).toBeGreaterThan(0);
-
 					const staleFiles = [...STALE_FILES, ...(layout.staleFiles ?? [])];
 					for (const fileName of staleFiles) {
 						const filePath = join(projectDir, fileName);
@@ -326,6 +471,25 @@ describe("emitted output layouts", () => {
 
 						return;
 					}
+
+					if (
+						typescriptVersion < TYPESCRIPT_4_0 &&
+						layout.typescript39Refusal !== undefined
+					) {
+						const before = await readTree(projectDir);
+						const cleanup = await runTscAfter(args, {
+							allowFailure: true,
+							cwd: projectDir,
+						});
+
+						expect(cleanup.exitCode).toBe(1);
+						expect(cleanup.stderr).toContain(layout.typescript39Refusal);
+						await expect(readTree(projectDir)).resolves.toStrictEqual(before);
+
+						return;
+					}
+
+					expect(emittedFiles.length).toBeGreaterThan(0);
 
 					const sourceContents = await Promise.all(
 						Object.keys(layout.sourceFiles).map((fileName) =>

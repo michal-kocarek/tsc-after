@@ -20,6 +20,10 @@ export interface OutputOptions {
 	sourceMap?: boolean | undefined;
 }
 
+const declarationFileExtensions = [".d.ts", ".d.mts", ".d.cts"];
+const esmFileExtensions = [".mts", ".mjs"];
+const cjsFileExtensions = [".cts", ".cjs"];
+
 export function getOutputFileNames(
 	options: OutputOptions,
 	fileName: string,
@@ -53,7 +57,9 @@ export function getOutputFileNames(
 	);
 
 	if (isJsonFile) {
-		outputFileNames.push(outputPath);
+		if (options.emitDeclarationOnly !== true) {
+			outputFileNames.push(outputPath);
+		}
 		return outputFileNames;
 	}
 
@@ -97,10 +103,10 @@ export function getOutputFileNames(
 }
 
 function getDeclarationExtension(sourceExtension: string): string {
-	if (sourceExtension === ".mts" || sourceExtension === ".mjs") {
+	if (esmFileExtensions.includes(sourceExtension)) {
 		return ".d.mts";
 	}
-	if (sourceExtension === ".cts" || sourceExtension === ".cjs") {
+	if (cjsFileExtensions.includes(sourceExtension)) {
 		return ".d.cts";
 	}
 	return ".d.ts";
@@ -150,9 +156,9 @@ function getOutputPath(
 
 function isDeclarationFile(fileName: string): boolean {
 	return (
-		fileName.endsWith(".d.ts") ||
-		fileName.endsWith(".d.mts") ||
-		fileName.endsWith(".d.cts")
+		declarationFileExtensions.some((extension) =>
+			fileName.endsWith(extension),
+		) || /\.d\..+\.ts$/u.test(path.basename(fileName))
 	);
 }
 
