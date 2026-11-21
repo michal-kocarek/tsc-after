@@ -15,7 +15,21 @@ Rename `foo.ts` to `foo/index.ts`, and `dist/foo.js` lives on forever.
 
 ## Usage
 
+In `package.json`, replace your build command:
+
+Replace the clean-then-compile command with:
+
+```diff
+- rm -rf dist && tsc
++ tsc && tsc-after
+```
+
+Additional usage:
+
 ```sh
+# Clean after compile; run after tsc build.
+tsc-after
+
 # Preview for tsconfig.json; --verbose lists individual paths.
 tsc-after --dry --verbose
 
