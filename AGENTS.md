@@ -69,3 +69,13 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 - Test files are isolated (own modules and globals); tests within a file run concurrently (`sequence.concurrent`).
 - For snapshots of CLI output, strip colors with `stripVTControlCharacters` from `node:util`.
 - `CI=1` is set, so Vitest won't write new snapshots; create or update them explicitly with `vitest run -u` and review the result.
+
+## Agent skills
+
+### Issue tracker
+
+Create and manage issues for this repository in GitHub Issues with `gh`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+For domain terminology and architectural decisions, follow the single-context glossary and ADR guidance in `docs/agents/domain.md`.
