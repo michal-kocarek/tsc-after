@@ -112,11 +112,17 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		).toThrow(UserError);
 	});
 
-	it("refuses skipped emit", async ({ expect }) => {
+	it("derives output paths when noEmitOnError is enabled", async ({
+		expect,
+	}) => {
 		const projectDir = createTempProject({
 			"src/index.ts": "export const value: number = 'invalid';",
 			"tsconfig.json": JSON.stringify({
-				compilerOptions: { noEmitOnError: true, outDir: "dist" },
+				compilerOptions: {
+					noEmitOnError: true,
+					outDir: "dist",
+					rootDir: "src",
+				},
 			}),
 		});
 		onTestFinished(() => {
@@ -127,29 +133,8 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 			path.join(projectDir, "tsconfig.json"),
 		);
 
-		expect(() => compiler.getOutputPaths(project)).toThrow(
-			"Refusing to clean outDir because TypeScript skipped emit.",
-		);
-	});
-
-	it("refuses noEmit projects", async ({ expect }) => {
-		const projectDir = createTempProject({
-			"src/index.ts": "export const value = 1;",
-			"tsconfig.json": JSON.stringify({
-				compilerOptions: { noEmit: true, outDir: "dist" },
-			}),
-		});
-		onTestFinished(() => {
-			fs.rmSync(projectDir, { force: true, recursive: true });
-		});
-		const compiler = await createCompiler();
-
-		const project = compiler.parseProject(
-			path.join(projectDir, "tsconfig.json"),
-		);
-
-		expect(() => compiler.getOutputPaths(project)).toThrow(
-			"Refusing to clean outDir because noEmit is enabled.",
+		expect(compiler.getOutputPaths(project)).toStrictEqual(
+			new Set([path.join(projectDir, "dist/index.js")]),
 		);
 	});
 

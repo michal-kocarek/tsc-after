@@ -25,6 +25,23 @@ const DEV_NODE_VERSION = `>=${readFileSync(new URL(".nvmrc", import.meta.url), "
 const SHELL_FILES_GLOB = ["**/*.sh", "scripts/*"];
 const TEST_FILES_GLOB = "**/__tests__/**.{js,ts}";
 const TSCONFIG_GLOB = "**/tsconfig*.json";
+const SWITCH_RESTRICTIONS = [
+	{
+		message: "Every switch statement must have a default case.",
+		selector: "SwitchStatement:not(:has(SwitchCase[test=null]))",
+	},
+	{
+		message: "Every switch default case must call assertUnreachable directly.",
+		selector:
+			"SwitchCase[test=null]:not([consequent.0.expression.callee.name='assertUnreachable']):not([consequent.0.argument.callee.name='assertUnreachable'])",
+	},
+];
+const COMPILER_WORK_RESTRICTION = {
+	message:
+		"Do not emit or type-check; see .github/DEVELOPMENT.md#design-standards.",
+	selector:
+		"CallExpression[callee.type='MemberExpression'] > MemberExpression.callee > :matches(Identifier.property[name=/^(emit|emitToString|getJavaScriptEmit|getDeclarationEmit|getTypeChecker|getSemanticDiagnostics|getPreEmitDiagnostics)$/], Literal.property[value=/^(emit|emitToString|getJavaScriptEmit|getDeclarationEmit|getTypeChecker|getSemanticDiagnostics|getPreEmitDiagnostics)$/])",
+};
 
 export default defineConfig(
 	includeIgnoreFile(fileURLToPath(new URL(".gitignore", import.meta.url)), {
@@ -97,19 +114,7 @@ export default defineConfig(
 			"n/no-sync": "off",
 			"no-console": "error",
 			"no-else-return": "error",
-			"no-restricted-syntax": [
-				"error",
-				{
-					message: "Every switch statement must have a default case.",
-					selector: "SwitchStatement:not(:has(SwitchCase[test=null]))",
-				},
-				{
-					message:
-						"Every switch default case must call assertUnreachable directly.",
-					selector:
-						"SwitchCase[test=null]:not([consequent.0.expression.callee.name='assertUnreachable']):not([consequent.0.argument.callee.name='assertUnreachable'])",
-				},
-			],
+			"no-restricted-syntax": ["error", ...SWITCH_RESTRICTIONS],
 			"no-shadow": "error",
 			"no-useless-rename": "error",
 			"object-shorthand": "error",
@@ -140,6 +145,18 @@ export default defineConfig(
 			],
 			// The v flag requires Node.js 20; engines.node also supports Node.js 16 and 18.
 			"regexp/require-unicode-sets-regexp": "off",
+		},
+	},
+	{
+		files: ["src/**/*.{js,ts}"],
+		ignores: ["**/__tests__/**"],
+		name: "Compiler design standards",
+		rules: {
+			"no-restricted-syntax": [
+				"error",
+				...SWITCH_RESTRICTIONS,
+				COMPILER_WORK_RESTRICTION,
+			],
 		},
 	},
 	{

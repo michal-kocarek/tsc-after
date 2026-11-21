@@ -41,6 +41,7 @@ const tscPath = join(
 	"bin/tsc",
 );
 const tscAfterPath = resolve(repositoryRoot, "bin/tsc-after.js");
+const TS_EMITTED_FILE_PREFIX = "TSFILE:"; // cspell:ignore TSFILE
 
 interface ProjectOptions {
 	fixtureDir?: string;
@@ -62,6 +63,23 @@ export function cliOutcome(result: { exitCode?: number; stderr: string }): {
 		hasStackTrace: result.stderr.includes(STACK_TRACE_MARKER),
 		stderr: result.stderr,
 	};
+}
+
+export async function listEmittedFiles(
+	projectDir: string,
+	args: readonly string[] = [],
+): Promise<string[]> {
+	const result = await runTsc(
+		["--project", projectDir, "--listEmittedFiles", ...args],
+		{ allowFailure: true, cwd: projectDir },
+	);
+	const emittedFileNames = result.stdout
+		.split("\n")
+		.filter((line) => line.startsWith(TS_EMITTED_FILE_PREFIX))
+		.map((line) => line.slice(TS_EMITTED_FILE_PREFIX.length).trim())
+		.map((fileName) => relative(projectDir, fileName).split(sep).join("/"));
+
+	return emittedFileNames.sort();
 }
 
 export async function pathExists(filePath: string): Promise<boolean> {

@@ -1,48 +1,12 @@
+import type * as TypeScript7Sync from "typescript-7/sync";
+
 import fs from "node:fs";
 import path from "node:path";
 
-import type { Compiler, CompilerOptions, Project } from "./compiler.ts";
+import type { Compiler, Project } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
-
-interface TypeScript7API {
-	close(): void;
-	createProgram(
-		fileNames: readonly string[],
-		options: TypeScript7CompilerOptions,
-	): TypeScript7Program;
-	getCanonicalFileName(fileName: string): string;
-	parseCommandLine(commandLine: readonly string[]): unknown;
-	parseConfigFile(fileName: string): TypeScript7ParsedCommandLine & {
-		errors: readonly unknown[];
-	};
-	readConfigFile(fileName: string): { config?: unknown };
-}
-
-type TypeScript7CompilerOptions = CompilerOptions & Record<string, unknown>;
-
-interface TypeScript7Module {
-	API: new () => TypeScript7API;
-	formatDiagnosticsWithColorAndContext(
-		diagnostics: readonly unknown[],
-		host: TypeScript7API,
-	): string;
-}
-
-interface TypeScript7ParsedCommandLine {
-	fileNames: string[];
-	options: TypeScript7CompilerOptions;
-	raw: unknown;
-}
-
-interface TypeScript7Program {
-	dispose(): void;
-	emitToString(): {
-		diagnostics: readonly unknown[];
-		emitSkipped: boolean;
-		outputFiles: ReadonlyMap<string, unknown>;
-	};
-}
+import { getOutputFileNames, type OutputOptions } from "./outputPaths.ts";
 
 const syncModuleSpecifier = "typescript/sync";
 
@@ -52,17 +16,20 @@ const syncModuleSpecifier = "typescript/sync";
  */
 export class TypeScript7Compiler implements Compiler {
 	readonly useCaseSensitiveFileNames: boolean;
-	private readonly api: TypeScript7API;
+	private readonly api: InstanceType<typeof TypeScript7Sync.API>;
 	private cachedProject: Project | undefined;
 	private isClosed = false;
-	private program: TypeScript7Program | undefined;
+	private program: TypeScript7Sync.Program | undefined;
 	private readonly projects = new WeakMap<
 		Project,
-		TypeScript7ParsedCommandLine
+		TypeScript7Sync.ParsedCommandLine
 	>();
-	private readonly typescriptSync: TypeScript7Module;
+	private readonly typescriptSync: typeof TypeScript7Sync;
 
-	private constructor(typescriptSync: TypeScript7Module, api: TypeScript7API) {
+	private constructor(
+		typescriptSync: typeof TypeScript7Sync,
+		api: InstanceType<typeof TypeScript7Sync.API>,
+	) {
 		this.typescriptSync = typescriptSync;
 		this.api = api;
 		this.useCaseSensitiveFileNames =
@@ -72,7 +39,7 @@ export class TypeScript7Compiler implements Compiler {
 	static async create(): Promise<TypeScript7Compiler> {
 		const typescriptSync = (await import(
 			syncModuleSpecifier
-		)) as unknown as TypeScript7Module;
+		)) as unknown as typeof TypeScript7Sync;
 		const api = new typescriptSync.API();
 		try {
 			// Initialize the API before querying its filesystem case sensitivity.
@@ -106,11 +73,6 @@ export class TypeScript7Compiler implements Compiler {
 		if (config === undefined) {
 			throw new Error("Project was not parsed by this compiler.");
 		}
-		if (config.options.noEmit === true) {
-			throw new UserError(
-				"Refusing to clean outDir because noEmit is enabled.",
-			);
-		}
 
 		if (this.cachedProject !== project) {
 			const previousProgram = this.program;
@@ -125,20 +87,32 @@ export class TypeScript7Compiler implements Compiler {
 		if (program === undefined) {
 			throw new Error("Could not create TypeScript program.");
 		}
-		const emit = program.emitToString();
-		if (emit.emitSkipped) {
-			const details =
-				emit.diagnostics.length > 0
-					? this.typescriptSync
-							.formatDiagnosticsWithColorAndContext(emit.diagnostics, this.api)
-							.trimEnd()
-					: "TypeScript did not provide emitted output paths.";
-			throw new UserError(
-				`${details}\nRefusing to clean outDir because TypeScript skipped emit.`,
-			);
+		const configFilePath = project.configFilePaths[0];
+		if (configFilePath === undefined) {
+			throw new Error("Project has no config file path.");
 		}
 
-		return new Set(emit.outputFiles.keys());
+		const outputOptions = {
+			...config.options,
+			configFilePath,
+			jsx:
+				config.options.jsx === this.typescriptSync.JsxEmit.Preserve
+					? "preserve"
+					: undefined,
+		} as OutputOptions;
+		const outputPaths = program
+			.getSourceFileNames()
+			.filter((fileName) => {
+				const metadata = program.getSourceFileMetadata(fileName);
+				return (
+					metadata !== undefined &&
+					!metadata.isDefaultLibrary &&
+					!metadata.isFromExternalLibrary
+				);
+			})
+			.flatMap((fileName) => getOutputFileNames(outputOptions, fileName));
+
+		return new Set(outputPaths);
 	}
 
 	parseProject(configFilePath: string): Project {
@@ -183,7 +157,7 @@ export class TypeScript7Compiler implements Compiler {
 }
 
 function getExtendedConfigInfo(
-	api: TypeScript7API,
+	api: InstanceType<typeof TypeScript7Sync.API>,
 	configFilePath: string,
 	rootConfig: unknown,
 ): { configFilePaths: string[]; hasWatchOptions: boolean } {

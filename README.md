@@ -57,13 +57,15 @@ Use `--verbose` to add individual removed and skipped entries.
 - By default, `tsc-after` reads `tsconfig.json` from the current directory and does not search parent directories.
 - `incremental`, `tsBuildInfoFile`, `composite`, `declarationDir`, and watch configurations are rejected.
   Project references are not followed.
-- Source files reached only through imports or `paths` aliases are not included when checking source/output overlap or expected outputs.
-  Cleanup may delete those sources if they are inside `outDir`, or delete their emitted files as stale ([issue #2](https://github.com/michal-kocarek/tsc-after/issues/2)).
+- Source files reached only through imports or `paths` aliases are not included when checking source/output overlap.
+  Before TypeScript 7, their expected outputs are not included either.
+  Cleanup may delete those sources if they are inside `outDir`, or, before TypeScript 7, delete their emitted files as stale ([issue #2](https://github.com/michal-kocarek/tsc-after/issues/2)).
 - Cleanup confinement and source/output overlap checks are incomplete.
   Do not rely on the current checks to protect valuable files.
 - Handling of TypeScript configurations and emitted file types is incomplete and still needs verification.
-- TypeScript 7.1 beta support is experimental and uses its native compiler API to determine outputs without writing them.
-  Cleanup is refused when `noEmit` is enabled or emit is skipped.
+- Cleanup is refused when `noEmit` is enabled, including in dry runs.
+  `noEmitOnError` does not prevent cleanup; expected outputs for current source files are kept even when the project has errors.
+- TypeScript 7.1 beta support is experimental and derives output paths without compiling the project.
   Package-based `extends` is not supported on TypeScript 7.1; use a relative or absolute config path instead.
 
 Related open work: [configuration handling (#2)](https://github.com/michal-kocarek/tsc-after/issues/2), [incremental build state (#4)](https://github.com/michal-kocarek/tsc-after/issues/4), [cleanup safety (#6)](https://github.com/michal-kocarek/tsc-after/issues/6), and [output coverage (#7)](https://github.com/michal-kocarek/tsc-after/issues/7).

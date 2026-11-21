@@ -86,47 +86,85 @@ describe("outDir safety", () => {
 				await expect(readTree(projectDir)).resolves.toStrictEqual(before);
 			});
 		});
-
-		it.for([
-			{
-				name: "noEmit",
-				options: { noEmit: true },
-				source: "export const value = 1;",
-			},
-			{
-				name: "noEmitOnError",
-				options: { noEmitOnError: true },
-				source: "export const value: number = 'invalid';",
-			},
-		])(
-			"refuses cleanup when $name prevents emit",
-			async ({ options, source }, { expect, task }) => {
-				await withProject(task, async (projectDir) => {
-					await writeJson(projectDir, "tsconfig.json", {
-						compilerOptions: {
-							...ISOLATED_COMPILER_OPTIONS,
-							outDir: "dist",
-							rootDir: "src",
-							...options,
-						},
-					});
-					await writeFile(join(projectDir, "src/index.ts"), source);
-					await mkdir(join(projectDir, "dist"));
-					await writeFile(join(projectDir, "dist/index.js"), "previous output");
-					const before = await readTree(projectDir);
-
-					const cleanup = await runTscAfter([], {
-						allowFailure: true,
-						cwd: projectDir,
-					});
-
-					expect(cleanup.exitCode).toBe(1);
-					expect(cleanup.stderr).toContain("Refusing to clean outDir");
-					expect(await readTree(projectDir)).toStrictEqual(before);
-				});
-			},
-		);
 	}
+
+	it.for(CLEAN_MODES)(
+		"refuses cleanup when noEmit is enabled ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						noEmit: true,
+						outDir: "dist",
+						rootDir: "src",
+					},
+				});
+				await writeFile(
+					join(projectDir, "src/index.ts"),
+					"export const value = 1;",
+				);
+				await mkdir(join(projectDir, "dist"));
+				await writeFile(join(projectDir, "dist/index.js"), "previous output");
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean outDir because noEmit is enabled.",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(CLEAN_MODES)(
+		"keeps current outputs with noEmitOnError enabled ($mode)",
+		async ({ args, mode }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						noEmitOnError: true,
+						outDir: "dist",
+						rootDir: "src",
+					},
+				});
+				await writeFile(
+					join(projectDir, "src/index.ts"),
+					"export const value: number = 'invalid';",
+				);
+				await mkdir(join(projectDir, "dist"));
+				await writeFile(join(projectDir, "dist/index.js"), "current output");
+				await writeFile(join(projectDir, "dist/stale.js"), "stale output");
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cleanup.exitCode).toBe(0);
+				expect(cleanup.stderr).toBe("");
+				await expect(
+					pathExists(join(projectDir, "dist/index.js")),
+				).resolves.toBe(true);
+				await expect(
+					pathExists(join(projectDir, "dist/stale.js")),
+				).resolves.toBe(mode === "dry");
+
+				if (mode === "dry") {
+					expect(cleanup.stdout).toContain("Would remove file: dist/stale.js");
+				}
+			});
+		},
+	);
 
 	it("refuses to clean when the project config is inside outDir", async ({
 		expect,

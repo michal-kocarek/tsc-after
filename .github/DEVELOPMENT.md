@@ -8,6 +8,20 @@ cd tsc-after
 pnpm install
 ```
 
+## Design standards
+
+These standards apply to every change and are checked in review.
+Runtime compiler work is limited to parsing configuration and building a program for parsing and module resolution; compiling is allowed only in tests.
+
+- **No emit:** Derive output paths without calling `emit`, `emitToString`, `getJavaScriptEmit`, or `getDeclarationEmit`.
+  Compiling adds unnecessary cost for a cleanup tool; ESLint rejects these member calls in production code.
+- **No type checking:** Do not call `getTypeChecker`, `getSemanticDiagnostics`, or `getPreEmitDiagnostics`.
+  Type checking adds unnecessary cost and is not needed to identify stale outputs; ESLint rejects these member calls in production code.
+- **Parity with `tsc`:** Match the installed TypeScript version's output paths.
+  Incorrect predictions can delete valid outputs; `emittedLayouts.e2e.test.ts` compares cleanup against `tsc --listEmittedFiles` across the supported version matrix.
+- **Refuse rather than guess:** Refuse cleanup with a clear error when output paths cannot be derived reliably.
+  This protects files from deletion when a configuration is unsupported; safety and comparison tests check refusals and preserved outputs.
+
 ## Building
 
 Run [**tsdown**](https://tsdown.dev) locally to build source files from `src/` into output files in `lib/`:
@@ -106,6 +120,7 @@ When a test needs isolated process state, use `vi.stubGlobal("process", { ...pro
 Keep E2E test files flat in `src/__tests__/`, grouped by feature area:
 
 - `project.e2e.test.ts` tests the isolated-project harness.
+- `emittedLayouts.e2e.test.ts` compares expected outputs with `tsc --listEmittedFiles`.
 - `staleOutputs.e2e.test.ts` tests stale output cleanup.
 - `projectOption.e2e.test.ts` tests `--project` and config handling.
 - `outDirSafety.e2e.test.ts` tests safety refusals involving `outDir`.

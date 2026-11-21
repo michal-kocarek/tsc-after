@@ -12,6 +12,7 @@
 
 ## TypeScript compiler API
 
+- For compiler or cleanup changes, follow the [Design standards](.github/DEVELOPMENT.md#design-standards).
 - Initialize the TypeScript 7.1 beta `typescript/sync` API (for example, with `api.parseCommandLine([])`) before calling `getCanonicalFileName`; otherwise it throws `API has not been initialized` instead of providing case-sensitivity information.
 
 ## Issues

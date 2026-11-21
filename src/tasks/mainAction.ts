@@ -13,6 +13,7 @@ import { type ParsedCliArgs, print, styleText } from "../common/util.ts";
 
 const MISSING_OUT_DIR_ERROR =
 	'outDir is not set in tsconfig.json; tsc-after only cleans a dedicated outDir. Set compilerOptions.outDir, e.g. "dist".';
+const NO_EMIT_ERROR = "Refusing to clean outDir because noEmit is enabled.";
 
 export async function mainAction(args: ParsedCliArgs): Promise<void> {
 	const cwd = process.cwd();
@@ -48,6 +49,9 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 
 		print(`Using tsconfig: ${tsconfigRelativePath}`);
 		const project = compiler.parseProject(tsconfigAbsolutePath);
+		if (project.options.noEmit === true) {
+			throw new UserError(NO_EMIT_ERROR);
+		}
 
 		if (project.options.outDir === undefined) {
 			throw new UserError(MISSING_OUT_DIR_ERROR);

@@ -6,13 +6,13 @@ export interface Compiler {
 }
 
 export interface CompilerOptions {
-	composite?: boolean;
-	declarationDir?: string;
-	incremental?: boolean;
-	noEmit?: boolean;
-	outDir?: string;
-	project?: string;
-	tsBuildInfoFile?: string;
+	composite?: boolean | undefined;
+	declarationDir?: string | undefined;
+	incremental?: boolean | undefined;
+	noEmit?: boolean | undefined;
+	outDir?: string | undefined;
+	project?: string | undefined;
+	tsBuildInfoFile?: string | undefined;
 }
 
 export interface Project {
