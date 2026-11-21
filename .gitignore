@@ -1,6 +1,6 @@
 /.idea
 /.junie
-/.tmp/e2e/
+/.tmp
 /coverage
 /dist
 /node_modules

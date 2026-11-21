@@ -1,6 +1,7 @@
 import comments from "@eslint-community/eslint-plugin-eslint-comments/configs";
 import { configs as eslintConfigs } from "@eslint/js";
 import markdown from "@eslint/markdown";
+import shell from "@eslint/shell";
 import vitest from "@vitest/eslint-plugin";
 import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
 import { importX } from "eslint-plugin-import-x";
@@ -21,6 +22,7 @@ const BIN_FILES_GLOB = "bin/*.js";
 const CONFIG_FILES_GLOB = "*.config.{js,ts}";
 // Node.js used for development (`.nvmrc`), as opposed to `engines.node` for users
 const DEV_NODE_VERSION = `>=${readFileSync(new URL(".nvmrc", import.meta.url), "utf8").trim()}`;
+const SHELL_FILES_GLOB = ["**/*.sh", "scripts/*"];
 const TEST_FILES_GLOB = "**/__tests__/**.{js,ts}";
 const TSCONFIG_GLOB = "**/tsconfig*.json";
 
@@ -29,7 +31,7 @@ export default defineConfig(
 		name: "Global imported ignores",
 	}),
 	globalIgnores(
-		["CHANGELOG.md", "src/**/__tests__/fixtures", "pnpm-lock.yaml"],
+		["CHANGELOG.md", "src/**/__tests__/fixtures", "pnpm-lock.yaml", ".husky/_"],
 		"Additional global ignores",
 	),
 	{
@@ -180,6 +182,18 @@ export default defineConfig(
 			"vitest/prefer-importing-vitest-globals": "off",
 		},
 		settings: { vitest: { typecheck: true } },
+	},
+	{
+		files: SHELL_FILES_GLOB,
+		name: "Shell script files",
+		plugins: { shell: { languages: shell.languages, rules: shell.rules } },
+		// Replace with something like .strict or .all when this package matures and introduces ruleset groups
+		rules: Object.fromEntries(
+			Object.keys(shell.rules).map((rule) => [
+				`shell/${rule}`,
+				"error" as const,
+			]),
+		),
 	},
 	{
 		extends: [ymlConfigs["flat/standard"], ymlConfigs["flat/prettier"]],

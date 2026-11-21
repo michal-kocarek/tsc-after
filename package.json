@@ -60,6 +60,7 @@
 		"@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
 		"@eslint/js": "10.0.1",
 		"@eslint/markdown": "9.0.0",
+		"@eslint/shell": "0.1.2",
 		"@release-it/conventional-changelog": "12.0.2",
 		"@tsconfig/node-lts": "26.0.1",
 		"@tsconfig/node-ts": "23.6.5",

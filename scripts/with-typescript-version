@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -o pipefail
+
+usage() {
+	cat << 'EOF'
+Usage: with-typescript-version <version> -- <command> [args...]
+
+Temporarily install a TypeScript version, run the command, then reinstall the
+project dependencies. package.json and pnpm-lock.yaml are restored from backups.
+
+Do not run package-manager installs, edit the manifest or lockfile, or run the
+project's clean script concurrently. The lock and backups are kept in .tmp; if
+interrupted uncatchably or recovery fails, restore both files from there and run
+pnpm install --frozen-lockfile before removing the lock directory.
+EOF
+}
+
+if [[ $# -lt 3 || $2 != -- || -z $1 ]]; then
+	usage >&2
+	exit 2
+fi
+
+version=$1
+shift 2
+
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P) || exit 1
+project_dir=$(cd -- "$script_dir/.." && pwd -P) || exit 1
+tmp_dir="$project_dir/.tmp"
+lock_dir="$tmp_dir/with-typescript-version.lock"
+
+if ! command -v pnpm > /dev/null 2>&1; then
+	printf 'pnpm is required to install the temporary TypeScript version.\n' >&2
+	exit 1
+fi
+if [[ ! -f $project_dir/package.json || ! -f $project_dir/pnpm-lock.yaml ]]; then
+	printf 'Expected package.json and pnpm-lock.yaml under %s.\n' "$project_dir" >&2
+	exit 1
+fi
+if ! mkdir -p -- "$tmp_dir"; then
+	printf 'Could not create temporary directory %s.\n' "$tmp_dir" >&2
+	exit 1
+fi
+if ! mkdir -- "$lock_dir" 2> /dev/null; then
+	printf 'Another helper may be running, or a stale lock exists at %s.\n' "$lock_dir" >&2
+	exit 1
+fi
+
+if ! cp -p -- "$project_dir/package.json" "$lock_dir/package.json" \
+	|| ! cp -p -- "$project_dir/pnpm-lock.yaml" "$lock_dir/pnpm-lock.yaml"; then
+	printf 'Could not back up the project manifest and lockfile; no install was attempted.\n' >&2
+	rm -f -- "$lock_dir/package.json" "$lock_dir/pnpm-lock.yaml"
+	rmdir -- "$lock_dir" 2> /dev/null || :
+	exit 1
+fi
+
+restore_files() {
+	cp -p -- "$lock_dir/package.json" "$project_dir/package.json" \
+		&& cp -p -- "$lock_dir/pnpm-lock.yaml" "$project_dir/pnpm-lock.yaml"
+}
+
+finish() {
+	local status=$?
+	trap - EXIT INT TERM HUP
+
+	if ! restore_files; then
+		printf 'Could not restore project files. Backups and lock are retained in %s.\n' "$lock_dir" >&2
+		exit "$((status == 0 ? 1 : status))"
+	fi
+	if ! pnpm --dir "$project_dir" install --frozen-lockfile; then
+		printf 'Could not reinstall the original dependencies. Backups and lock are retained in %s.\n' "$lock_dir" >&2
+		exit "$((status == 0 ? 1 : status))"
+	fi
+	if ! rm -rf -- "$lock_dir"; then
+		printf 'Could not remove helper lock %s.\n' "$lock_dir" >&2
+		exit "$((status == 0 ? 1 : status))"
+	fi
+	exit "$status"
+}
+
+trap finish EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if ! pnpm --dir "$project_dir" add --save-dev --save-exact --ignore-scripts "typescript@$version"; then
+	printf 'Could not install TypeScript version %s.\n' "$version" >&2
+	exit 1
+fi
+if ! restore_files; then
+	printf 'Could not restore package.json and pnpm-lock.yaml before running the command.\n' >&2
+	exit 1
+fi
+
+PATH="$project_dir/node_modules/.bin:${PATH-}" "$@"
+exit $?
