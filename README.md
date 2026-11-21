@@ -10,24 +10,24 @@
 
 `tsc` compiles your files, but it never deletes anything.
 Rename `foo.ts` to `foo/index.ts`, and `dist/foo.js` lives on forever.
-`tsc-after` reads your `tsconfig.json`, works out which files `tsc` would emit today, and removes the stale outputs it wouldn't.
 
-> [!WARNING]
-> Published on npm as `0.2.0`, but this README describes the current development source, whose CLI differs from the published package (for example, `--dry` here is `--dryRun` in `0.2.0`).
-> The published release and current source are experimental, not production-ready.
-> Do not add it to build scripts or run it against valuable output yet.
-> Cleanup is destructive: regular files in `outDir` that TypeScript does not identify as current outputs are removed, including copied assets.
-> Configuration support and cleanup safety are incomplete; review the limitations below and preview first.
+`tsc-after` reads your `tsconfig.json`, works out which files `tsc` would emit today, and removes the stale outputs it wouldn't.
 
 ## Usage
 
 ```sh
-# Current development source: preview for tsconfig.json; --verbose lists individual paths.
+# Preview for tsconfig.json; --verbose lists individual paths.
 tsc-after --dry --verbose
 
-# Current development source: select a tsconfig file instead of the default.
+# Select a tsconfig file instead of the default.
 tsc-after --project tsconfig.build.json
+
+# Select a folder with a tsconfig.json.
+tsc-after -p packages/core
 ```
+
+The project path must be inside the current working directory.
+Positional arguments and unknown flags are rejected.
 
 For a basic project with a dedicated `outDir`, `tsc-after` uses TypeScript's output-name API to identify expected outputs, removes other regular files in `outDir`, and removes directories left empty by cleanup.
 It skips symbolic links and entries on other devices.
@@ -39,8 +39,7 @@ This behavior and its safety limits are not yet verified for every TypeScript co
 
 - `outDir` must be set and dedicated to TypeScript outputs.
   Other regular files there, including copied assets, are treated as stale.
-- `--project` currently selects a tsconfig file; selecting a project directory is not supported.
-  By default, it reads `tsconfig.json` from the current directory and does not search parent directories.
+- By default, `tsc-after` reads `tsconfig.json` from the current directory and does not search parent directories.
 - `incremental`, `tsBuildInfoFile`, `composite`, `declarationDir`, and watch configurations are rejected.
   Project references are not followed.
 - Cleanup confinement and source/output overlap checks are incomplete.
@@ -54,7 +53,7 @@ See [`product.md`](./docs/product.md) for the roadmap.
 
 ## Requirements
 
-- `tsconfig.json` must be present (unlike `tsc`, it does not search parent directories for `tsconfig.json`)
+- the project's tsconfig file must exist inside the current working directory (unlike `tsc`, it does not search parent directories for `tsconfig.json`)
 - source code must be compiled in dedicated `outDir` path
 
 ## Exit codes
@@ -67,6 +66,7 @@ See [`product.md`](./docs/product.md) for the roadmap.
 
 Wiping `outDir` before every build (`rm -rf dist && tsc`, `rimraf dist && tsc`, or a `prebuild` script) is the usual fix for stale outputs.
 On GitHub, about 274k `package.json` files run `rm -rf dist` and another 199k run `rimraf dist` (see [`market-research.md`](./docs/market-research.md)).
+
 `tsc-after` is intended to remove only stale outputs rather than wiping `outDir` and rebuilding everything.
 The prototype is not yet a safe replacement for that workflow: configuration support and cleanup safeguards are incomplete, and incremental builds are not supported.
 Do not add it to a build script yet.
