@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0](https://github.com/michal-kocarek/tsc-after/compare/v0.2.0...v0.3.0) (2026-11-21)
+
+### ⚠ BREAKING CHANGES
+
+* update command line options and syntax to resemble tsc options more closer
+
+### Features
+
+* argument --project accepts project directories as well like tsc ([2277813](https://github.com/michal-kocarek/tsc-after/commit/227781389e9c9a1ee983b3b79609b0e9f5164ba5))
+* update command line options and syntax to resemble tsc options more closer ([3990ee5](https://github.com/michal-kocarek/tsc-after/commit/3990ee5d6a68b3f7c749c488dbf5ae23096039e2))
+
+### Bug Fixes
+
+* handle missing outDir without crashing ([c8d5147](https://github.com/michal-kocarek/tsc-after/commit/c8d51473c972a8bc9934650d73716785b533d9b8))
+* prevent cleanup of source-containing outDir ([80dea32](https://github.com/michal-kocarek/tsc-after/commit/80dea32f97d958fe1d66ff05e5c84937a37c5d52))
+* prevent cleanup through symbolic links ([699e512](https://github.com/michal-kocarek/tsc-after/commit/699e5125d49ceff1f00d2d53d15d5f06a657dced))
+
 ## 0.2.0 (2026-10-20)
 
 ### Features
