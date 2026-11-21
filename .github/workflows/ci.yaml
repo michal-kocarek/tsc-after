@@ -29,7 +29,7 @@ jobs:
         run: pnpm exec prettier --check .
       - name: Type Check
         if: *prepared
-        run: pnpm tsc
+        run: pnpm typecheck
       - name: Lint Spelling
         if: *prepared
         run: pnpm lint:spelling

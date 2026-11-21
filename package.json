@@ -43,7 +43,8 @@
 		"release": "release-it",
 		"test": "vitest",
 		"test:e2e": "vitest --project e2e",
-		"test:unit": "vitest --project unit"
+		"test:unit": "vitest --project unit",
+		"typecheck": "tsc"
 	},
 	"commitlint": {
 		"extends": [
