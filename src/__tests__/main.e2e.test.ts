@@ -41,9 +41,14 @@ describe("tsc-after", () => {
 			/^tsc-after\/\d+\.\d+\.\d+ [\w\-.]+ [\w\-.]+ [\w\-.]+$/v,
 		);
 
-		const expectedNodeVersion =
+		const expectedNodeVersionOverride =
 			// eslint-disable-next-line n/no-process-env -- Assert the compatibility runtime.
-			process.env["TSC_AFTER_EXPECTED_NODE_VERSION"] ?? process.versions.node;
+			process.env["TSC_AFTER_EXPECTED_NODE_VERSION"];
+		const expectedNodeVersion =
+			expectedNodeVersionOverride === undefined ||
+			expectedNodeVersionOverride === ""
+				? process.versions.node
+				: expectedNodeVersionOverride;
 
 		expect(result.stdout).toContain(` node-${expectedNodeVersion} `);
 	});
