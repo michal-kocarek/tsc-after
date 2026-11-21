@@ -6,7 +6,8 @@ usage() {
 Usage: with-typescript-version <version> -- <command> [args...]
 
 Temporarily install a TypeScript version, run the command, then reinstall the
-project dependencies. package.json and pnpm-lock.yaml are restored from backups.
+project dependencies. package.json and pnpm-lock.yaml stay modified until the
+command exits, then are restored from backups.
 
 Do not run package-manager installs, edit the manifest or lockfile, or run the
 project's clean script concurrently. The lock and backups are kept in .tmp; if
@@ -84,10 +85,6 @@ trap 'exit 143' TERM
 
 if ! pnpm --dir "$project_dir" add --save-dev --save-exact --ignore-scripts "typescript@$version"; then
 	printf 'Could not install TypeScript version %s.\n' "$version" >&2
-	exit 1
-fi
-if ! restore_files; then
-	printf 'Could not restore package.json and pnpm-lock.yaml before running the command.\n' >&2
 	exit 1
 fi
 
