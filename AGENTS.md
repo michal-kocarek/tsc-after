@@ -74,7 +74,8 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 
 ### Issue tracker
 
-Create and manage issues for this repository in GitHub Issues with `gh`. See `docs/agents/issue-tracker.md`.
+Create and manage issues for this repository in GitHub Issues with `gh`.
+See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
