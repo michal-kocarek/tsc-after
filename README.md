@@ -43,7 +43,9 @@ tsc-after -p packages/core
 The project path must be inside the current working directory.
 Positional arguments and unknown flags are rejected.
 
-For a basic project with a dedicated `outDir`, `tsc-after` uses TypeScript to identify expected outputs, removes other regular files in `outDir`, and removes directories left empty by cleanup.
+For a project with a dedicated `outDir`, `tsc-after` uses TypeScript to identify expected outputs, including those from files reached through imports and `paths` aliases.
+It removes other regular files in `outDir` and directories left empty by cleanup.
+If `declarationDir` is set outside `outDir`, it is cleaned separately; when nested in `outDir`, it is covered by that cleanup.
 It skips symbolic links and entries on other devices.
 This behavior and its safety limits are not yet verified for every TypeScript configuration or output type.
 
@@ -54,13 +56,13 @@ Use `--verbose` to add individual removed and skipped entries.
 
 - `outDir` must be set and dedicated to TypeScript outputs.
   Other regular files there, including copied assets, are treated as stale.
+- `declarationDir` must also be dedicated to TypeScript outputs and requires `declaration` to be enabled.
+- Cleanup is refused if a project source file or a config in its `extends` chain is inside either cleanup root.
 - TypeScript 3.9 through 4.1 require `rootDir` to be set; cleanup is refused without it.
+- Without `rootDir`, output layouts depend on the TypeScript version: TypeScript 5 and earlier use a common source directory, while TypeScript 6 and 7 use the config directory.
 - By default, `tsc-after` reads `tsconfig.json` from the current directory and does not search parent directories.
-- `incremental`, `tsBuildInfoFile`, `composite`, `declarationDir`, and watch configurations are rejected.
+- `incremental`, `tsBuildInfoFile`, `composite`, `outFile`, and watch configurations are rejected.
   Project references are not followed.
-- Source files reached only through imports or `paths` aliases are not included when checking source/output overlap.
-  Before TypeScript 7, their expected outputs are not included either.
-  Cleanup may delete those sources if they are inside `outDir`, or, before TypeScript 7, delete their emitted files as stale ([issue #2](https://github.com/michal-kocarek/tsc-after/issues/2)).
 - Cleanup confinement and source/output overlap checks are incomplete.
   Do not rely on the current checks to protect valuable files.
 - Handling of TypeScript configurations and emitted file types is incomplete and still needs verification.

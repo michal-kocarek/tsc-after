@@ -68,9 +68,10 @@ export function cliOutcome(result: { exitCode?: number; stderr: string }): {
 export async function listEmittedFiles(
 	projectDir: string,
 	args: readonly string[] = [],
+	projectPath: string = projectDir,
 ): Promise<string[]> {
 	const result = await runTsc(
-		["--project", projectDir, "--listEmittedFiles", ...args],
+		["--project", projectPath, "--listEmittedFiles", ...args],
 		{ allowFailure: true, cwd: projectDir },
 	);
 	const emittedFileNames = result.stdout

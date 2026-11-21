@@ -5,6 +5,7 @@ import { describe, it } from "vitest";
 import {
 	cliOutcome,
 	ISOLATED_COMPILER_OPTIONS,
+	listEmittedFiles,
 	pathExists,
 	readIfExists,
 	readTree,
@@ -34,6 +35,26 @@ const PROJECT_OPTIONS = [
 
 const INVALID_CONFIGS = [
 	{ config: undefined, diagnostic: "TS5083", name: "missing tsconfig.json" },
+	{
+		config: '{ "compilerOptions": { "outDir": "dist" ',
+		diagnostic: "TS1005",
+		name: "malformed JSON",
+	},
+	{
+		config: JSON.stringify({
+			compilerOptions: { outDir: "dist", rootDir: "src" },
+			extends: "./missing-base.json",
+		}),
+		diagnostic: "TS5083",
+		name: "missing extends target",
+	},
+	{
+		config: JSON.stringify({
+			compilerOptions: { bogusOption: true, outDir: "dist", rootDir: "src" },
+		}),
+		diagnostic: "TS5023",
+		name: "unknown compiler option",
+	},
 	{
 		config: "",
 		diagnostic: "outDir is not set in tsconfig.json",
@@ -182,6 +203,47 @@ describe("--project option", () => {
 		});
 	});
 
+	it.for(withCleanModes([{ name: "inherited relative paths" }]))(
+		"resolves an extends chain through --project ($mode)",
+		async ({ args, mode }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "config/base.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						outDir: "../outputs",
+						rootDir: "../src",
+					},
+					include: ["../src"],
+				});
+				await writeJson(projectDir, "config/middle.json", {
+					extends: "./base.json",
+				});
+				await writeJson(projectDir, "nested/tsconfig.json", {
+					extends: "../config/middle.json",
+				});
+				const emittedFiles = await listEmittedFiles(projectDir, [], "nested");
+
+				expect(emittedFiles.length).toBeGreaterThan(0);
+
+				await writeFile(join(projectDir, "outputs/stale.js"), "stale");
+
+				const cleanup = await runTscAfter([...args, "--project", "nested"], {
+					cwd: projectDir,
+				});
+
+				expect(cleanup.exitCode).toBe(0);
+
+				for (const file of emittedFiles) {
+					await expect(pathExists(join(projectDir, file))).resolves.toBe(true);
+				}
+
+				await expect(
+					pathExists(join(projectDir, "outputs/stale.js")),
+				).resolves.toBe(mode === "dry");
+			});
+		},
+	);
+
 	it.for(withCleanModes(INVALID_CONFIGS))(
 		"refuses $name without changing project files ($mode)",
 		async ({ args, config, diagnostic }, { expect, task }) => {
@@ -200,6 +262,11 @@ describe("--project option", () => {
 					join(projectDir, "src/README.md"),
 					"Keep this project file.\n",
 				);
+				await mkdir(join(projectDir, "dist"), { recursive: true });
+				await writeFile(
+					join(projectDir, "dist/stale.js"),
+					"keep stale output\n",
+				);
 				const before = await readTree(projectDir);
 
 				const cleanup = await runTscAfter(args, {
@@ -214,6 +281,37 @@ describe("--project option", () => {
 				});
 				expect(await readIfExists(configPath)).toBe(config);
 				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(withCleanModes([{ name: "malformed extended config" }]))(
+		"refuses $name without changing project files ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: { outDir: "dist", rootDir: "src" },
+					extends: "./base.json",
+				});
+				await writeFile(
+					join(projectDir, "base.json"),
+					'{ "compilerOptions": { ',
+				);
+				await mkdir(join(projectDir, "dist"));
+				await writeFile(join(projectDir, "dist/stale.js"), "keep");
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining("TS1005"),
+				});
+				await expect(readTree(projectDir)).resolves.toStrictEqual(before);
 			});
 		},
 	);

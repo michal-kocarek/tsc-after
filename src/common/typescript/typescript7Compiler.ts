@@ -152,11 +152,13 @@ export class TypeScript7Compiler implements Compiler {
 			);
 		}
 
-		const config = this.api.parseConfigFile(configFilePath);
-		if (config.errors.length > 0) {
+		const checkDiagnostics = (diagnostics: TypeScript7Sync.Diagnostic[]) => {
+			if (diagnostics.length === 0) {
+				return;
+			}
 			throw new UserError(
 				this.typescriptSync
-					.formatDiagnosticsWithColorAndContext(config.errors, {
+					.formatDiagnosticsWithColorAndContext(diagnostics, {
 						getCanonicalFileName: (fileName) =>
 							this.api.getCanonicalFileName(fileName),
 						getCurrentDirectory: () => this.api.getCurrentDirectory(),
@@ -164,19 +166,41 @@ export class TypeScript7Compiler implements Compiler {
 					})
 					.trimEnd(),
 			);
-		}
+		};
+		const readConfig = (filePath: string): unknown => {
+			const result = this.api.readConfigFile(filePath);
+			if (result.error !== undefined) {
+				checkDiagnostics([result.error]);
+			}
+			return result.config;
+		};
+		const rootConfig = readConfig(configFilePath);
+		const config = this.api.parseConfigFile(configFilePath);
+		checkDiagnostics(config.errors);
 
 		const extendedConfigInfo = getExtendedConfigInfo(
-			this.api,
+			readConfig,
 			configFilePath,
-			config.raw ?? this.api.readConfigFile(configFilePath).config,
+			rootConfig,
 		);
+		const program = this.api.createProgram(config.fileNames, config.options);
 		const project: Project = {
 			configFilePaths: extendedConfigInfo.configFilePaths,
 			fileNames: config.fileNames,
 			hasWatchOptions: extendedConfigInfo.hasWatchOptions,
 			options: config.options,
+			programFileNames: program.getSourceFileNames().filter((fileName) => {
+				const metadata = program.getSourceFileMetadata(fileName);
+				return (
+					metadata !== undefined &&
+					!metadata.isDefaultLibrary &&
+					!metadata.isFromExternalLibrary
+				);
+			}),
 		};
+		this.program?.dispose();
+		this.program = program;
+		this.cachedProject = project;
 		this.projects.set(project, config);
 		return project;
 	}
@@ -189,7 +213,7 @@ export class TypeScript7Compiler implements Compiler {
 }
 
 function getExtendedConfigInfo(
-	api: TypeScript7Api,
+	readConfig: (filePath: string) => unknown,
 	configFilePath: string,
 	rootConfig: unknown,
 ): { configFilePaths: string[]; hasWatchOptions: boolean } {
@@ -231,7 +255,7 @@ function getExtendedConfigInfo(
 				normalizedConfigFilePath,
 				extendedConfigPath,
 			);
-			const extendedConfig = api.readConfigFile(resolvedConfigPath).config;
+			const extendedConfig = readConfig(resolvedConfigPath);
 			visit(resolvedConfigPath, extendedConfig);
 		}
 	}

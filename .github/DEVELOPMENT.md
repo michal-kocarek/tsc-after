@@ -127,7 +127,7 @@ Keep E2E test files flat in `src/__tests__/`, grouped by feature area:
 - `main.e2e.test.ts` tests CLI arguments, help, and version.
 
 Name new files after the `tsc` feature they cover, such as `watch.e2e.test.ts` or `build.e2e.test.ts`.
-Keep `declarationDir`, `tsBuildInfoFile`, and `outFile` output tests in `staleOutputs.e2e.test.ts` until they need their own file.
+Keep `declarationDir` output comparisons in `emittedLayouts.e2e.test.ts`; keep `tsBuildInfoFile` and `outFile` output tests in `staleOutputs.e2e.test.ts` until they need their own file.
 
 Use one behavior per `it` and one named variant per `it.for` row; do not loop over subprocess runs inside a test.
 Each test should create its own project with `withProject` and run at most one `tsc` and one `tsc-after`, keeping the default five-second timeout practical.

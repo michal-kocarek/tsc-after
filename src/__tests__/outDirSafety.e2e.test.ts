@@ -10,11 +10,45 @@ import {
 	pathExists,
 	readTree,
 	runTscAfter,
+	withCleanModes,
 	withProject,
 	writeJson,
 } from "./project.ts";
 
 describe("outDir safety", () => {
+	it.for(withCleanModes([{ name: "outFile" }]))(
+		"refuses $name without changing files ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						module: "amd",
+						outDir: "dist",
+						outFile: "dist/bundle.js",
+						rootDir: "src",
+					},
+					include: ["src"],
+				});
+				await mkdir(join(projectDir, "dist"));
+				await writeFile(join(projectDir, "dist/bundle.js"), "keep");
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining("outFile is not supported"),
+				});
+				await expect(readTree(projectDir)).resolves.toStrictEqual(before);
+			});
+		},
+	);
+
 	if (Number.parseInt(ts.version, 10) >= 7) {
 		// These cases cover the TypeScript 7 adapter, which is not used by older compilers.
 		// eslint-disable-next-line vitest/no-conditional-tests
@@ -361,6 +395,327 @@ describe("outDir safety", () => {
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
 						"Refusing to clean outDir 'out': it contains source file",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(CLEAN_MODES)(
+		"refuses to clean when outDir contains an imported-only source ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						outDir: "out",
+						rootDir: ".",
+					},
+					files: ["src/index.ts"],
+				});
+				await mkdir(join(projectDir, "out"));
+				await writeFile(
+					join(projectDir, "src/index.ts"),
+					'import "../out/imported";\n',
+				);
+				await writeFile(
+					join(projectDir, "out/imported.ts"),
+					"export const imported = true;\n",
+				);
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean outDir 'out': it contains source file 'out/imported.ts'.",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(CLEAN_MODES)(
+		"refuses to clean when outDir contains a paths-alias source ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						baseUrl: ".",
+						outDir: "out",
+						paths: { "@source": ["out/aliased.ts"] },
+						rootDir: ".",
+					},
+					files: ["src/index.ts"],
+				});
+				await mkdir(join(projectDir, "out"));
+				await writeFile(
+					join(projectDir, "src/index.ts"),
+					'import { value } from "@source";\nconsole.log(value);\n',
+				);
+				await writeFile(
+					join(projectDir, "out/aliased.ts"),
+					"export const value = true;\n",
+				);
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean outDir 'out': it contains source file 'out/aliased.ts'.",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(CLEAN_MODES)(
+		"refuses to clean when outDir contains an imported declaration file ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						outDir: "out",
+						rootDir: ".",
+					},
+					files: ["src/index.ts"],
+				});
+				await mkdir(join(projectDir, "out"));
+				await writeFile(
+					join(projectDir, "src/index.ts"),
+					'import type { Value } from "../out/types";\nconst value: Value = { text: "value" };\nconsole.log(value);\n',
+				);
+				await writeFile(
+					join(projectDir, "out/types.d.ts"),
+					"export interface Value { text: string }\n",
+				);
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean outDir 'out': it contains source file 'out/types.d.ts'.",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(CLEAN_MODES)(
+		"refuses to clean when declarationDir contains a program source ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						declaration: true,
+						declarationDir: "types",
+						outDir: "dist",
+						rootDir: ".",
+					},
+					files: ["src/index.ts"],
+				});
+				await writeFile(
+					join(projectDir, "src/index.ts"),
+					'import "../types/source";\n',
+				);
+				await mkdir(join(projectDir, "types"), { recursive: true });
+				await writeFile(
+					join(projectDir, "types/source.ts"),
+					"export const value = true;\n",
+				);
+				await mkdir(join(projectDir, "dist"));
+				await writeFile(join(projectDir, "dist/stale.js"), "keep");
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean declarationDir 'types': it contains source file 'types/source.ts'.",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(CLEAN_MODES)(
+		"refuses to clean when declarationDir contains an extended config ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "types/base.json", {});
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						declaration: true,
+						declarationDir: "types",
+						outDir: "dist",
+						rootDir: "src",
+					},
+					extends: "./types/base.json",
+				});
+				await mkdir(join(projectDir, "dist"));
+				await writeFile(join(projectDir, "dist/stale.js"), "keep");
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean declarationDir 'types': it contains config file 'types/base.json'.",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(
+		withCleanModes([
+			{
+				declarationDir: "../outside",
+				name: "outside current working directory",
+			},
+			{ declarationDir: ".", name: "containing current working directory" },
+		]),
+	)(
+		"refuses declarationDir $name ($mode)",
+		async ({ args, declarationDir }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						declaration: true,
+						declarationDir,
+						outDir: "dist",
+						rootDir: "src",
+					},
+					files: ["src/index.ts"],
+				});
+				await mkdir(join(projectDir, "dist"), { recursive: true });
+				await writeFile(join(projectDir, "dist/stale.js"), "stale");
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to traverse outside safe paths containing tsconfig to process declarationDir!",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(CLEAN_MODES)(
+		"refuses to clean declarationDir through a symbolic link ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await mkdir(join(projectDir, "types-target"));
+				await writeFile(join(projectDir, "types-target/stale.d.ts"), "stale");
+				await symlink(
+					join(projectDir, "types-target"),
+					join(projectDir, "types-link"),
+					"dir",
+				);
+				await mkdir(join(projectDir, "dist"));
+				await writeFile(join(projectDir, "dist/stale.js"), "keep");
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						declaration: true,
+						declarationDir: "types-link",
+						outDir: "dist",
+						rootDir: "src",
+					},
+				});
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean declarationDir through a symbolic link: types-link!",
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(CLEAN_MODES)(
+		"refuses declarationDir when declaration emit is disabled ($mode)",
+		async ({ args }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						declarationDir: "types",
+						outDir: "dist",
+						rootDir: "src",
+					},
+				});
+				await mkdir(join(projectDir, "types"));
+				await writeFile(join(projectDir, "types/stale.d.ts"), "stale");
+				await mkdir(join(projectDir, "dist"));
+				await writeFile(join(projectDir, "dist/stale.js"), "keep");
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean declarationDir because declaration is not enabled.",
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);

@@ -14,13 +14,21 @@ import { type ParsedCliArgs, print, styleText } from "../common/util.ts";
 const MISSING_OUT_DIR_ERROR =
 	'outDir is not set in tsconfig.json; tsc-after only cleans a dedicated outDir. Set compilerOptions.outDir, e.g. "dist".';
 const NO_EMIT_ERROR = "Refusing to clean outDir because noEmit is enabled.";
+const DECLARATION_DISABLED_ERROR =
+	"Refusing to clean declarationDir because declaration is not enabled.";
+
+interface CleanupRoot {
+	name: "declarationDir" | "outDir";
+	path: string;
+	relativePath: string;
+}
 
 export async function mainAction(args: ParsedCliArgs): Promise<void> {
 	const cwd = process.cwd();
 	const compiler = await loadCompiler();
-	let outDir: string;
-	let outDirRelativePath: string;
+	let cleanupRoots: CleanupRoot[];
 	let expectedOutDirPaths: Set<string>;
+	let outDirAbsolutePath: string;
 
 	try {
 		const isPathInsideWithCompiler = (dirPath: string, filePath: string) =>
@@ -52,21 +60,31 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 		if (project.options.noEmit === true) {
 			throw new UserError(NO_EMIT_ERROR);
 		}
+		if (project.options.outFile !== undefined) {
+			throw new UserError("outFile is not supported");
+		}
 
 		if (project.options.outDir === undefined) {
 			throw new UserError(MISSING_OUT_DIR_ERROR);
 		}
-		outDir = project.options.outDir;
-		const outDirAbsolutePath = path.resolve(outDir);
-
-		outDirRelativePath = path.relative(cwd, outDirAbsolutePath);
-		if (
-			!isPathInsideWithCompiler(cwd, outDirAbsolutePath) ||
-			isPathInsideWithCompiler(outDirAbsolutePath, cwd)
-		) {
-			throw new UserError(
-				`Refusing to traverse outside safe paths containing tsconfig to process outDir!`,
-			);
+		outDirAbsolutePath = path.resolve(project.options.outDir);
+		const roots: CleanupRoot[] = [
+			{
+				name: "outDir",
+				path: outDirAbsolutePath,
+				relativePath: path.relative(cwd, outDirAbsolutePath),
+			},
+		];
+		if (project.options.declarationDir !== undefined) {
+			if (project.options.declaration !== true) {
+				throw new UserError(DECLARATION_DISABLED_ERROR);
+			}
+			const declarationDir = path.resolve(project.options.declarationDir);
+			roots.push({
+				name: "declarationDir",
+				path: declarationDir,
+				relativePath: path.relative(cwd, declarationDir),
+			});
 		}
 
 		if (project.options.incremental === true) {
@@ -85,33 +103,57 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 			throw new UserError("Project mode is not supported");
 		}
 
-		if (project.options.declarationDir !== undefined) {
-			throw new UserError("declarationDir is not supported");
-		}
-
 		if (project.hasWatchOptions) {
 			throw new UserError("Watch mode is not supported");
 		}
 
-		const isInsideOutDir = (filePath: string) =>
-			isPathInsideWithCompiler(outDirAbsolutePath, filePath) ||
-			isPathInsideWithCompiler(outDirAbsolutePath, fs.realpathSync(filePath));
-
-		for (const file of project.fileNames) {
-			if (isInsideOutDir(path.resolve(file))) {
+		for (const root of roots) {
+			if (
+				!isPathInsideWithCompiler(cwd, root.path) ||
+				isPathInsideWithCompiler(root.path, cwd)
+			) {
 				throw new UserError(
-					`Refusing to clean outDir '${outDirRelativePath}': it contains source file '${path.relative(cwd, file)}'.`,
+					`Refusing to traverse outside safe paths containing tsconfig to process ${root.name}!`,
 				);
 			}
-		}
+			const isInsideRoot = (filePath: string) =>
+				isPathInsideWithCompiler(root.path, filePath) ||
+				isPathInsideWithCompiler(root.path, fs.realpathSync(filePath));
 
-		for (const file of project.configFilePaths) {
-			if (isInsideOutDir(path.resolve(file))) {
-				throw new UserError(
-					`Refusing to clean outDir '${outDirRelativePath}': it contains config file '${path.relative(cwd, file)}'.`,
-				);
+			for (const file of project.programFileNames) {
+				if (isInsideRoot(path.resolve(file))) {
+					throw new UserError(
+						`Refusing to clean ${root.name} '${root.relativePath}': it contains source file '${path.relative(cwd, file)}'.`,
+					);
+				}
+			}
+
+			for (const file of project.configFilePaths) {
+				if (isInsideRoot(path.resolve(file))) {
+					throw new UserError(
+						`Refusing to clean ${root.name} '${root.relativePath}': it contains config file '${path.relative(cwd, file)}'.`,
+					);
+				}
+			}
+
+			try {
+				fs.lstatSync(root.path);
+				if (fs.realpathSync(root.path) !== root.path) {
+					throw new UserError(
+						`Refusing to clean ${root.name} through a symbolic link: ${root.relativePath}!`,
+					);
+				}
+			} catch (error) {
+				if (!isNodeErrorOf(error, Error, "ENOENT")) {
+					throw error;
+				}
 			}
 		}
+		cleanupRoots = roots.filter(
+			(root) =>
+				root.name === "outDir" ||
+				!isPathInsideWithCompiler(outDirAbsolutePath, root.path),
+		);
 
 		if (args.values.noClean) {
 			return;
@@ -213,78 +255,87 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 		return { dirIsEmpty, verdicts };
 	}
 
-	let outDirExists = true;
-	try {
-		fs.lstatSync(outDir);
-	} catch (error) {
-		if (!isNodeErrorOf(error, Error, "ENOENT")) {
-			throw error;
+	const results = cleanupRoots.map((root) => {
+		try {
+			fs.lstatSync(root.path);
+		} catch (error) {
+			if (!isNodeErrorOf(error, Error, "ENOENT")) {
+				throw error;
+			}
+			return { verdicts: [] };
 		}
-
-		outDirExists = false;
-	}
-
-	if (outDirExists && fs.realpathSync(outDir) !== path.resolve(outDir)) {
-		throw new UserError(
-			`Refusing to clean outDir through a symbolic link: ${outDirRelativePath}!`,
-		);
-	}
-
-	const result = outDirExists ? readDir(outDir) : { verdicts: [] };
+		return readDir(root.path);
+	});
 
 	const { dry, verbose } = args.values;
 	const removeVerb = dry ? "Would remove" : "Removed";
-	let fileCount = 0;
-	let dirCount = 0;
-
-	for (const verdict of result.verdicts) {
-		const displayPath = path.relative(cwd, verdict.path);
-
-		switch (verdict.type) {
-			case "removeDir":
-				if (!dry) {
-					fs.rmdirSync(verdict.path);
-				}
-				dirCount++;
-				if (dry || verbose) {
-					print(`${removeVerb} empty directory: ${displayPath}`);
-				}
-				break;
-			case "removeFile":
-				if (!dry) {
-					fs.rmSync(verdict.path, { recursive: false });
-				}
-				fileCount++;
-				if (dry || verbose) {
-					print(`${removeVerb} file: ${displayPath}`);
-				}
-				break;
-			case "skipped":
-				if (verbose) {
-					print(`Skipped (${verdict.reason}): ${displayPath}`);
-				}
-				break;
-			default:
-				assertUnreachable(verdict);
+	for (const [index, root] of cleanupRoots.entries()) {
+		const result = results[index];
+		if (result === undefined) {
+			throw new Error("Missing cleanup result.");
 		}
-	}
+		let fileCount = 0;
+		let dirCount = 0;
 
-	const parts: string[] = [];
-	if (fileCount > 0) {
-		parts.push(formatCount(fileCount, "file", "files"));
-	}
-	if (dirCount > 0) {
-		parts.push(formatCount(dirCount, "empty directory", "empty directories"));
-	}
+		for (const verdict of result.verdicts) {
+			if (
+				root.name === "declarationDir" &&
+				isPathInside(
+					outDirAbsolutePath,
+					verdict.path,
+					compiler.useCaseSensitiveFileNames,
+				)
+			) {
+				continue;
+			}
+			const displayPath = path.relative(cwd, verdict.path);
 
-	if (parts.length > 0) {
-		print(
-			`${binName}: ${removeVerb} ${parts.join(" and ")} from ${styleText("italic", outDirRelativePath)}`,
-		);
-	} else if (dry) {
-		print(
-			`${binName}: Nothing to remove from ${styleText("italic", outDirRelativePath)}`,
-		);
+			switch (verdict.type) {
+				case "removeDir":
+					if (!dry) {
+						fs.rmdirSync(verdict.path);
+					}
+					dirCount++;
+					if (dry || verbose) {
+						print(`${removeVerb} empty directory: ${displayPath}`);
+					}
+					break;
+				case "removeFile":
+					if (!dry) {
+						fs.rmSync(verdict.path, { recursive: false });
+					}
+					fileCount++;
+					if (dry || verbose) {
+						print(`${removeVerb} file: ${displayPath}`);
+					}
+					break;
+				case "skipped":
+					if (verbose) {
+						print(`Skipped (${verdict.reason}): ${displayPath}`);
+					}
+					break;
+				default:
+					assertUnreachable(verdict);
+			}
+		}
+
+		const parts: string[] = [];
+		if (fileCount > 0) {
+			parts.push(formatCount(fileCount, "file", "files"));
+		}
+		if (dirCount > 0) {
+			parts.push(formatCount(dirCount, "empty directory", "empty directories"));
+		}
+
+		if (parts.length > 0) {
+			print(
+				`${binName}: ${removeVerb} ${parts.join(" and ")} from ${styleText("italic", root.relativePath)}`,
+			);
+		} else if (dry || cleanupRoots.length > 1) {
+			print(
+				`${binName}: Nothing to remove from ${styleText("italic", root.relativePath)}`,
+			);
+		}
 	}
 }
 

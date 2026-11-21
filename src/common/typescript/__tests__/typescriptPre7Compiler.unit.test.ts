@@ -19,7 +19,8 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 				"base.json": JSON.stringify({
 					compilerOptions: { outDir: "dist" },
 				}),
-				"src/index.ts": "export const value = 1;",
+				"lib/imported.ts": "export const imported = true;",
+				"src/index.ts": 'import "../lib/imported";\nexport const value = 1;',
 				"tsconfig.json": JSON.stringify({
 					extends: "./base.json",
 					include: ["src"],
@@ -37,6 +38,12 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 			expect(project.fileNames).toStrictEqual([
 				path.join(projectDir, "src/index.ts"),
 			]);
+			expect(project.programFileNames.sort()).toStrictEqual(
+				[
+					path.join(projectDir, "src/index.ts"),
+					path.join(projectDir, "lib/imported.ts"),
+				].sort(),
+			);
 			expect(project.options.outDir).toBe(path.join(projectDir, "dist"));
 			expect(project.configFilePaths).toStrictEqual([
 				configFilePath,
@@ -47,7 +54,8 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 
 		it("records watch options", ({ expect }) => {
 			const projectDir = createTempProject({
-				"src/index.ts": "export const value = 1;",
+				"src/index.ts": 'import "./lib";\nexport const value = 1;',
+				"src/lib.ts": "export const imported = true;",
 				"tsconfig.json": JSON.stringify({
 					compilerOptions: { outDir: "dist" },
 					watchOptions: { watchFile: "useFsEvents" },

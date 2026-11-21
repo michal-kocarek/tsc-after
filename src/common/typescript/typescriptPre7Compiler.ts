@@ -41,10 +41,17 @@ export class TypeScriptPre7Compiler implements Compiler {
 			);
 		}
 
+		const emittableFileNames = project.programFileNames.filter(
+			(fileName) => !isDeclarationFileName(fileName),
+		);
+		const outputCommandLine = {
+			...parsedCommandLine,
+			fileNames: emittableFileNames,
+		};
 		const outputPaths = new Set<string>();
-		for (const fileName of project.fileNames) {
+		for (const fileName of emittableFileNames) {
 			for (const outputPath of ts.getOutputFileNames(
-				parsedCommandLine,
+				outputCommandLine,
 				fileName,
 				!this.useCaseSensitiveFileNames,
 			)) {
@@ -61,6 +68,17 @@ export class TypeScriptPre7Compiler implements Compiler {
 			getCurrentDirectory: () => process.cwd(),
 			getNewLine: () => ts.sys.newLine,
 		};
+		const checkConfigFile = (filePath: string) => {
+			const config = ts.readConfigFile(filePath, (name) =>
+				ts.sys.readFile(name),
+			);
+			if (config.error !== undefined) {
+				throw new UserError(
+					ts.formatDiagnostics([config.error], formatHost).trimEnd(),
+				);
+			}
+		};
+		checkConfigFile(configFilePath);
 		const parsedCommandLine = ts.getParsedCommandLineOfConfigFile(
 			configFilePath,
 			undefined,
@@ -88,6 +106,13 @@ export class TypeScriptPre7Compiler implements Compiler {
 		const configFile = isConfigFileMetadata(configFileOption)
 			? configFileOption
 			: undefined;
+		for (const filePath of configFile?.extendedSourceFiles ?? []) {
+			checkConfigFile(filePath);
+		}
+		const program = ts.createProgram(
+			parsedCommandLine.fileNames,
+			parsedCommandLine.options,
+		);
 		const project: Project = {
 			configFilePaths: [
 				configFile?.fileName ?? configFilePath,
@@ -96,6 +121,14 @@ export class TypeScriptPre7Compiler implements Compiler {
 			fileNames: parsedCommandLine.fileNames,
 			hasWatchOptions: parsedCommandLine.watchOptions !== undefined,
 			options: parsedCommandLine.options,
+			programFileNames: program
+				.getSourceFiles()
+				.filter(
+					(sourceFile) =>
+						!program.isSourceFileDefaultLibrary(sourceFile) &&
+						!program.isSourceFileFromExternalLibrary(sourceFile),
+				)
+				.map((sourceFile) => sourceFile.fileName),
 		};
 
 		this.parsedCommandLines.set(project, parsedCommandLine);
@@ -126,4 +159,12 @@ function isConfigFileMetadata(value: unknown): value is ConfigFileMetadata {
 	}
 
 	return true;
+}
+
+function isDeclarationFileName(fileName: string): boolean {
+	return (
+		fileName.endsWith(".d.ts") ||
+		fileName.endsWith(".d.mts") ||
+		fileName.endsWith(".d.cts")
+	);
 }
