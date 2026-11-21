@@ -296,7 +296,6 @@ export function mainAction(args: ParsedCliArgs) {
 	// TODO: For tsc-after, I’d make --dry print the files it would remove to stdout, followed by a count. A normal run
 	//  Can print a short count; --verbose can print each removed path. Keep debug objects such as the current print(tsconfig)
 	//  Out of normal output.
-	//  Exit with 0 for success, including a dry run or nothing to remove; 1 for a cleanup or config error; and 2 for invalid CLI arguments.
 	//  If you later want scripts to consume the file list, add a dedicated machine-readable option so the human summary does not get mixed into it.
 
 	// TODO: Consider adding --all? To just wipe entire outDir?

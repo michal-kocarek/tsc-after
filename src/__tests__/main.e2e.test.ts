@@ -48,7 +48,31 @@ describe("tsc-after", () => {
 			allowFailure: true,
 		});
 
-		expect(result.exitCode).toBe(1);
+		expect(result.exitCode).toBe(2);
+		expect(result.stderr).toBe("error: Unknown option '--unknown'.");
+		expect(result.stdout).toBe("");
+	});
+
+	it("should reject invalid boolean values with exit code 2", async ({
+		expect,
+	}) => {
+		const result = await runTscAfter(["--dry=yes"], {
+			allowFailure: true,
+		});
+
+		expect(result.exitCode).toBe(2);
+		expect(result.stderr).toBe(
+			"error: Option '-d, --dry' does not take an argument.",
+		);
+		expect(result.stdout).toBe("");
+	});
+
+	it("should parse arguments before handling help", async ({ expect }) => {
+		const result = await runTscAfter(["--help", "--unknown"], {
+			allowFailure: true,
+		});
+
+		expect(result.exitCode).toBe(2);
 		expect(result.stderr).toBe("error: Unknown option '--unknown'.");
 		expect(result.stdout).toBe("");
 	});
@@ -60,7 +84,7 @@ describe("tsc-after", () => {
 			allowFailure: true,
 		});
 
-		expect(result.exitCode).toBe(1);
+		expect(result.exitCode).toBe(2);
 		expect(result.stderr).toBe(
 			"error: Unexpected argument 'tsconfig.json'. This command does not take positional arguments.",
 		);
@@ -74,7 +98,7 @@ describe("tsc-after", () => {
 			allowFailure: true,
 		});
 
-		expect(result.exitCode).toBe(1);
+		expect(result.exitCode).toBe(2);
 		expect(result.stderr).toBe(
 			"error: Option '-p, --project <value>' argument missing.",
 		);
