@@ -49,6 +49,10 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
   Reuse a `tsc` flag name or short alias only when the meaning is the same (`--project`/`-p`, `--help`/`-h`, `--verbose`, `--watch`/`-w`), and never give a `tsc` flag name a different behavior.
 - Write help descriptions the way `tsc` does: one imperative sentence ending with a period, e.g. "Print this message.".
 
+## Linting
+
+- When running ESLint during development, use `pnpm lint --fix` to apply automatic fixes and review the resulting changes.
+
 ## Testing
 
 - For development or testing workflow details, consult [`.github/DEVELOPMENT.md`](.github/DEVELOPMENT.md).
