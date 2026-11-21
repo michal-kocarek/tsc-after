@@ -29,7 +29,7 @@ tsc-after -p packages/core
 The project path must be inside the current working directory.
 Positional arguments and unknown flags are rejected.
 
-For a basic project with a dedicated `outDir`, `tsc-after` uses TypeScript's output-name API to identify expected outputs, removes other regular files in `outDir`, and removes directories left empty by cleanup.
+For a basic project with a dedicated `outDir`, `tsc-after` uses TypeScript to identify expected outputs, removes other regular files in `outDir`, and removes directories left empty by cleanup.
 It skips symbolic links and entries on other devices.
 This behavior and its safety limits are not yet verified for every TypeScript configuration or output type.
 
@@ -47,6 +47,9 @@ This behavior and its safety limits are not yet verified for every TypeScript co
 - Cleanup confinement and source/output overlap checks are incomplete.
   Do not rely on the current checks to protect valuable files.
 - Handling of TypeScript configurations and emitted file types is incomplete and still needs verification.
+- TypeScript 7.1 beta support is experimental and uses its native compiler API to determine outputs without writing them.
+  Cleanup is refused when `noEmit` is enabled or emit is skipped.
+  Package-based `extends` is not supported on TypeScript 7.1; use a relative or absolute config path instead.
 
 Related open work: [configuration handling (#2)](https://github.com/michal-kocarek/tsc-after/issues/2), [incremental build state (#4)](https://github.com/michal-kocarek/tsc-after/issues/4), [cleanup safety (#6)](https://github.com/michal-kocarek/tsc-after/issues/6), and [output coverage (#7)](https://github.com/michal-kocarek/tsc-after/issues/7).
 
@@ -57,6 +60,9 @@ See [`product.md`](./docs/product.md) for the roadmap.
 
 - the project's tsconfig file must exist inside the current working directory (unlike `tsc`, it does not search parent directories for `tsconfig.json`)
 - source code must be compiled in dedicated `outDir` path
+- TypeScript 5.9.3 or 6.x, or TypeScript 7.1.0-beta through 7.x; TypeScript 7.0 is not supported
+- TypeScript 7.1 beta requires its platform-specific native compiler package; use Node.js 22 or later for its published `tsc` command.
+  The beta's `tsc` entrypoint fails on Node.js 16.20.2, 18.11.0, and 20.0.0 despite the package's Node.js 16.20.0 minimum.
 
 ## Exit codes
 

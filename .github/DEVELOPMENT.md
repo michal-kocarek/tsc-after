@@ -70,17 +70,18 @@ Both default to the Node version running Vitest:
 TSC_AFTER_NODE_EXECUTABLE=/path/to/node TSC_AFTER_EXPECTED_NODE_VERSION=18.11.0 pnpm run test:e2e --run
 ```
 
-CI also runs the end-to-end tests against TypeScript 5.9.3 and 6.0.3.
-To reproduce a matrix entry locally, build first with the locked development dependencies, then select the compiler and run the tests:
+CI also runs the end-to-end tests against TypeScript 5.9.3, 6.0.3, and 7.1.0-beta.
+The TypeScript 7.1 beta entrypoint requires a newer Node version than its package metadata suggests; CI also checks it with Node 22.0.0.
+Each TypeScript matrix entry also runs the version-gated compiler adapter unit tests in `src/common/typescript/__tests__/`.
+To reproduce a matrix entry locally, build first with the locked development dependencies, then run both test suites through the TypeScript version helper:
 
 ```shell
 pnpm build
-pnpm add --save-dev --save-exact --no-lockfile typescript@5.9.3
-TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=5.9.3 pnpm run test:e2e --run
+TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=5.9.3 scripts/with-typescript-version 5.9.3 -- bash -c 'pnpm exec vitest run --project unit src/common/typescript/__tests__ && pnpm run test:e2e --run'
 ```
 
-Selecting a version changes `package.json` and the installed dependencies but not the lockfile.
-Restore the TypeScript development dependency in `package.json` afterward and run `pnpm install --frozen-lockfile` to restore the locked dependencies.
+The helper keeps `package.json` and `pnpm-lock.yaml` modified for the duration of the command, then restores both files and reinstalls the locked dependencies when the command exits.
+Do not run it concurrently with package-manager installs, edits to those files, or `pnpm clean`.
 Testing a version does not by itself change the supported peer dependency range.
 
 `pnpm run test` is an alias for the source tests.

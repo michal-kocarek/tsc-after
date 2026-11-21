@@ -10,6 +10,10 @@
 - `src/tasks/`: main actions an entrypoint runs (`mainAction`, `help`, `version`).
 - `src/common/`: shared helpers and everything else.
 
+## TypeScript compiler API
+
+- Initialize the TypeScript 7.1 beta `typescript/sync` API (for example, with `api.parseCommandLine([])`) before calling `getCanonicalFileName`; otherwise it throws `API has not been initialized` instead of providing case-sensitivity information.
+
 ## Issues
 
 - Issues and milestones are tracked in [GitHub](https://github.com/michal-kocarek/tsc-after) (the `origin` remote).
