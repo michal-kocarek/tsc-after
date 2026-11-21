@@ -1,7 +1,8 @@
+import ts from "typescript";
 import { describe, it } from "vitest";
 
 import packageJson from "../../package.json" with { type: "json" };
-import { runTscAfter } from "./project.ts";
+import { runTsc, runTscAfter } from "./project.ts";
 
 // Sanity check as this needs full build
 try {
@@ -45,6 +46,21 @@ describe("tsc-after", () => {
 			process.env["TSC_AFTER_EXPECTED_NODE_VERSION"] ?? process.versions.node;
 
 		expect(result.stdout).toContain(` node-${expectedNodeVersion} `);
+	});
+
+	it("should use the selected TypeScript version", async ({ expect }) => {
+		const expectedVersion =
+			// eslint-disable-next-line n/no-process-env -- Assert the compatibility compiler.
+			process.env["TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION"] ?? ts.version;
+		const tsc = await runTsc(["--version"]);
+		const tscAfter = await runTscAfter(["--version"]);
+
+		expect(tsc.exitCode).toBe(0);
+		expect(tsc.stdout).toBe(`Version ${expectedVersion}`);
+		expect(tscAfter.exitCode).toBe(0);
+		expect(tscAfter.stdout.endsWith(` typescript-${expectedVersion}`)).toBe(
+			true,
+		);
 	});
 
 	it("should fail nicely when called with unknown argument", async ({

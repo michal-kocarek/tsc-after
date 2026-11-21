@@ -27,6 +27,8 @@ export default defineConfig({
 				extends: true,
 				test: {
 					include: ["src/**/*.e2e.test.ts"],
+					maxConcurrency: 2,
+					maxWorkers: 1,
 					name: { color: "cyan", label: "e2e" },
 				},
 			},

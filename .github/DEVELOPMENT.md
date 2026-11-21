@@ -96,6 +96,28 @@ Calls to `console.log`, `console.warn`, and other console methods will cause a t
 Pass argument arrays directly to argument-parsing functions in tests instead of stubbing `process.argv` or making production parameters optional for test convenience.
 When a test needs isolated process state, use `vi.stubGlobal("process", { ...process, ... })`; Vitest is configured to restore stubbed globals between tests, so keep the stub and code under test synchronous because tests in a file can run concurrently.
 
+### End-to-end tests
+
+Keep E2E test files flat in `src/__tests__/`, grouped by feature area:
+
+- `project.e2e.test.ts` tests the isolated-project harness.
+- `staleOutputs.e2e.test.ts` tests stale output cleanup.
+- `projectOption.e2e.test.ts` tests `--project` and config handling.
+- `outDirSafety.e2e.test.ts` tests safety refusals involving `outDir`.
+- `main.e2e.test.ts` tests CLI arguments, help, and version.
+
+Name new files after the `tsc` feature they cover, such as `watch.e2e.test.ts` or `build.e2e.test.ts`.
+Keep `declarationDir`, `tsBuildInfoFile`, and `outFile` output tests in `staleOutputs.e2e.test.ts` until they need their own file.
+
+Use one behavior per `it` and one named variant per `it.for` row; do not loop over subprocess runs inside a test.
+Each test should create its own project with `withProject` and run at most one `tsc` and one `tsc-after`, keeping the default five-second timeout practical.
+Use `CLEAN_MODES` or `withCleanModes` for normal and `--dry` variants.
+The E2E project uses one worker and allows two concurrent tests to limit subprocess contention; both limits are configured in `vitest.config.ts`.
+
+Reuse `src/__tests__/fixtures/simple` and adjust it in the test with helpers such as `writeJson`.
+Add a separate `fixtures/<name>/` directory and pass `fixtureDir` to `withProject` only when setup needs more than a few `writeJson` calls.
+Compare `readTree(projectDir)` before and after to check that files and symbolic links are unchanged, and use `cliOutcome` to check failure results.
+
 ## Type Checking
 
 You should be able to see suggestions from [TypeScript](https://typescriptlang.org) in your editor for all open files.
