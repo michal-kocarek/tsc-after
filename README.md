@@ -71,7 +71,7 @@ Use `--verbose` to add individual removed and skipped entries.
 - TypeScript 7.1 beta support is experimental and derives output paths without compiling the project.
   Package-based `extends` is not supported on TypeScript 7.1; use a relative or absolute config path instead.
 
-Related open work: [configuration handling (#2)](https://github.com/michal-kocarek/tsc-after/issues/2), [incremental build state (#4)](https://github.com/michal-kocarek/tsc-after/issues/4), [cleanup safety (#6)](https://github.com/michal-kocarek/tsc-after/issues/6), and [output coverage (#7)](https://github.com/michal-kocarek/tsc-after/issues/7).
+Related open work: [incremental build state (#4)](https://github.com/michal-kocarek/tsc-after/issues/4), [cleanup safety (#6)](https://github.com/michal-kocarek/tsc-after/issues/6), and [output coverage (#7)](https://github.com/michal-kocarek/tsc-after/issues/7).
 
 Planned: `--copy`, `--exclude`, and `--watch`.
 See [`product.md`](./docs/product.md) for the roadmap.
