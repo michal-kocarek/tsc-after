@@ -11,6 +11,7 @@ import { describe, it } from "vitest";
 
 import {
 	CLEAN_MODES,
+	ISOLATED_COMPILER_OPTIONS,
 	pathExists,
 	runTsc,
 	runTscAfter,
@@ -27,6 +28,7 @@ describe("stale outputs", () => {
 		await withProject(task, async (projectDir) => {
 			await writeJson(projectDir, "tsconfig.json", {
 				compilerOptions: {
+					...ISOLATED_COMPILER_OPTIONS,
 					declaration: true,
 					declarationMap: true,
 					outDir: "dist",

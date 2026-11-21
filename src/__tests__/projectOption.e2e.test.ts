@@ -4,6 +4,7 @@ import { describe, it } from "vitest";
 
 import {
 	cliOutcome,
+	ISOLATED_COMPILER_OPTIONS,
 	pathExists,
 	readIfExists,
 	readTree,
@@ -60,7 +61,11 @@ const INVALID_CONFIGS = [
 
 async function writeProjectLayouts(projectDir: string): Promise<void> {
 	const config = {
-		compilerOptions: { outDir: "dist", rootDir: "src" },
+		compilerOptions: {
+			...ISOLATED_COMPILER_OPTIONS,
+			outDir: "dist",
+			rootDir: "src",
+		},
 		include: ["src"],
 	};
 	await writeJson(projectDir, "tsconfig.json", config);

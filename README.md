@@ -74,7 +74,8 @@ See [`product.md`](./docs/product.md) for the roadmap.
 
 - the project's tsconfig file must exist inside the current working directory (unlike `tsc`, it does not search parent directories for `tsconfig.json`)
 - source code must be compiled in dedicated `outDir` path
-- TypeScript 5.9.3 or 6.x, or TypeScript 7.1.0-beta through 7.x; TypeScript 7.0 is not supported
+- Node.js `^16.19.0 || >=18.11.0`.
+- TypeScript 3.9.10+, 4.x–6.x, and 7.1.0-beta through 7.x are supported; TypeScript 7.0 is not.
 - TypeScript 7.1 beta requires its platform-specific native compiler package; use Node.js 22 or later for its published `tsc` command.
   The beta's `tsc` entrypoint fails on Node.js 16.20.2, 18.11.0, and 20.0.0 despite the package's Node.js 16.20.0 minimum.
 

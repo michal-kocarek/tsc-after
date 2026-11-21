@@ -6,6 +6,7 @@ import { describe, it } from "vitest";
 import {
 	CLEAN_MODES,
 	cliOutcome,
+	ISOLATED_COMPILER_OPTIONS,
 	pathExists,
 	readTree,
 	runTscAfter,
@@ -23,7 +24,11 @@ describe("outDir safety", () => {
 		}) => {
 			await withProject(task, async (projectDir) => {
 				await writeJson(projectDir, "tsconfig.json", {
-					compilerOptions: { outDir: "node_modules", rootDir: "src" },
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						outDir: "node_modules",
+						rootDir: "src",
+					},
 					extends: "shared-config",
 				});
 				await writeJson(projectDir, "outside.json", {});
@@ -55,7 +60,11 @@ describe("outDir safety", () => {
 		}) => {
 			await withProject(task, async (projectDir) => {
 				await writeJson(projectDir, "tsconfig.json", {
-					compilerOptions: { outDir: "dist", rootDir: "src" },
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						outDir: "dist",
+						rootDir: "src",
+					},
 					extends: ["./first.json"],
 				});
 				await writeJson(projectDir, "first.json", {
@@ -94,7 +103,12 @@ describe("outDir safety", () => {
 			async ({ options, source }, { expect, task }) => {
 				await withProject(task, async (projectDir) => {
 					await writeJson(projectDir, "tsconfig.json", {
-						compilerOptions: { outDir: "dist", rootDir: "src", ...options },
+						compilerOptions: {
+							...ISOLATED_COMPILER_OPTIONS,
+							outDir: "dist",
+							rootDir: "src",
+							...options,
+						},
 					});
 					await writeFile(join(projectDir, "src/index.ts"), source);
 					await mkdir(join(projectDir, "dist"));

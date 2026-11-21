@@ -4,8 +4,8 @@ import type { Compiler, Project } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
 
-/** Uses the `typescript` API for TypeScript 5.9 and 6.x. */
-export class TypeScript5Compiler implements Compiler {
+/** Uses the `typescript` API for TypeScript 3.9 through 6.x. */
+export class TypeScriptPre7Compiler implements Compiler {
 	readonly useCaseSensitiveFileNames: boolean;
 	private readonly parsedCommandLines = new WeakMap<
 		Project,

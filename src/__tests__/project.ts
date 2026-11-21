@@ -20,6 +20,10 @@ export const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 export const e2eDir = resolve(repositoryRoot, ".tmp/e2e");
 export const SOURCE_FILE = "src/lib.ts";
 
+// E2e projects live inside the repo, so tsc otherwise auto-includes its @types,
+// which older supported TypeScript versions cannot parse.
+export const ISOLATED_COMPILER_OPTIONS = { types: [] } as const;
+
 const STACK_TRACE_MARKER = "    at ";
 
 export const CLEAN_MODES = [

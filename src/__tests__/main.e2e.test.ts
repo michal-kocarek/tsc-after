@@ -54,9 +54,13 @@ describe("tsc-after", () => {
 	});
 
 	it("should use the selected TypeScript version", async ({ expect }) => {
-		const expectedVersion =
+		const expectedVersionOverride =
 			// eslint-disable-next-line n/no-process-env -- Assert the compatibility compiler.
-			process.env["TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION"] ?? ts.version;
+			process.env["TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION"];
+		const expectedVersion =
+			expectedVersionOverride === undefined || expectedVersionOverride === ""
+				? ts.version
+				: expectedVersionOverride;
 		const tsc = await runTsc(["--version"]);
 		const tscAfter = await runTscAfter(["--version"]);
 
