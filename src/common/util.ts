@@ -47,7 +47,9 @@ export function parseArgs() {
 	} catch (error) {
 		if (isParseArgsError(error)) {
 			process.exitCode = EXIT_CODE_INVALID_ARGUMENTS;
-			throw new UserError(error.message);
+			throw new UserError(
+				error.message.endsWith(".") ? error.message : `${error.message}.`,
+			);
 		}
 
 		throw error;

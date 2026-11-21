@@ -63,6 +63,13 @@ pnpm build
 pnpm run test:e2e
 ```
 
+For compatibility testing with another Node executable, set `TSC_AFTER_NODE_EXECUTABLE` and `TSC_AFTER_EXPECTED_NODE_VERSION`.
+Both default to the Node version running Vitest:
+
+```shell
+TSC_AFTER_NODE_EXECUTABLE=/path/to/node TSC_AFTER_EXPECTED_NODE_VERSION=18.11.0 pnpm run test:e2e --run
+```
+
 `pnpm run test` is an alias for the source tests.
 Add the `--coverage` flag to compute source test coverage and place reports in the `coverage/` directory:
 

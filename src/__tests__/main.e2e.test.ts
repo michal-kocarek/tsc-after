@@ -39,6 +39,12 @@ describe("tsc-after", () => {
 		expect(result.stdout).toMatch(
 			/^tsc-after\/\d+\.\d+\.\d+ [\w\-.]+ [\w\-.]+ [\w\-.]+$/v,
 		);
+
+		const expectedNodeVersion =
+			// eslint-disable-next-line n/no-process-env -- Assert the compatibility runtime.
+			process.env["TSC_AFTER_EXPECTED_NODE_VERSION"] ?? process.versions.node;
+
+		expect(result.stdout).toContain(` node-${expectedNodeVersion} `);
 	});
 
 	it("should fail nicely when called with unknown argument", async ({

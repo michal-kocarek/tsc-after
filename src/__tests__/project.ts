@@ -36,7 +36,10 @@ export function runTsc(args: string[], opts: RunOptions = {}) {
 }
 
 export async function runTscAfter(args: string[], opts: RunOptions = {}) {
-	const result = await execa(tscAfterPath, args, {
+	const nodeExecutable =
+		// eslint-disable-next-line n/no-process-env -- CLI runtime override.
+		process.env["TSC_AFTER_NODE_EXECUTABLE"] ?? process.execPath;
+	const result = await execa(nodeExecutable, [tscAfterPath, ...args], {
 		...(opts.cwd === undefined ? {} : { cwd: opts.cwd }),
 		env: {
 			FORCE_COLOR: undefined,

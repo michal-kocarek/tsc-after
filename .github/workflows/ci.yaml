@@ -73,14 +73,20 @@ jobs:
           - 26.0.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm build
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
+      - name: Save compatibility Node executable
+        run: echo "TSC_AFTER_NODE_EXECUTABLE=$(command -v node)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: ./.github/actions/prepare
+      - run: pnpm build
       - run: node bin/tsc-after.js --version
-      - run: pnpm run test:unit --run
       - run: pnpm run test:e2e --run
+        env:
+          TSC_AFTER_EXPECTED_NODE_VERSION: ${{ matrix.node }}
 
   # Single stable job to mark as required in branch protection; add every new job to `needs`.
   gate:
