@@ -41,6 +41,7 @@ export default defineConfig({
 			},
 		},
 		setupFiles: ["console-fail-test/setup"],
+		slowTestThreshold: 3_000,
 		strictTags: true,
 		unstubGlobals: true,
 	},
