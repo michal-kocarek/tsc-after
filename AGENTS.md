@@ -24,7 +24,16 @@
 
 - Issues and milestones are tracked in [GitHub](https://github.com/michal-kocarek/tsc-after) (the `origin` remote).
 - Treat references such as `#14` as GitHub issue numbers; read them with GitHub tools or `gh issue view <number>`.
-- Before closing a ticket, review `README.md` and update it to reflect the completed user-facing behavior or limitations; if no README change is warranted, explain why in the completion summary.
+- Before closing a ticket, update `README.md` following [README](#readme); if no README change is warranted, explain why in the completion summary.
+
+## README
+
+`tsc-after` aims to follow tsconfig and `tsc` semantics exactly, so readers take them as given.
+`README.md` documents only _deviations_: what `tsc-after` refuses, doesn't support yet, or does beyond `tsc`.
+
+- Before writing about a behavior, ask whether `tsc` already behaves that way (output layout without `rootDir`, option prerequisites like `declarationDir` needing `declaration`, `noEmitOnError`, module resolution, TypeScript's own runtime requirements); if it does, it's no deviation, so leave it to TypeScript's docs.
+- Write each deviation once, in one short line, in the section it belongs to; link its open issue on that line.
+- A delivered feature removes or narrows a deviation; it adds one only when it introduces a new refusal.
 
 ## Agent documentation
 
