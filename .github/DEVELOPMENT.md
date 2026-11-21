@@ -159,8 +159,7 @@ pnpm tsc --watch
 ## Releasing
 
 Run **Actions → Release → Run workflow** on `main`.
-Each dispatch runs the full CI workflow against the selected commit first; a release or dry run proceeds only if CI succeeds.
-This checks the selected commit even if a separate push-triggered CI run has already passed.
+Release dispatches do not run or wait for CI; verify the selected commit's CI result before releasing.
 Leave **Release version** blank to let [release-it](https://github.com/release-it/release-it) use the version from `package.json` as its current version and recommend an increment from [Conventional Commits](https://www.conventionalcommits.org) since the latest Git tag (`fix:` → patch, `feat:` → minor, breaking change → major).
 The conventional-changelog plugin uses Git commits and tags for this recommendation; GitHub Releases are not its input.
 The workflow keeps `package.json` at its current version until release-it updates it during a release.
