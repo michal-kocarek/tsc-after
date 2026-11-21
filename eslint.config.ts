@@ -71,6 +71,8 @@ export default defineConfig(
 		},
 		name: "All source code",
 		rules: {
+			"@typescript-eslint/consistent-type-imports": "error",
+			"@typescript-eslint/default-param-last": "error",
 			"@typescript-eslint/strict-boolean-expressions": "error",
 			"@typescript-eslint/switch-exhaustiveness-check": "error",
 			eqeqeq: "error",

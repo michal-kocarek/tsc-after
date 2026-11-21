@@ -1,34 +1,13 @@
-import { execa } from "execa";
-import { stripVTControlCharacters } from "node:util";
 import { describe, it } from "vitest";
 
 import packageJson from "../../package.json" with { type: "json" };
-
-const binPath = require.resolve("../../bin/tsc-after.js");
+import { runTscAfter } from "./project.ts";
 
 // Sanity check as this needs full build
 try {
 	require.resolve("../../dist/tscAfter.js");
 } catch (e) {
 	throw new Error("dist entry point not found", { cause: e });
-}
-
-async function runTscAfter(
-	args: string[],
-	opts: { allowFailure: boolean } = { allowFailure: false },
-) {
-	const result = await execa(binPath, args, {
-		env: {
-			FORCE_COLOR: undefined,
-			NO_COLOR: "1",
-		},
-		reject: !opts.allowFailure,
-	});
-
-	result.stdout = stripVTControlCharacters(result.stdout);
-	result.stderr = stripVTControlCharacters(result.stderr);
-
-	return result;
 }
 
 describe("package.json", () => {
