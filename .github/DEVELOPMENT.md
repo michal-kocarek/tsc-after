@@ -103,6 +103,11 @@ Run **Actions → Release → Run workflow** on `main`.
 See the preset's [default commit types](https://conventional-changelog.js.org/presets/conventional-commits/#default-commit-types) for which prefixes appear in the changelog.
 Approve the staged version on npm with 2FA to make it installable.
 
+The conventional-changelog plugin generates or updates `CHANGELOG.md` from commits and Git tags; it does not reconstruct the file from GitHub Releases.
+If `CHANGELOG.md` is missing, it can be generated from that Git history, so deleting it is not a safe way to correct a bad entry: an incorrect local tag can produce incorrect version boundaries or entries again.
+Keep valid published history, correct only the erroneous changelog entry, and before releasing verify that `package.json` and local tags agree with the versions actually published on npm and tagged in GitHub.
+Do not run the workflow while the local package version or tags contain an unreconciled release version.
+
 Git hooks run [commitlint](https://commitlint.js.org) on every new commit message and on all commits pushed to `main`.
 
 npm authenticates the workflow through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (no token) and adds provenance automatically.

@@ -9,7 +9,7 @@ Runs once after a build, or alongside `tsc --watch`.
 
 This document captures the naming decision, positioning, and feature vision.
 It is not a list of implemented features; `--copy` is planned for v1, but is not an available CLI option yet.
-The [v1 milestone](https://github.com/michal-kocarek/tsc-after/milestone/1) tracks the first release and its follow-ups; the [vNext milestone](https://github.com/michal-kocarek/tsc-after/milestone/2) holds later ideas.
+The published `0.2.0` is an experimental release; the [v1 milestone](https://github.com/michal-kocarek/tsc-after/milestone/1) tracks the first stable release and its follow-ups, while the [vNext milestone](https://github.com/michal-kocarek/tsc-after/milestone/2) holds later ideas.
 For the underlying market research, see [`market-research.md`](./market-research.md).
 
 ---
@@ -30,7 +30,7 @@ tsc && tsc-after
 
 The package and executable are both named `tsc-after`.
 The earlier `tsc-clean` proposal and historical availability checks remain in [`market-research.md`](./market-research.md); they do not establish availability of `tsc-after`.
-Verify that npm allows publishing under this name before releasing.
+The package is published on npm as `tsc-after`; verify the package and release state before publishing future versions.
 
 ---
 

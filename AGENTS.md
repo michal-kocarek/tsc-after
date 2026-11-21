@@ -14,6 +14,12 @@
 
 - Issues and milestones are tracked in [GitHub](https://github.com/michal-kocarek/tsc-after) (the `origin` remote).
 - Treat references such as `#14` as GitHub issue numbers; read them with GitHub tools or `gh issue view <number>`.
+- Before closing a ticket, review `README.md` and update it to reflect the completed user-facing behavior or limitations; if no README change is warranted, explain why in the completion summary.
+
+## Agent documentation
+
+- Before creating or editing agent-facing documentation, use the installed `writing-for-agents` skill from [Matt Pocock's skills collection](https://github.com/mattpocock/skills/).
+  If it is unavailable, tell the user and ask permission before downloading the skill directly from GitHub as a last resort.
 
 ## Naming
 
