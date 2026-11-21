@@ -3,6 +3,7 @@ import ts from "typescript";
 import type { Compiler, Project } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
+import { TYPESCRIPT_4_2, typescriptVersion } from "./version.ts";
 
 type ConfigFileMetadata = Pick<
 	ts.TsConfigSourceFile,
@@ -29,6 +30,15 @@ export class TypeScriptPre7Compiler implements Compiler {
 		const parsedCommandLine = this.parsedCommandLines.get(project);
 		if (parsedCommandLine === undefined) {
 			throw new Error("Project was not parsed by this compiler.");
+		}
+
+		if (
+			typescriptVersion < TYPESCRIPT_4_2 &&
+			parsedCommandLine.options.rootDir === undefined
+		) {
+			throw new UserError(
+				"Refusing to clean outDir: TypeScript 3.9 through 4.1 require rootDir to be set.",
+			);
 		}
 
 		const outputPaths = new Set<string>();

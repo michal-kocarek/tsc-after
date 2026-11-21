@@ -54,6 +54,7 @@ Use `--verbose` to add individual removed and skipped entries.
 
 - `outDir` must be set and dedicated to TypeScript outputs.
   Other regular files there, including copied assets, are treated as stale.
+- TypeScript 3.9 through 4.1 require `rootDir` to be set; cleanup is refused without it.
 - By default, `tsc-after` reads `tsconfig.json` from the current directory and does not search parent directories.
 - `incremental`, `tsBuildInfoFile`, `composite`, `declarationDir`, and watch configurations are rejected.
   Project references are not followed.

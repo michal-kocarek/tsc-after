@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { describe, it } from "vitest";
 
 import {
+	TYPESCRIPT_4_2,
 	TYPESCRIPT_7_1,
 	typescriptVersion,
 } from "../common/typescript/version.ts";
@@ -10,6 +11,7 @@ import {
 	ISOLATED_COMPILER_OPTIONS,
 	listEmittedFiles,
 	pathExists,
+	readTree,
 	runTscAfter,
 	withCleanModes,
 	withProject,
@@ -74,7 +76,12 @@ const emittedLayouts: EmittedLayout[] = [
 		name: "rootDir baseline",
 		sourceFiles: { "src/lib.ts": "export const value = 1;" },
 	},
-	...(typescriptVersion >= 4_000_000 ? defaultRootDirLayouts : []),
+	...defaultRootDirLayouts,
+	...defaultRootDirLayouts.map((layout) => ({
+		...layout,
+		compilerOptions: { ...layout.compilerOptions, rootDir: "src" },
+		name: `${layout.name} with rootDir`,
+	})),
 	{
 		include: ["src", "scripts"],
 		name: "multiple source directories without rootDir",
@@ -86,6 +93,24 @@ const emittedLayouts: EmittedLayout[] = [
 	{
 		include: ["src", "build.ts"],
 		name: "directory and single-file include",
+		sourceFiles: {
+			"build.ts": "export const build = true;",
+			"src/lib.ts": "export const value = 1;",
+		},
+	},
+	{
+		compilerOptions: { rootDir: "." },
+		include: ["src", "scripts"],
+		name: "multiple source directories with rootDir",
+		sourceFiles: {
+			"scripts/tool.ts": "export const tool = true;",
+			"src/lib.ts": "export const value = 1;",
+		},
+	},
+	{
+		compilerOptions: { rootDir: "." },
+		include: ["src", "build.ts"],
+		name: "directory and single-file include with rootDir",
 		sourceFiles: {
 			"build.ts": "export const build = true;",
 			"src/lib.ts": "export const value = 1;",
@@ -182,6 +207,25 @@ describe("emitted output layouts", () => {
 					await writeFile(filePath, "stale");
 				}
 
+				if (
+					typescriptVersion < TYPESCRIPT_4_2 &&
+					layout.compilerOptions?.["rootDir"] === undefined
+				) {
+					const before = await readTree(projectDir);
+					const cleanup = await runTscAfter(args, {
+						allowFailure: true,
+						cwd: projectDir,
+					});
+
+					expect(cleanup.exitCode).toBe(1);
+					expect(cleanup.stderr).toContain(
+						"Refusing to clean outDir: TypeScript 3.9 through 4.1 require rootDir to be set.",
+					);
+					await expect(readTree(projectDir)).resolves.toStrictEqual(before);
+
+					return;
+				}
+
 				const sourceContents = await Promise.all(
 					Object.keys(layout.sourceFiles).map((fileName) =>
 						readFile(join(projectDir, fileName), "utf8"),
@@ -229,6 +273,41 @@ describe("emitted output layouts", () => {
 				expect(await readFile(join(projectDir, "tsconfig.json"), "utf8")).toBe(
 					configContents,
 				);
+			});
+		},
+	);
+
+	it.for(withCleanModes([{ name: "inherited rootDir" }]))(
+		"accepts $name ($mode)",
+		async ({ args, mode }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				await writeJson(projectDir, "base.json", {
+					compilerOptions: { rootDir: "src" },
+				});
+				await writeJson(projectDir, "tsconfig.json", {
+					compilerOptions: { ...ISOLATED_COMPILER_OPTIONS, outDir: "dist" },
+					extends: "./base.json",
+					include: ["src"],
+				});
+				const emittedFiles = await listEmittedFiles(projectDir);
+
+				expect(emittedFiles.length).toBeGreaterThan(0);
+
+				await writeFile(join(projectDir, "dist/stale.js"), "stale");
+
+				const cleanup = await runTscAfter(args, { cwd: projectDir });
+
+				expect(cleanup.exitCode).toBe(0);
+
+				for (const fileName of emittedFiles) {
+					await expect(pathExists(join(projectDir, fileName))).resolves.toBe(
+						true,
+					);
+				}
+
+				await expect(
+					pathExists(join(projectDir, "dist/stale.js")),
+				).resolves.toBe(mode === "dry");
 			});
 		},
 	);

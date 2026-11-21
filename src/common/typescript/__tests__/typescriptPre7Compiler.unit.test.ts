@@ -5,7 +5,11 @@ import { describe, it, onTestFinished } from "vitest";
 
 import { UserError } from "../../errors.ts";
 import { TypeScriptPre7Compiler } from "../typescriptPre7Compiler.ts";
-import { TYPESCRIPT_7_0, typescriptVersion } from "../version.ts";
+import {
+	TYPESCRIPT_4_2,
+	TYPESCRIPT_7_0,
+	typescriptVersion,
+} from "../version.ts";
 
 describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 	TypeScriptPre7Compiler,
@@ -96,6 +100,33 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 				]),
 			);
 		});
+
+		it.runIf(typescriptVersion < TYPESCRIPT_4_2)(
+			"requires rootDir on TypeScript 3.9 through 4.1",
+			({ expect }) => {
+				const projectDir = createTempProject({
+					"src/index.ts": "export const value = 1;",
+					"tsconfig.json": JSON.stringify({
+						compilerOptions: { outDir: "dist" },
+						files: ["src/index.ts", "types/global.d.ts"],
+					}),
+					"types/global.d.ts": "declare const globalValue: string;",
+				});
+				const compiler = new TypeScriptPre7Compiler();
+				onTestFinished(() => {
+					compiler.close();
+					fs.rmSync(projectDir, { force: true, recursive: true });
+				});
+
+				const project = compiler.parseProject(
+					path.join(projectDir, "tsconfig.json"),
+				);
+
+				expect(() => compiler.getOutputPaths(project)).toThrow(
+					"Refusing to clean outDir: TypeScript 3.9 through 4.1 require rootDir to be set.",
+				);
+			},
+		);
 
 		it("converts config diagnostics into a UserError", ({ expect }) => {
 			const projectDir = createTempProject({
