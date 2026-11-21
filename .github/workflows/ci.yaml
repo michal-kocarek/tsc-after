@@ -88,6 +88,30 @@ jobs:
         env:
           TSC_AFTER_EXPECTED_NODE_VERSION: ${{ matrix.node }}
 
+  typescript_compatibility:
+    name: TypeScript ${{ matrix.typescript }} Compatibility
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        typescript:
+          - 5.9.3
+          - 6.0.3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: ./.github/actions/prepare
+      - run: pnpm build
+      - name: Select TypeScript version
+        run: pnpm add --save-dev --save-exact --no-lockfile "typescript@$TYPESCRIPT_VERSION"
+        env:
+          TYPESCRIPT_VERSION: ${{ matrix.typescript }}
+      - run: pnpm run test:e2e --run
+        env:
+          TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION: ${{ matrix.typescript }}
+
   # Single stable job to mark as required in branch protection; add every new job to `needs`.
   gate:
     name: CI Gate
@@ -96,6 +120,7 @@ jobs:
       - check
       - node_compatibility
       - test
+      - typescript_compatibility
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any job did not succeed

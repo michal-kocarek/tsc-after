@@ -70,6 +70,19 @@ Both default to the Node version running Vitest:
 TSC_AFTER_NODE_EXECUTABLE=/path/to/node TSC_AFTER_EXPECTED_NODE_VERSION=18.11.0 pnpm run test:e2e --run
 ```
 
+CI also runs the end-to-end tests against TypeScript 5.9.3 and 6.0.3.
+To reproduce a matrix entry locally, build first with the locked development dependencies, then select the compiler and run the tests:
+
+```shell
+pnpm build
+pnpm add --save-dev --save-exact --no-lockfile typescript@5.9.3
+TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=5.9.3 pnpm run test:e2e --run
+```
+
+Selecting a version changes `package.json` and the installed dependencies but not the lockfile.
+Restore the TypeScript development dependency in `package.json` afterward and run `pnpm install --frozen-lockfile` to restore the locked dependencies.
+Testing a version does not by itself change the supported peer dependency range.
+
 `pnpm run test` is an alias for the source tests.
 Add the `--coverage` flag to compute source test coverage and place reports in the `coverage/` directory:
 
