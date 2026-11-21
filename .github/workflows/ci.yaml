@@ -93,27 +93,40 @@ jobs:
           TSC_AFTER_EXPECTED_NODE_VERSION: ${{ matrix.node }}
 
   typescript_compatibility:
-    name: TypeScript ${{ matrix.typescript }} Compatibility
+    name: TypeScript ${{ matrix.typescript }} Compatibility ${{ matrix.node && format('(Node.js {0})', matrix.node) || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        typescript:
-          - 5.9.3
-          - 6.0.3
+        include:
+          - typescript: 5.9.3
+          - typescript: 6.0.3
+          - typescript: 7.1.0-beta
+          - typescript: 7.1.0-beta
+            node: 22.0.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: ${{ matrix.node != '' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - if: ${{ matrix.node != '' }}
+        name: Save compatibility Node executable
+        run: echo "TSC_AFTER_NODE_EXECUTABLE=$(command -v node)" >> "$GITHUB_ENV"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
       - uses: ./.github/actions/prepare
       - run: pnpm build
-      - name: Select TypeScript version
-        run: pnpm add --save-dev --save-exact --no-lockfile "typescript@$TYPESCRIPT_VERSION"
+      - name: TypeScript adapter unit and end-to-end tests
+        run: |
+          scripts/with-typescript-version "$TYPESCRIPT_VERSION" -- bash -c '
+            pnpm exec vitest run --project unit src/common/typescript/__tests__ &&
+            pnpm run test:e2e --run
+          '
         env:
           TYPESCRIPT_VERSION: ${{ matrix.typescript }}
-      - run: pnpm run test:e2e --run
-        env:
+          TSC_AFTER_EXPECTED_NODE_VERSION: ${{ matrix.node || '' }}
           TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION: ${{ matrix.typescript }}
 
   # Single stable job to mark as required in branch protection; add every new job to `needs`.

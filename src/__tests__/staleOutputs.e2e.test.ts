@@ -16,9 +16,52 @@ import {
 	runTscAfter,
 	withCleanModes,
 	withProject,
+	writeJson,
 } from "./project.ts";
 
 describe("stale outputs", () => {
+	it("retains emitted JavaScript, declarations, and maps", async ({
+		expect,
+		task,
+	}) => {
+		await withProject(task, async (projectDir) => {
+			await writeJson(projectDir, "tsconfig.json", {
+				compilerOptions: {
+					declaration: true,
+					declarationMap: true,
+					outDir: "dist",
+					rootDir: "src",
+					sourceMap: true,
+				},
+			});
+			await runTsc([], { cwd: projectDir });
+			const outputs = [
+				"index.js",
+				"index.js.map",
+				"index.d.ts",
+				"index.d.ts.map",
+			];
+			const contents = await Promise.all(
+				outputs.map((file) => readFile(join(projectDir, "dist", file), "utf8")),
+			);
+			await writeFile(join(projectDir, "dist/stale.js"), "stale");
+
+			const cleanup = await runTscAfter([], { cwd: projectDir });
+
+			expect(cleanup.exitCode).toBe(0);
+			await expect(
+				Promise.all(
+					outputs.map((file) =>
+						readFile(join(projectDir, "dist", file), "utf8"),
+					),
+				),
+			).resolves.toStrictEqual(contents);
+			await expect(pathExists(join(projectDir, "dist/stale.js"))).resolves.toBe(
+				false,
+			);
+		});
+	});
+
 	it("removes stale outputs after tsc emits the project", async ({
 		expect,
 		task,

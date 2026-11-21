@@ -32,7 +32,10 @@ const simpleFixtureDir = resolve(
 	repositoryRoot,
 	"src/__tests__/fixtures/simple",
 );
-const tscPath = require.resolve("typescript/bin/tsc");
+const tscPath = join(
+	dirname(require.resolve("typescript/package.json")),
+	"bin/tsc",
+);
 const tscAfterPath = resolve(repositoryRoot, "bin/tsc-after.js");
 
 interface ProjectOptions {
