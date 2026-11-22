@@ -10,9 +10,20 @@
 - `src/tasks/`: main actions an entrypoint runs (`mainAction`, `help`, `version`).
 - `src/common/`: shared helpers and everything else.
 
+## Code style
+
+- Handle paths through `src/common/paths.ts`: `displayPath` for paths shown to users, `lstatIfExists` for entries that may be missing, and `normalizePathForComparison` or `isPathInside` for comparisons, which respect `useCaseSensitiveFileNames`.
+- Pass an options object once a function takes several arguments of the same type, such as predicates.
+- Narrow `Pick<Project, …>` parameters to the fields the function reads.
+- Resolve each item once into a record that carries everything later stages need, instead of pairing parallel arrays by index.
+- Type a closed set of strings as a literal union (e.g. `SkipReason`), and export a named type for each shared shape (e.g. `CleanupPlan`).
+- Apply steps return `void` unless they produce new data.
+- Keep each doc comment directly above the declaration it describes.
+  When a check is correct only because of a guarantee made elsewhere, state that guarantee in a one-line comment at the check.
+
 ## TypeScript compiler API
 
-- For compiler or cleanup changes, follow the [Design standards](.github/DEVELOPMENT.md#design-standards).
+- For compiler, cleanup, copy, or CLI output changes, follow the [Design standards](.github/DEVELOPMENT.md#design-standards).
 - Initialize the TypeScript 7.1 beta `typescript/sync` API (for example, with `api.parseCommandLine([])`) before calling `getCanonicalFileName`; otherwise it throws `API has not been initialized` instead of providing case-sensitivity information.
 
 ## Type assertions

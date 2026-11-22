@@ -21,6 +21,15 @@ Runtime compiler work is limited to parsing configuration and building a program
   Incorrect predictions can delete valid outputs; `emittedLayouts.e2e.test.ts` compares cleanup against `tsc --listEmittedFiles` across the supported version matrix.
 - **Refuse rather than guess:** Refuse cleanup with a clear error when output paths cannot be derived reliably.
   This protects files from deletion when a configuration is unsupported; safety and comparison tests check refusals and preserved outputs.
+- **Validate before changing:** Planners (`resolveCleanupRoots`, `planCopy`, `planCleanup`) only read; apply steps (`applyCleanup`, `applyCopy`) run after every planner has succeeded.
+  Run root-level checks before per-entry checks.
+  A refusal then leaves the file system unchanged and reports the most basic problem first; e2e refusal tests assert an unchanged `readTree`.
+- **Uniform error messages:** Write every error message as full sentences that end with a period, never `!`; `printError` adds the `error: ` prefix.
+  Start refusals with `Refusing to <verb>`, then name the subject and the reason, e.g. `Refusing to copy 'src/x.json': it is inside outDir 'dist'.`
+  Word invalid-argument errors like `tsc` (e.g. `Option '--noClean' cannot be specified without specifying option '--copy'.`), and pass TypeScript diagnostics through unchanged.
+  Quote paths and values in single quotes, show paths relative to the current working directory with `displayPath`, and build repeated messages with small helpers in the module that throws them.
+- **Uniform summaries:** Start every summary line with `tsc-after:`, and take dry-run and real-run verbs ("Would copy" and "Copied") from the shared `verbs` table in `mainAction.ts`.
+  Check new output text against existing wording before adding it, since example strings in plans or issues are illustrations rather than specifications.
 
 ## Building
 
