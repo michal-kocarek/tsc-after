@@ -6,7 +6,6 @@ import { describe, it } from "vitest";
 import { UserError } from "../errors.ts";
 import { realpath } from "../paths.ts";
 import { loadProject } from "../project.ts";
-import { TYPESCRIPT_4_2, typescriptVersion } from "../typescript/version.ts";
 
 const SOURCE_FILES = { "src/index.ts": "export const value = 1;" };
 
@@ -305,22 +304,6 @@ describe(loadProject, () => {
 
 			await expect(result).rejects.toThrow(UserError);
 			await expect(result).rejects.toThrow(message);
-		},
-	);
-
-	it.runIf(typescriptVersion < TYPESCRIPT_4_2)(
-		"requires rootDir on TypeScript 3.9 through 4.1",
-		async ({ expect, onTestFinished }) => {
-			const projectDir = createTempProject(onTestFinished, {
-				...SOURCE_FILES,
-				"tsconfig.json": JSON.stringify({
-					compilerOptions: { outDir: "dist" },
-				}),
-			});
-
-			await expect(loadProject(".", projectDir)).rejects.toThrow(
-				"Refusing to clean outDir: TypeScript 3.9 through 4.1 require rootDir to be set.",
-			);
 		},
 	);
 });

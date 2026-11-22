@@ -13,6 +13,12 @@ Rename `foo.ts` to `foo/index.ts`, and `dist/foo.js` lives on forever.
 
 `tsc-after` reads your `tsconfig.json`, works out which files `tsc` would emit today, and removes the stale outputs it wouldn't.
 
+## Install
+
+```sh
+npm install --save-dev tsc-after
+```
+
 ## Usage
 
 In `package.json`, replace the clean-then-compile command:
@@ -22,27 +28,15 @@ In `package.json`, replace the clean-then-compile command:
 + tsc && tsc-after
 ```
 
-Additional usage:
+## Options
 
-```sh
-# Clean after compile; run after tsc build.
-tsc-after
-
-# Preview planned removals for tsconfig.json.
-tsc-after --dry
-
-# Clean, then copy a file into outDir and keep it during cleanup.
-tsc-after --copy src/schema.json:schema.json
-
-# Copy a file without cleaning.
-tsc-after --noClean --copy README.md:README.md
-
-# Select a tsconfig file instead of the default.
-tsc-after --project tsconfig.build.json
-
-# Select a folder with a tsconfig.json.
-tsc-after -p packages/core
-```
+- `--project`, `-p`: Use the project given a config file or a directory containing `tsconfig.json`.
+- `--dry`, `-d`: Preview removals and copies without changing files.
+- `--verbose`: Enable verbose logging of removed, copied, and skipped entries.
+- `--copy <source:destination>`: Copy a file into `outDir` and keep its destination during cleanup.
+- `--noClean`: Disable removing stale outputs from `outDir`.
+- `--help`, `-h`: Print the help message.
+- `--version`: Print the version.
 
 Relative `--copy` sources resolve from the current working directory, not `rootDir`, and destinations resolve from `outDir`.
 For example, with the current working directory at the project root and `outDir` set to `dist`, `--copy src/asset.json:asset.json` copies `src/asset.json` to `dist/asset.json`.
@@ -50,23 +44,16 @@ For example, with the current working directory at the project root and `outDir`
 `tsc-after` asks TypeScript which files the project emits, then removes every other regular file except `--copy` destinations in `outDir` and `declarationDir`, along with directories left empty.
 It skips symbolic links and entries on other devices inside `outDir` or `declarationDir`.
 
-`--dry` lists planned removals and copies without changing files.
-Use `--verbose` to add individual removed, copied, and skipped entries.
-
 ## Limitations
 
 `tsc-after` reads your tsconfig the way `tsc` does; this list covers only where it differs.
 
 - Anything in `outDir` or `declarationDir` other than TypeScript outputs or `--copy` destinations is removed as stale.
-- `--copy` takes single files only, not globs or directories ([#9](https://github.com/michal-kocarek/tsc-after/issues/9)).
+- `--copy` copies single files; globs and directories are not supported.
 - `outFile` is rejected, and project references are not followed.
-- Support for TypeScript 3.9 - 4.1 is limited, because they compute output paths differently:
-  - `rootDir` is required ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
-  - 3.9 only: `emitDeclarationOnly` with `resolveJsonModule` and JSON source files, and `allowJs` with `jsx: preserve`, `declaration`, and `.jsx` source files are refused ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
-- TypeScript 7.1 beta support is experimental.
+- TypeScript 7.1 support follows its beta API and may change with TypeScript releases.
 
-Planned: `--exclude` and `--watch`.
-See [`product.md`](./docs/product.md) for the roadmap.
+For the roadmap, see [`product.md`](./docs/product.md) and the [vNext milestone](https://github.com/michal-kocarek/tsc-after/milestone/2).
 
 ## Security measures
 
@@ -82,7 +69,7 @@ See [`product.md`](./docs/product.md) for the roadmap.
 ## Requirements
 
 - Node.js 16.19.0 or later, including the latest LTS.
-- TypeScript 3.9.10 through 7.x, including 7.1 beta (except 7.0, which has no API support).
+- TypeScript 4.2.4 through 7.x, including 7.1 beta (except 7.0, which has no API support).
 
 ## Why not `rm -rf dist && tsc`?
 
