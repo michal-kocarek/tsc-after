@@ -59,6 +59,7 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 - After editing files, fix them instead of only checking them: run `pnpm exec prettier --write <files>` and `pnpm exec eslint --fix <files>` on the files you changed, then review the diff and resolve the remaining ESLint errors.
   Pass only the files you changed; `pnpm lint --fix` fixes the whole repository.
 - Try to write Markdown with one sentence per line; `prettier-plugin-sentences-per-line` reformats it anyway.
+- Run knip only through `pnpm lint:knip`; running it directly crashes.
 
 ## Testing
 

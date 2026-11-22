@@ -1,14 +1,20 @@
 import path from "node:path";
+import ts from "typescript";
 import { describe, it } from "vitest";
 
 import { getOutputFileNames } from "../outputPaths.ts";
+import {
+	TYPESCRIPT_6_0,
+	TYPESCRIPT_7_0,
+	typescriptVersion,
+} from "../version.ts";
 
 const projectDir = path.resolve("/project");
 const configFilePath = path.join(projectDir, "tsconfig.json");
 const outputDir = path.join(projectDir, "dist");
 
 describe(getOutputFileNames, () => {
-	it.for([
+	const outputCases = [
 		{
 			fileName: path.join(projectDir, "src/index.ts"),
 			name: "uses the default rootDir",
@@ -196,12 +202,52 @@ describe(getOutputFileNames, () => {
 			options: { declaration: true },
 			outputFileNames: [],
 		},
-	])("$name", ({ fileName, options, outputFileNames }, { expect }) => {
-		expect(
-			getOutputFileNames(
+	] as const;
+
+	const parseConfigHost: ts.ParseConfigHost = {
+		fileExists: () => false,
+		readDirectory: () => [],
+		readFile: () => undefined,
+		useCaseSensitiveFileNames: true,
+	};
+
+	it.for(outputCases)(
+		"$name",
+		({ fileName, options, outputFileNames }, { expect }) => {
+			expect(
+				getOutputFileNames(
+					{ configFilePath, outDir: "dist", ...options },
+					fileName,
+				),
+			).toStrictEqual(outputFileNames);
+		},
+	);
+
+	describe.runIf(
+		typescriptVersion >= TYPESCRIPT_6_0 && typescriptVersion < TYPESCRIPT_7_0,
+	)("matches ts.getOutputFileNames", () => {
+		it.for(outputCases)("$name", ({ fileName, options }, { expect }) => {
+			const parsed = ts.parseJsonConfigFileContent(
+				{
+					compilerOptions: { outDir: "dist", ...options },
+					files: [path.relative(projectDir, fileName)],
+				},
+				parseConfigHost,
+				projectDir,
+				undefined,
+				configFilePath,
+			);
+			const predicted = getOutputFileNames(
 				{ configFilePath, outDir: "dist", ...options },
 				fileName,
-			),
-		).toStrictEqual(outputFileNames);
+			);
+			const compilerOutput = ts
+				.getOutputFileNames(parsed, fileName, false)
+				.map((outputPath) => path.normalize(outputPath));
+
+			expect(compilerOutput).toStrictEqual(
+				predicted.map((outputPath) => path.normalize(outputPath)),
+			);
+		});
 	});
 });

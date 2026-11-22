@@ -5,6 +5,7 @@ import ts from "typescript";
 export const TYPESCRIPT_3_9 = 3_009_000;
 export const TYPESCRIPT_4_0 = 4_000_000;
 export const TYPESCRIPT_4_2 = 4_002_000;
+export const TYPESCRIPT_6_0 = 6_000_000;
 export const TYPESCRIPT_7_0 = 7_000_000;
 export const TYPESCRIPT_7_1 = 7_001_000;
 
