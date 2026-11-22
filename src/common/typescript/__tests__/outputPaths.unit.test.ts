@@ -309,10 +309,10 @@ describe(getTsBuildInfoEmitOutputFilePath, () => {
 			tsBuildInfoFile: path.join(outputDir, "state/build.json"),
 		},
 		{
-			configFileName: "myconfig",
+			configFileName: "my-config",
 			name: "names it after a config without an extension",
 			options: { incremental: true, outDir: "dist" },
-			tsBuildInfoFile: path.join(outputDir, "myconfig.tsbuildinfo"),
+			tsBuildInfoFile: path.join(outputDir, "my-config.tsbuildinfo"),
 		},
 		{
 			configFileName: "tsconfig.custom",
