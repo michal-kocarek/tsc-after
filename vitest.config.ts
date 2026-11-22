@@ -31,8 +31,6 @@ export default defineConfig({
 					maxConcurrency: (process.env["CI"] ?? "") === "" ? 3 : 2,
 					maxWorkers: 1,
 					name: { color: "cyan", label: "e2e" },
-					// Prolong as on GH runners, tests can take a while under old TypeScript versions.
-					testTimeout: 10_000,
 				},
 			},
 		],
@@ -46,6 +44,7 @@ export default defineConfig({
 		setupFiles: ["console-fail-test/setup"],
 		slowTestThreshold: 5_000,
 		strictTags: true,
+		testTimeout: 10_000,
 		unstubGlobals: true,
 	},
 });
