@@ -143,6 +143,26 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 				compiler.parseProject(path.join(projectDir, "tsconfig.json")),
 			).toThrow(UserError);
 		});
+
+		it("normalizes config paths before reading malformed JSON", ({
+			expect,
+			onTestFinished,
+		}) => {
+			const projectDir = createTempProject({
+				"tsconfig.json": '{ "compilerOptions": { ',
+			});
+			const compiler = new TypeScriptPre7Compiler();
+			onTestFinished(() => {
+				compiler.close();
+				fs.rmSync(projectDir, { force: true, recursive: true });
+			});
+
+			const parseProject = () =>
+				compiler.parseProject(path.join(projectDir, "tsconfig.json"));
+
+			expect(parseProject).toThrow(UserError);
+			expect(parseProject).toThrow("TS1005");
+		});
 	},
 );
 

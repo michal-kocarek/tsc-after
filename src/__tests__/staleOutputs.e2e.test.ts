@@ -15,6 +15,7 @@ import {
 	pathExists,
 	runTsc,
 	runTscAfter,
+	toPlatformSep,
 	withCleanModes,
 	withProject,
 	writeJson,
@@ -341,7 +342,7 @@ describe("stale outputs", () => {
 					) &&
 					(mode !== "dry" ||
 						cleanupState.cleanup.stdout.includes(
-							`tsc-after: Nothing to remove from ${outDir}`,
+							toPlatformSep(`tsc-after: Nothing to remove from ${outDir}`),
 						)),
 				outDirExists: cleanupState.outDirExists,
 				sourceUnchanged: cleanupState.sourceUnchanged,

@@ -14,6 +14,7 @@ import {
 	repositoryRoot,
 	runTsc,
 	runTscAfter,
+	toPlatformSep,
 	withCleanModes,
 	withProject,
 } from "./project.ts";
@@ -125,7 +126,7 @@ describe.each(starterProjects)("starter project $name", (starterProject) => {
 							if (mode === "dry") {
 								for (const file of starterProject.expectedStaleFiles) {
 									expect(cleanup.stdout).toContain(
-										`Would remove file: ${file}`,
+										toPlatformSep(`Would remove file: ${file}`),
 									);
 								}
 

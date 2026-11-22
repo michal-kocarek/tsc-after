@@ -159,6 +159,10 @@ export async function runTscAfter(
 	return result;
 }
 
+export function toPlatformSep(value: string): string {
+	return value.replaceAll("/", sep);
+}
+
 export function withCleanModes<T extends object>(
 	rows: readonly T[],
 ): ((typeof CLEAN_MODES)[number] & T)[] {

@@ -95,7 +95,7 @@ export class TypeScriptPre7Compiler implements Compiler {
 			getNewLine: () => ts.sys.newLine,
 		};
 		const checkConfigFile = (filePath: string) => {
-			const config = ts.readConfigFile(filePath, (name) =>
+			const config = ts.readConfigFile(filePath.replaceAll("\\", "/"), (name) =>
 				ts.sys.readFile(name),
 			);
 			if (config.error !== undefined) {

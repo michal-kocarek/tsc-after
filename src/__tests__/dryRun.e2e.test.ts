@@ -7,6 +7,7 @@ import {
 	readTree,
 	runTsc,
 	runTscAfter,
+	toPlatformSep,
 	withProject,
 } from "./project.ts";
 
@@ -31,15 +32,17 @@ describe("dry run and cleanup output", () => {
 
 			expect(cleanup.exitCode).toBe(0);
 			expect(cleanup.stderr).toBe("");
-			expect(cleanup.stdout.split("\n")).toStrictEqual([
-				"Using tsconfig: tsconfig.json",
-				"Would remove empty directory: dist/empty",
-				"Would remove file: dist/old/nested/stale.js",
-				"Would remove empty directory: dist/old/nested",
-				"Would remove empty directory: dist/old",
-				"Would remove file: dist/stale.js",
-				"tsc-after: Would remove 2 files and 3 empty directories from dist",
-			]);
+			expect(cleanup.stdout.split("\n")).toStrictEqual(
+				[
+					"Using tsconfig: tsconfig.json",
+					"Would remove empty directory: dist/empty",
+					"Would remove file: dist/old/nested/stale.js",
+					"Would remove empty directory: dist/old/nested",
+					"Would remove empty directory: dist/old",
+					"Would remove file: dist/stale.js",
+					"tsc-after: Would remove 2 files and 3 empty directories from dist",
+				].map(toPlatformSep),
+			);
 			await expect(readTree(projectDir)).resolves.toStrictEqual(
 				treeBeforeCleanup,
 			);
@@ -67,10 +70,12 @@ describe("dry run and cleanup output", () => {
 
 			expect(cleanup.exitCode).toBe(0);
 			expect(cleanup.stderr).toBe("");
-			expect(cleanup.stdout.split("\n")).toStrictEqual([
-				"Using tsconfig: tsconfig.json",
-				"tsc-after: Nothing to remove from dist",
-			]);
+			expect(cleanup.stdout.split("\n")).toStrictEqual(
+				[
+					"Using tsconfig: tsconfig.json",
+					"tsc-after: Nothing to remove from dist",
+				].map(toPlatformSep),
+			);
 			await expect(readTree(projectDir)).resolves.toStrictEqual(
 				treeBeforeCleanup,
 			);
@@ -91,13 +96,15 @@ describe("dry run and cleanup output", () => {
 
 			expect(cleanup.exitCode).toBe(0);
 			expect(cleanup.stderr).toBe("");
-			expect(cleanup.stdout.split("\n")).toStrictEqual([
-				"Using tsconfig: tsconfig.json",
-				"Skipped (expected output file): dist/index.js",
-				"Skipped (expected output file): dist/lib.js",
-				"Skipped (directory not empty): dist",
-				"tsc-after: Nothing to remove from dist",
-			]);
+			expect(cleanup.stdout.split("\n")).toStrictEqual(
+				[
+					"Using tsconfig: tsconfig.json",
+					"Skipped (expected output file): dist/index.js",
+					"Skipped (expected output file): dist/lib.js",
+					"Skipped (directory not empty): dist",
+					"tsc-after: Nothing to remove from dist",
+				].map(toPlatformSep),
+			);
 			await expect(readTree(projectDir)).resolves.toStrictEqual(
 				treeBeforeCleanup,
 			);
@@ -145,16 +152,18 @@ describe("dry run and cleanup output", () => {
 
 			expect(cleanup.exitCode).toBe(0);
 			expect(cleanup.stderr).toBe("");
-			expect(cleanup.stdout.split("\n")).toStrictEqual([
-				"Using tsconfig: tsconfig.json",
-				"Removed empty directory: dist/empty",
-				"Skipped (expected output file): dist/index.js",
-				"Skipped (expected output file): dist/lib.js",
-				"Removed file: dist/old/stale.js",
-				"Removed empty directory: dist/old",
-				"Skipped (directory not empty): dist",
-				"tsc-after: Removed 1 file and 2 empty directories from dist",
-			]);
+			expect(cleanup.stdout.split("\n")).toStrictEqual(
+				[
+					"Using tsconfig: tsconfig.json",
+					"Removed empty directory: dist/empty",
+					"Skipped (expected output file): dist/index.js",
+					"Skipped (expected output file): dist/lib.js",
+					"Removed file: dist/old/stale.js",
+					"Removed empty directory: dist/old",
+					"Skipped (directory not empty): dist",
+					"tsc-after: Removed 1 file and 2 empty directories from dist",
+				].map(toPlatformSep),
+			);
 			await expect(pathExists(emptyDir)).resolves.toBe(false);
 			await expect(pathExists(join(projectDir, "dist/old"))).resolves.toBe(
 				false,

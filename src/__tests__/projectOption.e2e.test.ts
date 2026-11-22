@@ -12,6 +12,7 @@ import {
 	runTsc,
 	runTscAfter,
 	SOURCE_FILE,
+	toPlatformSep,
 	withCleanModes,
 	withProject,
 	writeJson,
@@ -130,7 +131,7 @@ describe("--project option", () => {
 					cleanupExitCode: cleanup.exitCode,
 					compilationExitCode: compilation.exitCode,
 					configFileDisplayed: cleanup.stdout.includes(
-						`Using tsconfig: ${configFile}`,
+						`Using tsconfig: ${toPlatformSep(configFile)}`,
 					),
 					outputsExistBeforeCleanup,
 					retainedOutputExistsAfterCleanup:

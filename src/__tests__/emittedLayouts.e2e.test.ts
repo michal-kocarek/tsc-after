@@ -14,6 +14,7 @@ import {
 	readTree,
 	repositoryRoot,
 	runTscAfter,
+	toPlatformSep,
 	withCleanModes,
 	withProject,
 	writeJson,
@@ -515,7 +516,7 @@ describe("emitted output layouts", () => {
 						for (const cleanupRoot of layout.cleanupRoots) {
 							expect(
 								summaryLines.some((line) =>
-									line.endsWith(`from ${cleanupRoot}`),
+									line.endsWith(`from ${toPlatformSep(cleanupRoot)}`),
 								),
 							).toBe(true);
 						}
@@ -529,7 +530,7 @@ describe("emitted output layouts", () => {
 
 						if (mode === "dry") {
 							expect(cleanup.stdout.split("\n")).not.toContain(
-								`Would remove file: ${fileName}`,
+								`Would remove file: ${toPlatformSep(fileName)}`,
 							);
 						}
 					}
@@ -541,7 +542,7 @@ describe("emitted output layouts", () => {
 
 						if (mode === "dry") {
 							expect(cleanup.stdout).toContain(
-								`Would remove file: ${fileName}`,
+								`Would remove file: ${toPlatformSep(fileName)}`,
 							);
 						}
 					}

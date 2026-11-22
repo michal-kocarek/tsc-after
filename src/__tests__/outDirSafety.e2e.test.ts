@@ -10,6 +10,7 @@ import {
 	pathExists,
 	readTree,
 	runTscAfter,
+	toPlatformSep,
 	withCleanModes,
 	withProject,
 	writeJson,
@@ -129,7 +130,7 @@ describe("outDir safety", () => {
 
 					if (mode === "dry") {
 						expect(cleanup.stdout).toContain(
-							"Would remove file: dist/base.json",
+							toPlatformSep("Would remove file: dist/base.json"),
 						);
 					}
 				});
@@ -209,7 +210,9 @@ describe("outDir safety", () => {
 				).resolves.toBe(mode === "dry");
 
 				if (mode === "dry") {
-					expect(cleanup.stdout).toContain("Would remove file: dist/stale.js");
+					expect(cleanup.stdout).toContain(
+						toPlatformSep("Would remove file: dist/stale.js"),
+					);
 				}
 			});
 		},
@@ -240,7 +243,7 @@ describe("outDir safety", () => {
 
 				if (mode === "dry") {
 					expect(cleanup.stdout).toContain(
-						"Would remove file: dist/tsconfig.json",
+						toPlatformSep("Would remove file: dist/tsconfig.json"),
 					);
 				}
 			});
@@ -304,7 +307,9 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						"Refusing to clean outDir 'not-a-directory/dist': 'not-a-directory' is not a directory.",
+						toPlatformSep(
+							"Refusing to clean outDir 'not-a-directory/dist': 'not-a-directory' is not a directory.",
+						),
 					),
 				});
 				expect(cleanup.stdout).toContain("Using tsconfig: tsconfig.json");
@@ -368,7 +373,9 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						`Refusing to clean ${kind === "declaration" ? "declarationDir" : "outDir"} through a symbolic link: ${rootPath}!`,
+						toPlatformSep(
+							`Refusing to clean ${kind === "declaration" ? "declarationDir" : "outDir"} through a symbolic link: ${rootPath}!`,
+						),
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);
@@ -411,7 +418,9 @@ describe("outDir safety", () => {
 				exitCode: 1,
 				staleOutputExists: true,
 				stderr: expect.stringContaining(
-					"Refusing to clean outDir through a symbolic link: linked/dist!",
+					toPlatformSep(
+						"Refusing to clean outDir through a symbolic link: linked/dist!",
+					),
 				),
 			});
 			await expect(readTree(projectDir)).resolves.toStrictEqual(before);
@@ -445,7 +454,9 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						"Refusing to clean outDir 'src': it contains source file 'src/index.ts'.",
+						toPlatformSep(
+							"Refusing to clean outDir 'src': it contains source file 'src/index.ts'.",
+						),
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);
@@ -526,7 +537,9 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						"Refusing to clean outDir 'out': it contains source file 'out/imported.ts'.",
+						toPlatformSep(
+							"Refusing to clean outDir 'out': it contains source file 'out/imported.ts'.",
+						),
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);
@@ -568,7 +581,9 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						"Refusing to clean outDir 'out': it contains source file 'out/aliased.ts'.",
+						toPlatformSep(
+							"Refusing to clean outDir 'out': it contains source file 'out/aliased.ts'.",
+						),
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);
@@ -608,7 +623,9 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						"Refusing to clean outDir 'out': it contains source file 'out/types.d.ts'.",
+						toPlatformSep(
+							"Refusing to clean outDir 'out': it contains source file 'out/types.d.ts'.",
+						),
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);
@@ -652,7 +669,9 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						"Refusing to clean declarationDir 'types': it contains source file 'types/source.ts'.",
+						toPlatformSep(
+							"Refusing to clean declarationDir 'types': it contains source file 'types/source.ts'.",
+						),
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);
@@ -690,7 +709,7 @@ describe("outDir safety", () => {
 
 				if (mode === "dry") {
 					expect(cleanup.stdout).toContain(
-						"Would remove file: types/base.json",
+						toPlatformSep("Would remove file: types/base.json"),
 					);
 				}
 			});
@@ -840,7 +859,9 @@ describe("outDir safety", () => {
 				expect(await pathExists(extendedConfigPath)).toBe(mode === "dry");
 
 				if (mode === "dry") {
-					expect(cleanup.stdout).toContain("Would remove file: dist/base.json");
+					expect(cleanup.stdout).toContain(
+						toPlatformSep("Would remove file: dist/base.json"),
+					);
 				}
 			});
 		},
