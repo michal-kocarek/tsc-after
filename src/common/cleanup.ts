@@ -3,27 +3,138 @@ import path from "node:path";
 
 import type { Project } from "./project.ts";
 
-import { isNodeErrorOf, UserError } from "./errors.ts";
+import { assertUnreachable, isNodeErrorOf, UserError } from "./errors.ts";
 import { isPathInside, normalizePathForComparison } from "./paths.ts";
 
-export interface CleanupRoot {
+type CleanupPlan = readonly RootCleanup[];
+
+interface CleanupRoot {
 	name: "declarationDir" | "outDir";
 	path: string;
 	relativePath: string;
 }
 
-export type Verdict =
+interface RootCleanup {
+	root: CleanupRoot;
+	verdicts: readonly Verdict[];
+}
+
+type Verdict =
 	| { path: string; reason: string; type: "skipped" }
 	| { path: string; type: "removeDir" }
 	| { path: string; type: "removeFile" };
 
-export function readCleanupRoot(
-	root: CleanupRoot,
-	expectedOutputPaths: ReadonlySet<string>,
-	useCaseSensitiveFileNames: boolean,
+/**
+ * Plans the removal of stale outputs from each cleanup root without changing
+ * anything, refusing roots that are unsafe to clean.
+ * A path inside outDir always belongs to outDir, even when outDir is nested in
+ * declarationDir.
+ */
+export function planCleanup(
+	project: Pick<
+		Project,
+		| "declarationDir"
+		| "outDir"
+		| "outputPaths"
+		| "sourceFileNames"
+		| "useCaseSensitiveFileNames"
+	>,
+	cwd: string,
+): CleanupPlan {
+	const { outDir, useCaseSensitiveFileNames } = project;
+	const normalizedOutputPaths = new Set(
+		[...project.outputPaths].map((filePath) =>
+			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
+		),
+	);
+	const isOutputPath = (filePath: string) =>
+		normalizedOutputPaths.has(
+			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
+		);
+
+	let outDirIsRemoved = false;
+	const plan: RootCleanup[] = [];
+	for (const root of resolveCleanupRoots(project, cwd)) {
+		const verdicts = readCleanupRoot(root.path, isOutputPath, (dirPath) => {
+			if (
+				root.name === "outDir" ||
+				!isPathInside(outDir, dirPath, useCaseSensitiveFileNames)
+			) {
+				return undefined;
+			}
+			return outDirIsRemoved;
+		});
+		if (root.name === "outDir") {
+			outDirIsRemoved = verdicts.some(
+				(verdict) => verdict.type === "removeDir" && verdict.path === root.path,
+			);
+		}
+		plan.push({ root, verdicts });
+	}
+
+	return plan;
+}
+
+/**
+ * Removes what the plan marks for removal, contents before their directories.
+ * Returns the plan's verdicts, with a busy cleanup root reported as skipped.
+ */
+export function applyCleanup(
+	plan: CleanupPlan,
+	{ dry }: { dry: boolean },
+): CleanupPlan {
+	return plan.map(({ root, verdicts }) => ({
+		root,
+		verdicts: verdicts.map((verdict): Verdict => {
+			if (dry) {
+				return verdict;
+			}
+			switch (verdict.type) {
+				case "removeDir":
+					try {
+						fs.rmdirSync(verdict.path);
+					} catch (error) {
+						if (
+							verdict.path === root.path &&
+							isNodeErrorOf(error, Error, "EBUSY")
+						) {
+							return {
+								path: verdict.path,
+								reason: "busy directory",
+								type: "skipped",
+							};
+						}
+						throw error;
+					}
+					return verdict;
+				case "removeFile":
+					fs.rmSync(verdict.path, { recursive: false });
+					return verdict;
+				case "skipped":
+					return verdict;
+				default:
+					return assertUnreachable(verdict);
+			}
+		}),
+	}));
+}
+
+function notADirectoryError(root: CleanupRoot, componentPath: string): string {
+	return `Refusing to clean ${root.name} '${root.relativePath}': '${componentPath}' is not a directory.`;
+}
+
+/**
+ * Walks a cleanup root, listing contents before their directory.
+ * `isDirOwnedElsewhere` returns `undefined` for a directory this root owns, or
+ * whether another root's plan removes it.
+ */
+function readCleanupRoot(
+	rootPath: string,
+	isOutputPath: (filePath: string) => boolean,
+	isDirOwnedElsewhere: (dirPath: string) => boolean | undefined,
 ): Verdict[] {
 	try {
-		fs.lstatSync(root.path);
+		fs.lstatSync(rootPath);
 	} catch (error) {
 		if (isNodeErrorOf(error, Error, "ENOENT")) {
 			return [];
@@ -31,12 +142,7 @@ export function readCleanupRoot(
 		throw error;
 	}
 
-	const normalizedExpectedOutputPaths = new Set(
-		[...expectedOutputPaths].map((filePath) =>
-			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
-		),
-	);
-	return readDir(root.path);
+	return readDir(rootPath);
 
 	function readDir(dirPath: string): Verdict[] {
 		const verdicts: Verdict[] = [];
@@ -72,11 +178,7 @@ export function readCleanupRoot(
 			}
 
 			if (fullPathStat.isFile()) {
-				if (
-					normalizedExpectedOutputPaths.has(
-						normalizePathForComparison(fullPath, useCaseSensitiveFileNames),
-					)
-				) {
+				if (isOutputPath(fullPath)) {
 					verdicts.push({
 						path: fullPath,
 						reason: "expected output file",
@@ -91,6 +193,13 @@ export function readCleanupRoot(
 			}
 
 			if (fullPathStat.isDirectory()) {
+				const isRemovedElsewhere = isDirOwnedElsewhere(fullPath);
+				if (isRemovedElsewhere !== undefined) {
+					if (!isRemovedElsewhere) {
+						dirIsEmpty = false;
+					}
+					continue;
+				}
 				const childVerdicts = readDir(fullPath);
 				verdicts.push(...childVerdicts);
 				if (childVerdicts.some((verdict) => verdict.type === "skipped")) {
@@ -121,7 +230,7 @@ export function readCleanupRoot(
 	}
 }
 
-export function resolveCleanupRoots(
+function resolveCleanupRoots(
 	project: Pick<
 		Project,
 		| "declarationDir"
@@ -207,8 +316,4 @@ export function resolveCleanupRoots(
 			root.name === "outDir" ||
 			!isPathInside(outDir, root.path, useCaseSensitiveFileNames),
 	);
-}
-
-function notADirectoryError(root: CleanupRoot, componentPath: string): string {
-	return `Refusing to clean ${root.name} '${root.relativePath}': '${componentPath}' is not a directory.`;
 }

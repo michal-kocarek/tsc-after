@@ -1,13 +1,8 @@
-import fs from "node:fs";
 import path from "node:path";
 
-import {
-	readCleanupRoot,
-	resolveCleanupRoots,
-} from "../common/cleanupRoots.ts";
+import { applyCleanup, planCleanup } from "../common/cleanup.ts";
 import { binName } from "../common/constants.ts";
-import { assertUnreachable, isNodeErrorOf } from "../common/errors.ts";
-import { isPathInside } from "../common/paths.ts";
+import { assertUnreachable } from "../common/errors.ts";
 import { loadProject } from "../common/project.ts";
 import { type ParsedCliArgs, print, styleText } from "../common/util.ts";
 
@@ -16,69 +11,29 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 	const project = await loadProject(args.values.project, cwd);
 	print(`Using tsconfig: ${path.relative(cwd, project.configFilePath)}`);
 
-	const cleanupRoots = resolveCleanupRoots(project, cwd);
+	const plan = planCleanup(project, cwd);
 	if (args.values.noClean) {
 		return;
 	}
 
-	const results = cleanupRoots.map((root) =>
-		readCleanupRoot(
-			root,
-			project.outputPaths,
-			project.useCaseSensitiveFileNames,
-		),
-	);
-
 	const { dry, verbose } = args.values;
+	const results = applyCleanup(plan, { dry });
 	const removeVerb = dry ? "Would remove" : "Removed";
-	for (const [index, root] of cleanupRoots.entries()) {
-		const result = results[index];
-		if (result === undefined) {
-			throw new Error("Missing cleanup result.");
-		}
+	for (const { root, verdicts } of results) {
 		let fileCount = 0;
 		let dirCount = 0;
 
-		for (const verdict of result) {
-			if (
-				root.name === "declarationDir" &&
-				isPathInside(
-					project.outDir,
-					verdict.path,
-					project.useCaseSensitiveFileNames,
-				)
-			) {
-				continue;
-			}
+		for (const verdict of verdicts) {
 			const displayPath = path.relative(cwd, verdict.path);
 
 			switch (verdict.type) {
 				case "removeDir":
-					if (!dry) {
-						try {
-							fs.rmdirSync(verdict.path);
-						} catch (error) {
-							if (
-								verdict.path === root.path &&
-								isNodeErrorOf(error, Error, "EBUSY")
-							) {
-								if (verbose) {
-									print(`Skipped (busy directory): ${displayPath}`);
-								}
-								break;
-							}
-							throw error;
-						}
-					}
 					dirCount++;
 					if (dry || verbose) {
 						print(`${removeVerb} empty directory: ${displayPath}`);
 					}
 					break;
 				case "removeFile":
-					if (!dry) {
-						fs.rmSync(verdict.path, { recursive: false });
-					}
 					fileCount++;
 					if (dry || verbose) {
 						print(`${removeVerb} file: ${displayPath}`);
@@ -106,7 +61,7 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 			print(
 				`${binName}: ${removeVerb} ${parts.join(" and ")} from ${styleText("italic", root.relativePath)}`,
 			);
-		} else if (dry || cleanupRoots.length > 1) {
+		} else if (dry || results.length > 1) {
 			print(
 				`${binName}: Nothing to remove from ${styleText("italic", root.relativePath)}`,
 			);

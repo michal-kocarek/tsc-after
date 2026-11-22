@@ -16,6 +16,10 @@ _Avoid_: input files, root files (root files are only those matched by `files` a
 The files `tsc` would write for a project's source files; also called _emitted files_, and writing them is _emit_.
 _Avoid_: build artifacts, dist files
 
+**Cleanup root**:
+The `outDir`, or a `declarationDir` outside it, whose stale outputs `tsc-after` removes.
+_Avoid_: target dir, clean dir
+
 **Stale outputs**:
-Files in `outDir` that the current project would not emit.
+Files in a cleanup root that the current project would not emit.
 _Avoid_: orphans, leftovers
