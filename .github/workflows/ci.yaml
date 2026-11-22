@@ -57,7 +57,7 @@ jobs:
   # passing the suite unchanged (3.9.10 is the latest 3.9 patch).
   test:
     # matrix.os is linux (default) or windows, short for the check name.
-    name: Test / ${{ matrix.os || 'linux' }} node/${{ matrix.node || 'default' }} typescript/${{ matrix.typescript || 'default' }}
+    name: Test / ${{ matrix.os || 'linux' }} node ${{ matrix.node || 'default' }} ts ${{ matrix.typescript || 'default' }}
     runs-on: ${{ matrix.os == 'windows' && 'windows-latest' || 'ubuntu-latest' }}
     defaults:
       run:
