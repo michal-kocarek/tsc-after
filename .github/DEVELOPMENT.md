@@ -175,6 +175,7 @@ Keep E2E test files flat in `src/__tests__/`, grouped by feature area:
 - `emittedLayouts.e2e.test.ts` compares expected outputs with `tsc --listEmittedFiles`.
 - `incremental.e2e.test.ts` tests incremental build state across cleanup.
 - `staleOutputs.e2e.test.ts` tests stale output cleanup.
+- `copy.e2e.test.ts` tests copy behavior and refusals.
 - `projectOption.e2e.test.ts` tests `--project` and config handling.
 - `outDirSafety.e2e.test.ts` tests safety refusals involving `outDir`.
 - `main.e2e.test.ts` tests CLI arguments, help, and version.

@@ -20,6 +20,12 @@ _Avoid_: build artifacts, dist files
 The `outDir`, or a `declarationDir` outside it, whose stale outputs `tsc-after` removes.
 _Avoid_: target dir, clean dir
 
+**Copy entry**:
+One `--copy <source>:<destination>` pair.
+
+**Copy destination**:
+The file in `outDir` that a copy entry writes.
+
 **Stale outputs**:
-Files in a cleanup root that the current project would not emit.
+Files in a cleanup root that are neither outputs of the current project nor copy destinations.
 _Avoid_: orphans, leftovers

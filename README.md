@@ -31,6 +31,12 @@ tsc-after
 # Preview planned removals for tsconfig.json.
 tsc-after --dry
 
+# Clean, then copy a file into outDir and keep it during cleanup.
+tsc-after --copy src/schema.json:schema.json
+
+# Copy a file without cleaning.
+tsc-after --noClean --copy README.md:README.md
+
 # Select a tsconfig file instead of the default.
 tsc-after --project tsconfig.build.json
 
@@ -38,24 +44,25 @@ tsc-after --project tsconfig.build.json
 tsc-after -p packages/core
 ```
 
-`tsc-after` asks TypeScript which files the project emits, then removes every other regular file in `outDir` and `declarationDir`, along with directories left empty.
+`tsc-after` asks TypeScript which files the project emits, then removes every other regular file except `--copy` destinations in `outDir` and `declarationDir`, along with directories left empty.
 It skips symbolic links and entries on other devices inside `outDir` or `declarationDir`.
 
-`--dry` lists planned removals without changing files.
-Use `--verbose` to add individual removed and skipped entries.
+`--dry` lists planned removals and copies without changing files.
+Use `--verbose` to add individual removed, copied, and skipped entries.
 
 ## Limitations
 
 `tsc-after` reads your tsconfig the way `tsc` does; this list covers only where it differs.
 
-- `outDir` (and `declarationDir`) must hold only TypeScript outputs: anything else, including copied assets, is removed as stale.
+- Anything in `outDir` or `declarationDir` other than TypeScript outputs or `--copy` destinations is removed as stale.
+- `--copy` takes single files only, not globs or directories ([#9](https://github.com/michal-kocarek/tsc-after/issues/9)).
 - `outFile` is rejected, and project references are not followed.
 - Support for TypeScript 3.9 - 4.1 is limited, because they compute output paths differently:
   - `rootDir` is required ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
   - 3.9 only: `emitDeclarationOnly` with `resolveJsonModule` and JSON source files, and `allowJs` with `jsx: preserve`, `declaration`, and `.jsx` source files are refused ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
 - TypeScript 7.1 beta support is experimental.
 
-Planned: `--copy`, `--exclude`, and `--watch`.
+Planned: `--exclude` and `--watch`.
 See [`product.md`](./docs/product.md) for the roadmap.
 
 ## Security measures
@@ -64,6 +71,8 @@ See [`product.md`](./docs/product.md) for the roadmap.
 - `outDir` and `declarationDir` must be inside, and not equal to, the current working directory.
 - Cleanup is refused when `outDir` or `declarationDir` contains a source file of the project.
 - Cleanup is refused when `outDir` or `declarationDir` is reached through a symbolic link.
+- `--copy` sources must be regular files inside the current working directory and outside `outDir` and `declarationDir`.
+- `--copy` destinations must stay inside `outDir` and cannot be written through symbolic links.
 - A `--project` path outside the current working directory is refused.
 - Without `--project`, only `tsconfig.json` in the current working directory is read; unlike `tsc`, parent directories are not searched.
 

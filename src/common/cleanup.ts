@@ -40,13 +40,34 @@ export function planCleanup(
 		| "useCaseSensitiveFileNames"
 	>,
 	cwd: string,
+	copyDestinations: readonly string[],
 ): CleanupPlan {
 	const { outDir, useCaseSensitiveFileNames } = project;
 	const normalizedOutputPaths = new Set(
-		[...project.outputPaths].map((filePath) =>
+		[...project.outputPaths, ...copyDestinations].map((filePath) =>
 			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
 		),
 	);
+	const normalizedCopyDestinationDirs = new Set<string>();
+	for (const destinationPath of copyDestinations) {
+		let dirPath = path.dirname(destinationPath);
+		while (isPathInside(outDir, dirPath, useCaseSensitiveFileNames)) {
+			normalizedCopyDestinationDirs.add(
+				normalizePathForComparison(dirPath, useCaseSensitiveFileNames),
+			);
+			if (
+				normalizePathForComparison(dirPath, useCaseSensitiveFileNames) ===
+				normalizePathForComparison(outDir, useCaseSensitiveFileNames)
+			) {
+				break;
+			}
+			dirPath = path.dirname(dirPath);
+		}
+	}
+	const isCopyDestinationDir = (dirPath: string) =>
+		normalizedCopyDestinationDirs.has(
+			normalizePathForComparison(dirPath, useCaseSensitiveFileNames),
+		);
 	const isOutputPath = (filePath: string) =>
 		normalizedOutputPaths.has(
 			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
@@ -55,15 +76,20 @@ export function planCleanup(
 	let outDirIsRemoved = false;
 	const plan: RootCleanup[] = [];
 	for (const root of resolveCleanupRoots(project, cwd)) {
-		const verdicts = readCleanupRoot(root.path, isOutputPath, (dirPath) => {
-			if (
-				root.name === "outDir" ||
-				!isPathInside(outDir, dirPath, useCaseSensitiveFileNames)
-			) {
-				return undefined;
-			}
-			return outDirIsRemoved;
-		});
+		const verdicts = readCleanupRoot(
+			root.path,
+			isOutputPath,
+			isCopyDestinationDir,
+			(dirPath) => {
+				if (
+					root.name === "outDir" ||
+					!isPathInside(outDir, dirPath, useCaseSensitiveFileNames)
+				) {
+					return undefined;
+				}
+				return outDirIsRemoved;
+			},
+		);
 		if (root.name === "outDir") {
 			outDirIsRemoved = verdicts.some(
 				(verdict) => verdict.type === "removeDir" && verdict.path === root.path,
@@ -131,6 +157,7 @@ function notADirectoryError(root: CleanupRoot, componentPath: string): string {
 function readCleanupRoot(
 	rootPath: string,
 	isOutputPath: (filePath: string) => boolean,
+	isCopyDestinationDir: (dirPath: string) => boolean,
 	isDirOwnedElsewhere: (dirPath: string) => boolean | undefined,
 ): Verdict[] {
 	try {
@@ -216,7 +243,13 @@ function readCleanupRoot(
 			dirIsEmpty = false;
 		}
 
-		if (dirIsEmpty) {
+		if (isCopyDestinationDir(dirPath)) {
+			verdicts.push({
+				path: dirPath,
+				reason: "copy destination directory",
+				type: "skipped",
+			});
+		} else if (dirIsEmpty) {
 			verdicts.push({ path: dirPath, type: "removeDir" });
 		} else {
 			verdicts.push({

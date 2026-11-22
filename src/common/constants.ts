@@ -29,6 +29,13 @@ export const cliArgsOptions = {
 		helpDescription: "Disable removing stale outputs from 'outDir'.",
 		type: "boolean",
 	},
+	copy: {
+		default: [],
+		helpDescription:
+			"Copy a file to a path relative to 'outDir', given as '<source>:<destination>'.",
+		multiple: true,
+		type: "string",
+	},
 	dry: {
 		default: false,
 		helpDescription: "Show what would be deleted.",

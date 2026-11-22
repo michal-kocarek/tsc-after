@@ -11,6 +11,9 @@ COMMON COMMANDS
   tsc-after -p ./path/to/tsconfig.json
   Removes stale outputs of the TypeScript project located at the specified path.
 
+  tsc-after --copy src/schema.json:schema.json
+  Removes stale outputs, then copies a file into 'outDir'.
+
   tsc-after --dry
   Shows what would be deleted from 'outDir', without deleting anything.
 
@@ -23,6 +26,8 @@ COMMAND LINE FLAGS
   --project, -p  Use the project given the path to its configuration file, or to a folder with a 'tsconfig.json'.
 
       --noClean  Disable removing stale outputs from 'outDir'.
+
+         --copy  Copy a file to a path relative to 'outDir', given as '<source>:<destination>'.
 
       --dry, -d  Show what would be deleted.
 

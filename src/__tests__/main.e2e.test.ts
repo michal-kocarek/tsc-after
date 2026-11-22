@@ -116,6 +116,42 @@ describe("tsc-after", () => {
 		expect(result.stdout).toBe("");
 	});
 
+	it("should reject --noClean without --copy", async ({ expect }) => {
+		const result = await runTscAfter(["--noClean"], { allowFailure: true });
+
+		expect(result.exitCode).toBe(2);
+		expect(result.stderr).toBe(
+			"error: Option '--noClean' cannot be specified without specifying option '--copy'.",
+		);
+		expect(result.stdout).toBe("");
+	});
+
+	it("should parse arguments before handling help for --noClean", async ({
+		expect,
+	}) => {
+		const result = await runTscAfter(["--help", "--noClean"], {
+			allowFailure: true,
+		});
+
+		expect(result.exitCode).toBe(2);
+		expect(result.stderr).toBe(
+			"error: Option '--noClean' cannot be specified without specifying option '--copy'.",
+		);
+		expect(result.stdout).toBe("");
+	});
+
+	it("should reject malformed --copy values", async ({ expect }) => {
+		const result = await runTscAfter(["--copy", "src/file.json"], {
+			allowFailure: true,
+		});
+
+		expect(result.exitCode).toBe(2);
+		expect(result.stderr).toBe(
+			"error: Option '--copy' expects '<source>:<destination>', got 'src/file.json'.",
+		);
+		expect(result.stdout).toBe("");
+	});
+
 	it("should fail nicely when called with positional argument", async ({
 		expect,
 	}) => {
