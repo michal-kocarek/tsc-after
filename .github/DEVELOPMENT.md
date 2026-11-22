@@ -241,5 +241,10 @@ Do not run the workflow while the local package version or tags contain an unrec
 
 Git hooks run [commitlint](https://commitlint.js.org) on every new commit message and on all commits pushed to `main`.
 
+The PR-title check in `.github/workflows/pr-title.yaml` uses `pull_request_target` so it can validate title edits, but checks out only the trusted default branch and never PR code.
+Keep its GitHub Actions event policy scoped to that workflow, and do not fetch or execute pull-request content in it.
+The check validates the PR title, not the final squash message, which GitHub lets the merger edit; preserve the checked title when merging.
+Require the check only after the workflow is on `main` and a PR run confirms its status-check name.
+
 npm authenticates the workflow through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (no token) and adds provenance automatically.
 The trusted publisher on npm must point to workflow `release.yaml` and environment `npm-release`.
