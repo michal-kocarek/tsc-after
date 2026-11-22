@@ -89,7 +89,8 @@ The entries cover the locked TypeScript on Ubuntu and Windows, and on the lowest
 They also cover TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0, `.nvmrc`, and Windows.
 Vitest always runs on `.nvmrc`; the Node.js entry selects the Node.js that runs `tsc` and `tsc-after`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
-Branch protection requires only the `CI Gate` check, which fails unless every job in its `needs` succeeds; add each new CI job there instead of to the repository settings.
+The `main branch CI gate` ruleset requires only `CI Gate`, which fails unless every job in its `needs` succeeds; add each new CI job there instead of to the repository settings.
+Repository admins and deploy keys can bypass this check, so use the bypass only when the checks cannot run; the admin bypass also permits direct pushes to `main`.
 The non-required `Codecov` job runs after `CI Gate`, including on failure, and needs no change when gated jobs are added.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
 The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
@@ -215,10 +216,20 @@ Add `--watch` to keep the type checker running in a watch mode that updates the 
 pnpm tsc --watch
 ```
 
+## Merging pull requests
+
+Squash is the only enabled merge method.
+Follow the title and blank-body guidance in [CONTRIBUTING.md](./CONTRIBUTING.md), check that `Conventional title` passed, and preserve the title in the merge dialog.
+Include any `Co-authored-by:` lines needed to credit other authors.
+Auto-merge and branch-update suggestions are enabled, but branches do not need to be up to date before merging.
+The signature ruleset permits repository admins to bypass signatures for PR merges, without guaranteeing the resulting commit is signed; direct pushes need signed commits except when using a deploy key.
+The `v*` tag rulesets let deploy keys create tags and prevent everyone, including deploy keys, from updating or deleting them.
+Conversation resolution is not required because GitHub couples that ruleset option to requiring PRs, which would block direct pushes.
+
 ## Releasing
 
 Run **Actions → Release → Run workflow** on `main`.
-Release dispatches do not run or wait for CI; verify the selected commit's CI result before releasing.
+The release job requires a successful `CI Gate` from a `push` run on `main` for the exact selected commit before publishing.
 Leave **Release version** blank to let [release-it](https://github.com/release-it/release-it) use the version from `package.json` as its current version and recommend an increment from [Conventional Commits](https://www.conventionalcommits.org) since the latest Git tag (`fix:` → patch, `feat:` → minor, breaking change → major).
 The conventional-changelog plugin uses Git commits and tags for this recommendation; GitHub Releases are not its input.
 The workflow keeps `package.json` at its current version until release-it updates it during a release.

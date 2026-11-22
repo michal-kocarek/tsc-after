@@ -40,9 +40,10 @@ Please don't post comments asking for permission or stating you will work on an 
 Once you've identified an unassigned open issue that doesn't yet have a PR sent, you're free to send a pull request.
 Be sure to fill out the pull request template's requested information -- otherwise your PR will likely be closed.
 
-PR titles must follow [conventional commits](https://www.conventionalcommits.org/en/v1.0.0), and the PR-title check validates this before merge.
+PR titles must follow [conventional commits](https://www.conventionalcommits.org/en/v1.0.0), and the `Conventional title` check reports whether they comply.
 You can fix the title after opening the PR; maintainers may also edit it before merging.
-The PR title is the default squash commit title, so keep it accurate before merge.
+The squash commit title defaults to the PR title, and its body defaults to blank.
+Maintainers can add a `BREAKING CHANGE:` note to that body when needed.
 A [commitlint](https://commitlint.js.org) Git hook separately checks individual commit messages; the PR-title check only checks the PR title.
 Check [previously merged PRs](https://github.com/michal-kocarek/tsc-after/pulls?q=is%3Apr+is%3Amerged) for reference.
 
