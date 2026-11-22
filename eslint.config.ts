@@ -248,6 +248,11 @@ export default defineConfig(
 		},
 	},
 	{
+		files: [".github/codecov.yml"],
+		name: "Codecov YAML file",
+		rules: { "yml/file-extension": "off" },
+	},
+	{
 		files: [
 			".github/workflows/**/*.{yml,yaml}",
 			".github/actions/**/*.{yml,yaml}",

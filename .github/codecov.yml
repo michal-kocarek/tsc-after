@@ -1,0 +1,14 @@
+bundle_analysis:
+  status: informational
+  warning_threshold: 5%
+comment:
+  require_bundle_changes: true
+  require_changes: true
+coverage:
+  status:
+    patch:
+      default:
+        informational: true
+    project:
+      default:
+        informational: true

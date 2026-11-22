@@ -90,18 +90,21 @@ They also cover TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta 
 Vitest always runs on `.nvmrc`; the Node.js entry selects the Node.js that runs `tsc` and `tsc-after`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
 Branch protection requires only the `CI Gate` check, which fails unless every job in its `needs` succeeds; add each new CI job there instead of to the repository settings.
+The non-required `Codecov` job runs after `CI Gate`, including on failure, and needs no change when gated jobs are added.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
 The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
 TypeScript 3.7 added `getOutputFileNames`, 3.8 added `watchOptions`, and 3.9 is the oldest version that passes the test suite unchanged; 3.9.10 is the latest patch of that release line.
-To reproduce a matrix entry locally, build first with the locked development dependencies, then run both test suites through the TypeScript version helper:
+To reproduce a matrix entry locally, run both test suites through the TypeScript version helper:
 
 ```shell
-pnpm build
 TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=3.9.10 scripts/with-typescript-version 3.9.10 -- bash -c 'pnpm run test:unit --run && pnpm run test:e2e --run'
 ```
 
-The helper keeps `package.json` and `pnpm-lock.yaml` modified for the duration of the command, then restores both files and reinstalls the locked dependencies when the command exits.
-Do not run it concurrently with package-manager installs, edits to those files, or `pnpm clean`.
+The helper puts the snapshot's `node_modules/.bin` first on `PATH`, but pnpm can select a colliding binary such as `typescript-7` for bare `tsc`.
+Commands that need the requested compiler should resolve `typescript` from the snapshot instead of relying on `tsc` from `PATH`.
+Each invocation copies the Git-selected working tree into its own fresh `.tmp` workspace and runs the command there.
+Run only one E2E suite at a time because Vitest already runs compiler-spawning E2E tests concurrently.
+Run `pnpm clean` only after all helper invocations have exited.
 Testing a version does not by itself change the supported peer dependency range.
 
 ### Diagnosing CI failures
@@ -138,8 +141,10 @@ While a run is in progress, retrieve logs for a finished job directly:
 gh api --allow-escape-sequences "repos/michal-kocarek/tsc-after/actions/jobs/$JOB_ID/logs"
 ```
 
-Each failed test job uploads an artifact, kept for one day, with a Vitest JSON report per test run and `environment.json`.
+Each test matrix entry uploads a one-day artifact with Vitest JSON and JUnit reports for every test run, when available.
+On failure, the artifact also contains `environment.json`.
 The environment report records the runner image, Node.js and TypeScript versions, CPUs, memory, load averages, disk space, temporary directory paths, and file name case sensitivity.
+Each entry also uploads its LCOV coverage when available, and `check` uploads the built `dist/`; the `Codecov` job collects these artifacts for coverage, test analytics, and bundle analysis.
 Download the artifacts uploaded so far with:
 
 ```shell
@@ -235,6 +240,11 @@ Keep valid published history, correct only the erroneous changelog entry, and be
 Do not run the workflow while the local package version or tags contain an unreconciled release version.
 
 Git hooks run [commitlint](https://commitlint.js.org) on every new commit message and on all commits pushed to `main`.
+
+The PR-title check in `.github/workflows/pr-title.yaml` uses `pull_request_target` so it can validate title edits, but checks out only the trusted default branch and never PR code.
+Keep its GitHub Actions event policy scoped to that workflow, and do not fetch or execute pull-request content in it.
+The check validates the PR title, not the final squash message, which GitHub lets the merger edit; preserve the checked title when merging.
+Require the check only after the workflow is on `main` and a PR run confirms its status-check name.
 
 npm authenticates the workflow through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (no token) and adds provenance automatically.
 The trusted publisher on npm must point to workflow `release.yaml` and environment `npm-release`.

@@ -44,6 +44,13 @@ jobs:
         name: Build
         if: *prepared
         run: pnpm build
+      - name: Upload build
+        if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
       - name: Lint
         if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
         run: pnpm lint
@@ -60,7 +67,7 @@ jobs:
     name: Test / ${{ matrix.os || 'linux' }}, node ${{ matrix.node || 'default' }}, ts ${{ matrix.typescript || 'default' }}
     runs-on: ${{ matrix.os == 'windows' && 'windows-latest' || 'ubuntu-latest' }}
     env:
-      TEST_RESULTS_DIR: .tmp/ci
+      TEST_RESULTS_DIR: ${{ github.workspace }}/.tmp/ci
       TSC_AFTER_EXPECTED_NODE_VERSION: ${{ matrix.node || '' }}
       TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION: ${{ matrix.typescript || '' }}
     defaults:
@@ -109,12 +116,12 @@ jobs:
         with:
           node-version-file: .nvmrc
       - uses: ./.github/actions/prepare
-      # Build with the locked development dependencies before swapping TypeScript.
+      # Keep the locked build for the version check; the helper builds its snapshot separately.
       - run: pnpm build
       - run: '"${TSC_AFTER_NODE_EXECUTABLE:-node}" bin/tsc-after.js --version'
       - name: Unit and end-to-end tests
         run: |
-          tests=(bash -c 'pnpm run test:unit --run --coverage && pnpm run test:e2e --run')
+          tests=(bash -c 'pnpm run test:unit --run --coverage --coverage.reportsDirectory="$GITHUB_WORKSPACE/coverage" && pnpm run test:e2e --run')
           if [[ -n $TYPESCRIPT_VERSION ]]; then
             scripts/with-typescript-version "$TYPESCRIPT_VERSION" -- "${tests[@]}"
           else
@@ -254,20 +261,23 @@ jobs:
           console.log(JSON.stringify(report, null, 2));
           EOF
       - name: Upload test diagnostics
-        if: failure()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results-${{ matrix.os || 'linux' }}-node-${{ matrix.node || 'default' }}-typescript-${{ matrix.typescript || 'default' }}
           path: ${{ env.TEST_RESULTS_DIR }}
           retention-days: 1
           if-no-files-found: ignore
-      # Every entry uploads, so Codecov merges coverage of version-specific branches.
-      - if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      - name: Upload coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-${{ matrix.os || 'linux' }}-node-${{ matrix.node || 'default' }}-typescript-${{ matrix.typescript || 'default' }}
+          path: ${{ github.workspace }}/coverage/lcov.info
+          retention-days: 1
+          if-no-files-found: ignore
 
-  # Single stable job to mark as required in branch protection; add every new job to `needs`.
+  # Single stable job to mark as required in branch protection; add every new job to `needs`, except codecov.
   gate:
     name: CI Gate
     if: always()
@@ -279,3 +289,50 @@ jobs:
       - name: Fail if any job did not succeed
         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
         run: exit 1
+
+  codecov:
+    name: Codecov
+    needs: gate
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/prepare
+      - name: Download coverage
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: coverage-*
+          path: .tmp/codecov/coverage
+      - name: Download test results
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: test-results-*
+          path: .tmp/codecov/test-results
+      - id: download-dist
+        name: Download build
+        continue-on-error: true
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: dist
+          path: dist
+      - name: Upload coverage to Codecov
+        continue-on-error: true
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          directory: .tmp/codecov/coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload test results to Codecov
+        continue-on-error: true
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          directory: .tmp/codecov/test-results
+          report_type: test_results
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Bundle analysis
+        if: ${{ steps.download-dist.outcome == 'success' }}
+        continue-on-error: true
+        run: pnpm exec bundle-analyzer dist --bundle-name=tsc-after --upload-token="$CODECOV_TOKEN"
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

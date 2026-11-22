@@ -6,7 +6,7 @@ const FIXTURES_GLOB = "**/__tests__/fixtures/**";
 // eslint-disable-next-line n/no-process-env -- CI collects test reports to upload from failed jobs.
 const testResultsDir = process.env["TEST_RESULTS_DIR"] ?? "";
 // Unit and end-to-end tests run separately; colons are invalid in Windows file names.
-const testResultsFileName = `vitest-${new Date().toISOString().replaceAll(":", "-")}.json`;
+const testResultsFileName = `vitest-${new Date().toISOString().replaceAll(":", "-")}`;
 
 export default defineConfig({
 	test: {
@@ -24,10 +24,14 @@ export default defineConfig({
 			? {}
 			: {
 					outputFile: {
-						json: path.join(testResultsDir, testResultsFileName),
+						json: path.join(testResultsDir, `${testResultsFileName}.json`),
+						junit: path.join(
+							testResultsDir,
+							`${testResultsFileName}.junit.xml`,
+						),
 					},
 					// Listing reporters disables the automatic github-actions reporter.
-					reporters: ["default", "github-actions", "json"],
+					reporters: ["default", "github-actions", "json", "junit"],
 				}),
 		projects: [
 			{
