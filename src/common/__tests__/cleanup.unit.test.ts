@@ -3,11 +3,15 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it, vi } from "vitest";
 
-import { applyCleanup, planCleanup } from "../cleanup.ts";
+import {
+	applyCleanup,
+	planCleanup as createCleanupPlan,
+	resolveCleanupRoots,
+} from "../cleanup.ts";
 import { UserError } from "../errors.ts";
 import { realpath } from "../paths.ts";
 
-describe(planCleanup, () => {
+describe(resolveCleanupRoots, () => {
 	it("refuses roots outside cwd or containing cwd", ({
 		expect,
 		onTestFinished,
@@ -15,13 +19,16 @@ describe(planCleanup, () => {
 		const projectDir = createTempDir(onTestFinished);
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(projectDir, { outDir: "../outside" }),
 				projectDir,
 			),
 		).toThrow(UserError);
 		expect(() =>
-			planCleanup(createProject(projectDir, { outDir: "." }), projectDir),
+			resolveCleanupRoots(
+				createProject(projectDir, { outDir: "." }),
+				projectDir,
+			),
 		).toThrow(UserError);
 	});
 
@@ -35,7 +42,7 @@ describe(planCleanup, () => {
 		fs.writeFileSync(sourcePath, "export {};");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(
 					projectDir,
 					{ outDir: "dist" },
@@ -59,7 +66,7 @@ describe(planCleanup, () => {
 		fs.symlinkSync(path.join(outDir, "index.ts"), sourcePath);
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(
 					projectDir,
 					{ outDir: "dist" },
@@ -78,7 +85,7 @@ describe(planCleanup, () => {
 		const sourcePath = path.join(projectDir, "dist/missing.ts");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(
 					projectDir,
 					{ outDir: "dist" },
@@ -98,8 +105,11 @@ describe(planCleanup, () => {
 		fs.symlinkSync(targetDir, path.join(projectDir, "linked"), "dir");
 
 		expect(() =>
-			planCleanup(createProject(projectDir, { outDir: "linked" }), projectDir),
-		).toThrow("Refusing to clean outDir through a symbolic link: linked!");
+			resolveCleanupRoots(
+				createProject(projectDir, { outDir: "linked" }),
+				projectDir,
+			),
+		).toThrow("Refusing to clean outDir through a symbolic link: linked.");
 	});
 
 	it("refuses a missing root under a symbolic link", ({
@@ -111,12 +121,12 @@ describe(planCleanup, () => {
 		fs.symlinkSync(targetDir, path.join(projectDir, "linked"), "dir");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(projectDir, { outDir: "linked/dist" }),
 				projectDir,
 			),
 		).toThrow(
-			`Refusing to clean outDir through a symbolic link: ${path.join("linked", "dist")}!`,
+			`Refusing to clean outDir through a symbolic link: ${path.join("linked", "dist")}.`,
 		);
 	});
 
@@ -125,8 +135,11 @@ describe(planCleanup, () => {
 		fs.symlinkSync("missing", path.join(projectDir, "dist"));
 
 		expect(() =>
-			planCleanup(createProject(projectDir, { outDir: "dist" }), projectDir),
-		).toThrow("Refusing to clean outDir through a symbolic link: dist!");
+			resolveCleanupRoots(
+				createProject(projectDir, { outDir: "dist" }),
+				projectDir,
+			),
+		).toThrow("Refusing to clean outDir through a symbolic link: dist.");
 	});
 
 	it("refuses a non-directory parent component", ({
@@ -137,7 +150,7 @@ describe(planCleanup, () => {
 		fs.writeFileSync(path.join(projectDir, "file"), "not a directory");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(projectDir, { outDir: "file/dist" }),
 				projectDir,
 			),
@@ -145,12 +158,18 @@ describe(planCleanup, () => {
 			`Refusing to clean outDir '${path.join("file", "dist")}': 'file' is not a directory.`,
 		);
 	});
+});
 
+describe(createCleanupPlan, () => {
 	it("plans nothing for a missing root", ({ expect, onTestFinished }) => {
 		const projectDir = createTempDir(onTestFinished);
 
 		expect(
-			planCleanup(createProject(projectDir, { outDir: "dist" }), projectDir),
+			planCleanup(
+				createProject(projectDir, { outDir: "dist" }),
+				projectDir,
+				[],
+			),
 		).toStrictEqual([{ root: outDirRoot(projectDir, "dist"), verdicts: [] }]);
 	});
 
@@ -166,7 +185,11 @@ describe(planCleanup, () => {
 		fs.writeFileSync(staleFilePath, "stale");
 
 		expect(
-			planCleanup(createProject(projectDir, { outDir: "dist" }), projectDir),
+			planCleanup(
+				createProject(projectDir, { outDir: "dist" }),
+				projectDir,
+				[],
+			),
 		).toStrictEqual([
 			{
 				root: outDirRoot(projectDir, "dist"),
@@ -204,6 +227,84 @@ describe(planCleanup, () => {
 			{ path: outputPath, reason: "expected output file", type: "skipped" },
 			{ path: linkPath, reason: "symbolic link", type: "skipped" },
 			{ path: outDir, reason: "directory not empty", type: "skipped" },
+		]);
+	});
+
+	it("keeps copy destinations with their own reason", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
+		const outDir = path.join(projectDir, "dist");
+		const assetsDir = path.join(outDir, "assets");
+		const destinationPath = path.join(assetsDir, "schema.json");
+		fs.mkdirSync(assetsDir, { recursive: true });
+		fs.writeFileSync(destinationPath, "schema");
+
+		expect(
+			planCleanup(createProject(projectDir, { outDir: "dist" }), projectDir, [
+				destinationPath,
+			]),
+		).toStrictEqual([
+			{
+				root: outDirRoot(projectDir, "dist"),
+				verdicts: [
+					{
+						path: destinationPath,
+						reason: "copy destination",
+						type: "skipped",
+					},
+					{
+						path: assetsDir,
+						reason: "copy destination directory",
+						type: "skipped",
+					},
+					{
+						path: outDir,
+						reason: "copy destination directory",
+						type: "skipped",
+					},
+				],
+			},
+		]);
+	});
+
+	it("keeps empty directories that will contain copy destinations", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
+		const outDir = path.join(projectDir, "dist");
+		const assetsDir = path.join(outDir, "assets");
+		const nestedDir = path.join(assetsDir, "nested");
+		const destinationPath = path.join(nestedDir, "schema.json");
+		fs.mkdirSync(nestedDir, { recursive: true });
+
+		expect(
+			planCleanup(createProject(projectDir, { outDir: "dist" }), projectDir, [
+				destinationPath,
+			]),
+		).toStrictEqual([
+			{
+				root: outDirRoot(projectDir, "dist"),
+				verdicts: [
+					{
+						path: nestedDir,
+						reason: "copy destination directory",
+						type: "skipped",
+					},
+					{
+						path: assetsDir,
+						reason: "copy destination directory",
+						type: "skipped",
+					},
+					{
+						path: outDir,
+						reason: "copy destination directory",
+						type: "skipped",
+					},
+				],
+			},
 		]);
 	});
 
@@ -270,7 +371,11 @@ describe(planCleanup, () => {
 		using lstatSync = spyOnDevice(rootPath);
 
 		expect(
-			planCleanup(createProject(projectDir, { outDir: "dist" }), projectDir),
+			planCleanup(
+				createProject(projectDir, { outDir: "dist" }),
+				projectDir,
+				[],
+			),
 		).toStrictEqual([
 			{
 				root: outDirRoot(projectDir, "dist"),
@@ -319,6 +424,7 @@ describe(planCleanup, () => {
 				outDir: "dist",
 			}),
 			projectDir,
+			[],
 		);
 
 		expect(plan.map(({ root }) => root)).toStrictEqual([
@@ -353,6 +459,7 @@ describe(planCleanup, () => {
 					{ outputPaths: [outputPath] },
 				),
 				projectDir,
+				[],
 			),
 		).toStrictEqual([
 			{
@@ -394,6 +501,7 @@ describe(planCleanup, () => {
 		const plan = planCleanup(
 			createProject(projectDir, { declarationDir: "dist", outDir: "dist/js" }),
 			projectDir,
+			[],
 		);
 
 		expect(plan[1]?.verdicts).toStrictEqual([
@@ -416,10 +524,29 @@ describe(applyCleanup, () => {
 		const plan = planCleanup(
 			createProject(projectDir, { declarationDir: "dist", outDir: "dist/js" }),
 			projectDir,
+			[],
 		);
 
 		expect(applyCleanup(plan, { dry: false })).toStrictEqual(plan);
 		expect(fs.existsSync(declarationDir)).toBe(false);
+	});
+
+	it("removes a previous copy destination once it is no longer requested", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
+		const destinationPath = path.join(projectDir, "dist/schema.json");
+		fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+		fs.writeFileSync(destinationPath, "old schema");
+		const plan = planCleanup(
+			createProject(projectDir, { outDir: "dist" }),
+			projectDir,
+			[],
+		);
+
+		expect(applyCleanup(plan, { dry: false })).toStrictEqual(plan);
+		expect(fs.existsSync(destinationPath)).toBe(false);
 	});
 
 	it("changes nothing in a dry run", ({ expect, onTestFinished }) => {
@@ -430,6 +557,7 @@ describe(applyCleanup, () => {
 		const plan = planCleanup(
 			createProject(projectDir, { outDir: "dist" }),
 			projectDir,
+			[],
 		);
 
 		expect(applyCleanup(plan, { dry: true })).toStrictEqual(plan);
@@ -448,6 +576,7 @@ describe(applyCleanup, () => {
 		const plan = planCleanup(
 			createProject(projectDir, { outDir: "dist" }),
 			projectDir,
+			[],
 		);
 		const originalRmdirSync = fs.rmdirSync;
 		using rmdir = vi
@@ -488,7 +617,8 @@ function createProject(
 		sourceFileNames?: string[];
 		useCaseSensitiveFileNames?: boolean;
 	} = {},
-): Parameters<typeof planCleanup>[0] {
+): Parameters<typeof createCleanupPlan>[0] &
+	Parameters<typeof resolveCleanupRoots>[0] {
 	return {
 		declarationDir:
 			dirs.declarationDir === undefined
@@ -519,11 +649,25 @@ function outDirRoot(projectDir: string, relativePath: string) {
 	};
 }
 
+function planCleanup(
+	project: Parameters<typeof createCleanupPlan>[0] &
+		Parameters<typeof resolveCleanupRoots>[0],
+	cwd: string,
+	copyDestinations: readonly string[],
+) {
+	return createCleanupPlan(
+		project,
+		resolveCleanupRoots(project, cwd),
+		copyDestinations,
+	);
+}
+
 function planVerdicts(
-	project: Parameters<typeof planCleanup>[0],
+	project: Parameters<typeof createCleanupPlan>[0] &
+		Parameters<typeof resolveCleanupRoots>[0],
 	cwd: string,
 ): unknown[] {
-	return planCleanup(project, cwd).flatMap(({ verdicts }) => verdicts);
+	return planCleanup(project, cwd, []).flatMap(({ verdicts }) => verdicts);
 }
 
 function spyOnDevice(dirPath: string) {

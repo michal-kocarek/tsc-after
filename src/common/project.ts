@@ -8,7 +8,7 @@ import { isPathInside } from "./paths.ts";
 import { loadCompiler } from "./typescript/loadCompiler.ts";
 
 const OUTSIDE_CWD_ERROR =
-	"Refusing to traverse outside current working directory to read tsconfig!";
+	"Refusing to traverse outside current working directory to read tsconfig.";
 const NO_EMIT_ERROR = "Refusing to clean outDir because noEmit is enabled.";
 const MISSING_OUT_DIR_ERROR =
 	'outDir is not set in tsconfig.json; tsc-after only cleans a dedicated outDir. Set compilerOptions.outDir, e.g. "dist".';
@@ -86,10 +86,10 @@ function resolveOutputDirs(
 		throw new UserError(NO_EMIT_ERROR);
 	}
 	if (options.outFile !== undefined) {
-		throw new UserError("outFile is not supported");
+		throw new UserError("outFile is not supported.");
 	}
 	if (options.project !== undefined) {
-		throw new UserError("Project mode is not supported");
+		throw new UserError("Project mode is not supported.");
 	}
 	if (options.outDir === undefined) {
 		throw new UserError(MISSING_OUT_DIR_ERROR);

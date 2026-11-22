@@ -4,11 +4,11 @@
 
 `tsc` compiles your files, but it never deletes anything.
 Rename `foo.ts` to `foo/index.ts` and `dist/foo.js` and `dist/foo.d.ts` live on forever — confusing your tests, your types, and your teammates. `tsc-after` reads your `tsconfig.json`, works out exactly which files `tsc` would emit today, and removes the ones it wouldn't.
-Cleaning is enabled by default; an opt-in `--copy` capability to copy additional artifacts into `outDir` (commonly `dist`) is planned for v1.
+Cleaning is enabled by default; opt-in `--copy` copies additional artifacts into `outDir` (commonly `dist`).
 Runs once after a build, or alongside `tsc --watch`.
 
 This document captures the naming decision, positioning, and feature vision.
-It is not a list of implemented features; `--copy` is planned for v1, but is not an available CLI option yet.
+It includes both implemented features and future ideas.
 The published `0.2.0` is an experimental release; the [v1 milestone](https://github.com/michal-kocarek/tsc-after/milestone/1) tracks the first stable release and its follow-ups, while the [vNext milestone](https://github.com/michal-kocarek/tsc-after/milestone/2) holds later ideas.
 For the underlying market research, see [`market-research.md`](./market-research.md).
 
@@ -25,7 +25,7 @@ tsc && tsc-after
 **Why it wins**
 
 - **It describes when it runs.** `tsc && tsc-after` reads naturally as a post-build companion.
-- **It covers both capabilities.** Cleaning is the default; `--copy` will opt into copying additional artifacts without making the name cleanup-only.
+- **It covers both capabilities.** Cleaning is the default; `--copy` opts into copying additional artifacts without making the name cleanup-only.
 - **It's a compiler companion.** The `tsc-*` prefix places it next to `tsc-watch` (~3M downloads/month) and `tsc-alias` — tools people already reach for right after `tsc`.
 
 The package and executable are both named `tsc-after`.
@@ -53,7 +53,7 @@ The package is published on npm as `tsc-after`; verify the package and release s
 
 > `tsc` compiles your files, but it never deletes anything.
 > Rename `foo.ts` to `foo/index.ts` and `dist/foo.js` and `dist/foo.d.ts` live on forever — confusing your tests, your types, and your teammates. `tsc-after` reads your `tsconfig.json`, works out exactly which files `tsc` would emit today, and removes the ones it wouldn't.
-> Cleaning is enabled by default; opt-in artifact copying via `--copy` is planned for v1.
+> Cleaning is enabled by default; artifact copying is opt-in via `--copy`.
 > Runs once after a build, or alongside `tsc --watch`.
 
 ### Tone
@@ -70,23 +70,22 @@ The capabilities below describe the product vision; the v1 milestone tracks the 
 ### Capabilities
 
 - **Clean (enabled by default):** Remove stale TypeScript build output using the selected tsconfig.
-- **Copy (planned for v1, opt-in via `--copy`):** Copy additional artifacts into the configured `outDir`, commonly `dist`.
+- **Copy (opt-in via `--copy`):** Copy additional artifacts into the configured `outDir`, commonly `dist`.
   See [Copy design (v1)](#copy-design-v1) for the agreed behavior and [Post-v1 ideas](#post-v1-ideas) for what is deliberately left out.
 
 ---
 
 ## CLI Sketch
 
-`outDir` must be dedicated to TypeScript output.
-A stateless cleaner cannot tell an old compiler emit from an asset copied into the same directory: either file may be removed when it is absent from the current emit set.
-Until the planned v1 `--copy` capability is implemented, copy assets **after** running `tsc-after`, or keep them in another directory.
-Once it ships, files copied with `--copy` count as expected outputs, so cleanup keeps them.
+`outDir` must be dedicated to TypeScript outputs and explicitly listed copy destinations.
+A stateless cleaner cannot tell an old compiler emit from an unlisted asset: either file may be removed when it is absent from the current emit set.
+Files listed with `--copy` count as expected outputs, so cleanup keeps them.
 A future `--exclude <glob>` option may support shared output directories; it is not part of v1.
 
 ```json
 {
 	"scripts": {
-		"build": "tsc && tsc-after && cp assets/* dist/assets/"
+		"build": "tsc && tsc-after --copy src/schema.json:schema.json"
 	}
 }
 ```
@@ -98,8 +97,8 @@ tsc-after -p tsconfig.build.json                       # pick a config
 tsc-after -b                                           # planned: follow project references
 tsc-after --watch                                      # planned: companion to tsc --watch
 tsc-after --verbose                                    # list every removed file
-tsc-after --copy src/schema.json:schema.json           # planned: clean, then copy
-tsc-after --noClean --copy src/schema.json:schema.json # planned: copy only
+tsc-after --copy src/schema.json:schema.json           # clean, then copy
+tsc-after --noClean --copy src/schema.json:schema.json # copy only
 ```
 
 Typical `package.json` wiring:
@@ -116,14 +115,14 @@ Typical `package.json` wiring:
 ### Exit codes
 
 - `0` for success, including a dry run or nothing to remove
-- `1` for a configuration or cleanup error
+- `1` for a configuration, cleanup, or copy error
 - `2` for invalid command-line arguments
 
 ---
 
 ## Copy design (v1)
 
-Status: agreed design for [#3](https://github.com/michal-kocarek/tsc-after/issues/3), not implemented yet.
+Status: implemented, based on the design agreed in [#3](https://github.com/michal-kocarek/tsc-after/issues/3).
 
 ### Use cases
 
@@ -142,8 +141,9 @@ tsc && tsc-after --copy src/schema.json:schema.json --copy README.md:README.md
 
 - `--copy <source>:<destination>` is repeatable; each entry copies exactly one file.
 - The entry is split on its last `:`.
+- Missing separators or empty sides are invalid command-line usage (exit `2`).
 - `<source>` is resolved from the current working directory, like other paths given on the `tsc` command line (e.g. `--project`).
-  It must be a regular file inside the current working directory and outside `outDir`.
+  It must be a regular file inside the current working directory and outside `outDir` and `declarationDir`.
 - `<destination>` is a file path relative to `outDir`.
   It must not be absolute or contain `..`, so copies never leave `outDir`.
 - No globs, no directories, and no shorthand without `<destination>` in v1.
@@ -161,18 +161,19 @@ tsc && tsc-after --copy src/schema.json:schema.json --copy README.md:README.md
 ### Execution
 
 - Plan everything, validate everything, then clean, then copy.
-  Any error stops the run before a single file is changed.
+  Validation errors leave all files unchanged; I/O errors while cleaning or copying can leave partial changes.
 - A destination whose content already matches its source is skipped, so its modification time stays the same.
 - `--dry` prints `Would copy file: src/schema.json -> dist/schema.json`; `--verbose` lists each copied and skipped file.
 - The summary covers both tasks, e.g. `tsc-after: Copied 2 files and removed 1 file from dist`.
 
 ### Errors (exit `1`, nothing changed)
 
-- The source is missing, is not a regular file, is outside the current working directory, or is inside `outDir`.
+- The source is missing, is not a regular file, is outside the current working directory, or is inside `outDir` or `declarationDir`.
 - The destination is absolute or contains `..`.
 - Two entries share a destination, compared case-insensitively when the file system is case-insensitive.
+- A destination is nested under another destination or a project output, or contains a project output.
 - A destination is also a file `tsc` would emit, e.g. a `.json` file with `resolveJsonModule`.
-- A destination is a directory, a symbolic link, another non-regular entry, or a path through a symbolic link.
+- A destination is a directory, a symbolic link, another non-regular entry, or a path through a symbolic link or non-directory.
 - Everything that already makes cleanup refuse to run (`noEmit`, missing `outDir`, source/output overlap) also applies to copying.
 
 ---

@@ -31,6 +31,10 @@ export function help() {
 				"Removes stale outputs of the TypeScript project located at the specified path.",
 			),
 			command(
+				`${binName} --copy src/schema.json:schema.json`,
+				"Removes stale outputs, then copies a file into 'outDir'.",
+			),
+			command(
 				`${binName} --dry`,
 				"Shows what would be deleted from 'outDir', without deleting anything.",
 			),

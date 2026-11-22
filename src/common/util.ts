@@ -1,6 +1,7 @@
 import * as util from "node:util";
 
 import { cliArgsOptions } from "./constants.ts";
+import { parseCopyEntry } from "./copy.ts";
 import { isNodeErrorOf, UserError } from "./errors.ts";
 
 const EXIT_CODE_ERROR = 1;
@@ -40,24 +41,52 @@ const PARSE_ARGS_ERROR_CODES = [
 export type ParsedCliArgs = ReturnType<typeof parseArgs>;
 
 export function parseArgs(args: string[]) {
-	try {
-		// Node.js 16.19 / 18.11 added `default` to `util.parseArgs()`, which sets the `engines.node` floor.
-		// eslint-disable-next-line n/no-unsupported-features/node-builtins -- Experimental there, but behaves the same.
-		return util.parseArgs({ args, options: cliArgsOptions });
-	} catch (error) {
-		if (isParseArgsError(error)) {
-			process.exitCode = EXIT_CODE_INVALID_ARGUMENTS;
-			throw new UserError(
-				error.message.endsWith(".") ? error.message : `${error.message}.`,
+	const parsed = parseNodeArgs(args);
+
+	if (parsed.values.noClean && parsed.values.copy.length === 0) {
+		throw invalidArgument(
+			"Option '--noClean' cannot be specified without specifying option '--copy'.",
+		);
+	}
+
+	const copyEntries = parsed.values.copy.map((value) => {
+		const entry = parseCopyEntry(value);
+
+		if (entry === undefined) {
+			throw invalidArgument(
+				`Option '--copy' expects '<source>:<destination>', got '${value}'.`,
 			);
 		}
 
-		throw error;
-	}
+		return entry;
+	});
+
+	return { ...parsed, copyEntries };
+}
+
+function invalidArgument(message: string): UserError {
+	process.exitCode = EXIT_CODE_INVALID_ARGUMENTS;
+	return new UserError(message);
 }
 
 function isParseArgsError(error: unknown): error is TypeError {
 	return PARSE_ARGS_ERROR_CODES.some((code) =>
 		isNodeErrorOf(error, TypeError, code),
 	);
+}
+
+function parseNodeArgs(args: string[]) {
+	try {
+		// Node.js 16.19 / 18.11 added `default` to `util.parseArgs()`, which sets the `engines.node` floor.
+		// eslint-disable-next-line n/no-unsupported-features/node-builtins -- Experimental there, but behaves the same.
+		return util.parseArgs({ args, options: cliArgsOptions });
+	} catch (error) {
+		if (isParseArgsError(error)) {
+			throw invalidArgument(
+				error.message.endsWith(".") ? error.message : `${error.message}.`,
+			);
+		}
+
+		throw error;
+	}
 }

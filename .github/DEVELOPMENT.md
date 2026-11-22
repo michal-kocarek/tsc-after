@@ -21,6 +21,15 @@ Runtime compiler work is limited to parsing configuration and building a program
   Incorrect predictions can delete valid outputs; `emittedLayouts.e2e.test.ts` compares cleanup against `tsc --listEmittedFiles` across the supported version matrix.
 - **Refuse rather than guess:** Refuse cleanup with a clear error when output paths cannot be derived reliably.
   This protects files from deletion when a configuration is unsupported; safety and comparison tests check refusals and preserved outputs.
+- **Validate before changing:** Planners (`resolveCleanupRoots`, `planCopy`, `planCleanup`) only read; apply steps (`applyCleanup`, `applyCopy`) run after every planner has succeeded.
+  Run root-level checks before per-entry checks.
+  A refusal then leaves the file system unchanged and reports the most basic problem first; e2e refusal tests assert an unchanged `readTree`.
+- **Uniform error messages:** Write every error message as full sentences that end with a period, never `!`; `printError` adds the `error: ` prefix.
+  Start refusals with `Refusing to <verb>`, then name the subject and the reason, e.g. `Refusing to copy 'src/x.json': it is inside outDir 'dist'.`
+  Word invalid-argument errors like `tsc` (e.g. `Option '--noClean' cannot be specified without specifying option '--copy'.`), and pass TypeScript diagnostics through unchanged.
+  Quote paths and values in single quotes, show paths relative to the current working directory with `displayPath`, and build repeated messages with small helpers in the module that throws them.
+- **Uniform summaries:** Start every summary line with `tsc-after:`, and take dry-run and real-run verbs ("Would copy" and "Copied") from the shared `verbs` table in `mainAction.ts`.
+  Check new output text against existing wording before adding it, since example strings in plans or issues are illustrations rather than specifications.
 
 ## Building
 
@@ -89,8 +98,8 @@ The entries cover the locked TypeScript on Ubuntu and Windows, and on the lowest
 They also cover TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0, `.nvmrc`, and Windows.
 Vitest always runs on `.nvmrc`; the Node.js entry selects the Node.js that runs `tsc` and `tsc-after`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
-The `main branch CI gate` ruleset requires only `CI Gate`, which fails unless every job in its `needs` succeeds; add each new CI job there instead of to the repository settings.
-Repository admins and deploy keys can bypass this check, so use the bypass only when the checks cannot run; the admin bypass also permits direct pushes to `main`.
+The `main branch required checks` ruleset requires `CI Gate` and `Conventional title`; `CI Gate` fails unless every job in its `needs` succeeds, so add each CI job that should block merging to its `needs` instead of listing it in the ruleset.
+Repository admins and deploy keys can bypass both checks on PRs and direct pushes, so use the bypass only when the checks cannot run.
 The non-required `Codecov` job runs after `CI Gate`, including on failure, and needs no change when gated jobs are added.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
 The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
@@ -169,24 +178,8 @@ When a test needs isolated process state, use `vi.stubGlobal("process", { ...pro
 
 ### End-to-end tests
 
-Keep E2E test files flat in `src/__tests__/`, grouped by feature area:
-
-- `project.e2e.test.ts` tests the isolated-project harness.
-- `emittedLayouts.e2e.test.ts` compares expected outputs with `tsc --listEmittedFiles`.
-- `incremental.e2e.test.ts` tests incremental build state across cleanup.
-- `staleOutputs.e2e.test.ts` tests stale output cleanup.
-- `projectOption.e2e.test.ts` tests `--project` and config handling.
-- `outDirSafety.e2e.test.ts` tests safety refusals involving `outDir`.
-- `main.e2e.test.ts` tests CLI arguments, help, and version.
-
-Name new files after the `tsc` feature they cover, such as `watch.e2e.test.ts` or `build.e2e.test.ts`.
-Keep `declarationDir` output comparisons in `emittedLayouts.e2e.test.ts`; keep `outFile` output tests in `staleOutputs.e2e.test.ts` until they need their own file.
-
-Use one behavior per `it` and one named variant per `it.for` row; do not loop over subprocess runs inside a test.
-Each test should create its own project with `withProject`.
-Most flows need at most one `tsc` and one `tsc-after`; a single flow may run multiple compiler commands when a later build verifies the result of earlier cleanup.
-Give flows with multiple compiler commands an explicit larger timeout.
-Use `CLEAN_MODES` or `withCleanModes` for normal and `--dry` variants.
+Place E2E tests in `src/__tests__/`.
+For E2E test authoring conventions, see [`src/__tests__/AGENTS.md`](../src/__tests__/AGENTS.md).
 
 The E2E project uses one worker and allows two concurrent tests in CI or three locally, as configured in `vitest.config.ts`.
 E2E tests run `tsc` and `tsc-after` subprocesses, so excessive parallelism can starve CPU on resource-constrained GitHub Actions runners and cause timeouts.
@@ -222,6 +215,7 @@ Squash is the only enabled merge method.
 Follow the title and blank-body guidance in [CONTRIBUTING.md](./CONTRIBUTING.md), check that `Conventional title` passed, and preserve the title in the merge dialog.
 Include any `Co-authored-by:` lines needed to credit other authors.
 Auto-merge and branch-update suggestions are enabled, but branches do not need to be up to date before merging.
+The `main branch is immutable` ruleset prevents deletion, force pushes, and merge commits; ordinary direct pushes remain allowed.
 The signature ruleset permits repository admins to bypass signatures for PR merges, without guaranteeing the resulting commit is signed; direct pushes need signed commits except when using a deploy key.
 The `v*` tag rulesets let deploy keys create tags and prevent everyone, including deploy keys, from updating or deleting them.
 Conversation resolution is not required because GitHub couples that ruleset option to requiring PRs, which would block direct pushes.
@@ -255,7 +249,6 @@ Git hooks run [commitlint](https://commitlint.js.org) on every new commit messag
 The PR-title check in `.github/workflows/pr-title.yaml` uses `pull_request_target` so it can validate title edits, but checks out only the trusted default branch and never PR code.
 Keep its GitHub Actions event policy scoped to that workflow, and do not fetch or execute pull-request content in it.
 The check validates the PR title, not the final squash message, which GitHub lets the merger edit; preserve the checked title when merging.
-Require the check only after the workflow is on `main` and a PR run confirms its status-check name.
 
 npm authenticates the workflow through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (no token) and adds provenance automatically.
 The trusted publisher on npm must point to workflow `release.yaml` and environment `npm-release`.

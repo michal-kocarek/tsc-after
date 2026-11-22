@@ -29,6 +29,46 @@ describe(parseArgs, () => {
 		expect(shortOption.values.dry).toBe(true);
 	});
 
+	it("parses repeatable --copy options", ({ expect }) => {
+		const parsed = parseArgs([
+			"--copy",
+			"src/one.json:one.json",
+			"--copy",
+			"src/two.json:two.json",
+		]);
+
+		expect(parsed.values.copy).toStrictEqual([
+			"src/one.json:one.json",
+			"src/two.json:two.json",
+		]);
+		expect(parsed.copyEntries).toStrictEqual([
+			{ destination: "one.json", source: "src/one.json" },
+			{ destination: "two.json", source: "src/two.json" },
+		]);
+	});
+
+	it("rejects --noClean without --copy", ({ expect }) => {
+		const originalExitCode = originalProcess.exitCode;
+		vi.stubGlobal("process", { ...originalProcess });
+
+		expect(() => parseArgs(["--noClean"])).toThrow(
+			"Option '--noClean' cannot be specified without specifying option '--copy'.",
+		);
+		expect(process.exitCode).toBe(2);
+		expect(originalProcess.exitCode).toBe(originalExitCode);
+	});
+
+	it("rejects malformed --copy values", ({ expect }) => {
+		const originalExitCode = originalProcess.exitCode;
+		vi.stubGlobal("process", { ...originalProcess });
+
+		expect(() => parseArgs(["--copy", "src/file.json"])).toThrow(
+			"Option '--copy' expects '<source>:<destination>', got 'src/file.json'.",
+		);
+		expect(process.exitCode).toBe(2);
+		expect(originalProcess.exitCode).toBe(originalExitCode);
+	});
+
 	it("sets the exit code when argument parsing fails", ({ expect }) => {
 		const originalExitCode = originalProcess.exitCode;
 		vi.stubGlobal("process", { ...originalProcess });

@@ -230,7 +230,7 @@ describe(loadProject, () => {
 
 			await expect(loadProject(projectPath, projectDir)).rejects.toThrow(
 				new UserError(
-					"Refusing to traverse outside current working directory to read tsconfig!",
+					"Refusing to traverse outside current working directory to read tsconfig.",
 				),
 			);
 		},
@@ -280,7 +280,7 @@ describe(loadProject, () => {
 				outDir: "dist",
 				outFile: "dist/bundle.js",
 			},
-			message: "outFile is not supported",
+			message: "outFile is not supported.",
 		},
 		{
 			compilerOptions: {},

@@ -1,6 +1,19 @@
+import path from "node:path";
 import { describe, it } from "vitest";
 
-import { isPathInside } from "../paths.ts";
+import {
+	displayPath,
+	isPathInside,
+	normalizedAncestorDirPaths,
+} from "../paths.ts";
+
+describe(displayPath, () => {
+	it("returns a dot for the current working directory", ({ expect }) => {
+		const cwd = path.resolve("project");
+
+		expect(displayPath(cwd, cwd)).toBe(".");
+	});
+});
 
 describe(isPathInside, () => {
 	it("returns true for equal paths", ({ expect }) => {
@@ -47,5 +60,30 @@ describe(isPathInside, () => {
 		expect(
 			isPathInside("project/dist/.", "project/dist/nested/../index.js", true),
 		).toBe(true);
+	});
+});
+
+describe(normalizedAncestorDirPaths, () => {
+	it("returns parent directories up to and including the root", ({
+		expect,
+	}) => {
+		const rootPath = path.resolve("project/dist");
+		const filePath = path.join(rootPath, "assets/schema.json");
+
+		expect(normalizedAncestorDirPaths(filePath, rootPath, true)).toStrictEqual([
+			path.join(rootPath, "assets"),
+			rootPath,
+		]);
+	});
+
+	it("stops at the filesystem root", ({ expect }) => {
+		const rootPath = path.parse(process.cwd()).root;
+		const filePath = path.join(rootPath, "project/assets/schema.json");
+
+		expect(normalizedAncestorDirPaths(filePath, rootPath, true)).toStrictEqual([
+			path.join(rootPath, "project", "assets"),
+			path.join(rootPath, "project"),
+			rootPath,
+		]);
 	});
 });
