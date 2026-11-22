@@ -44,6 +44,7 @@
 
 - Before writing about a behavior, ask whether `tsc` already behaves that way (output layout without `rootDir`, option prerequisites like `declarationDir` needing `declaration`, `noEmitOnError`, module resolution, TypeScript's own runtime requirements); if it does, it's no deviation, so leave it to TypeScript's docs.
 - Write each deviation once, in one short line, in the section it belongs to; link its open issue on that line.
+- Write for the common case (80/20): summarize what most users hit, and keep exact bounds and edge cases in [`DEVELOPMENT.md`](.github/DEVELOPMENT.md); rarer needs arrive as issues.
 - A delivered feature removes or narrows a deviation; it adds one only when it introduces a new refusal.
 
 ## Agent documentation

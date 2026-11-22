@@ -1,23 +1,39 @@
 <h1 align="center">tsc-after</h1>
 
-<p align="center">Your <code>dist</code>, as <code>tsc</code> should've left it. 🧹</p>
+<p align="center">Your <code>dist</code>, as <code>tsc</code> should've left it.</p>
 
 <p align="center">
 	<a href="https://npmjs.com/package/tsc-after"><img alt="npm version" src="https://img.shields.io/npm/v/tsc-after" /></a>
+	<a href="https://github.com/michal-kocarek/tsc-after/actions/workflows/ci.yaml?query=branch%3Amain"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/michal-kocarek/tsc-after/ci.yaml?branch=main&label=CI" /></a>
 	<a href="https://codecov.io/gh/michal-kocarek/tsc-after"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/michal-kocarek/tsc-after" /></a>
 	<a href="./LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" /></a>
 </p>
 
 `tsc` compiles your files, but it never deletes anything.
-Rename `foo.ts` to `foo/index.ts`, and `dist/foo.js` lives on forever.
+Rename `src/foo.ts` to `src/foo/index.ts`, and `dist/foo.js` lives on forever.
 
-`tsc-after` reads your `tsconfig.json`, works out which files `tsc` would emit today, and removes the stale outputs it wouldn't.
+`tsc-after` reads your tsconfig, asks TypeScript which files `tsc` emits, and removes every other file in `outDir`, plus any directories left empty.
+It is tested against real `tsc` output on Linux and Windows, and has no dependencies beyond the TypeScript already in your project.
+
+## Why not `rm -rf dist && tsc`?
+
+Wiping `outDir` before every build (`rm -rf dist && tsc`, `rimraf dist && tsc`, or a `prebuild` script) is the usual fix for stale outputs.
+On GitHub, about 274,000 `package.json` files run `rm -rf dist`, and another 199,000 run `rimraf dist` (see [`market-research.md`](./docs/market-research.md)).
+
+`tsc-after` removes only stale outputs, so the rest of `outDir` stays in place:
+
+- **Incremental builds.** With `incremental` or `composite`, the `.tsbuildinfo` file and unchanged outputs survive, so `tsc` re-emits only what changed.
+- **Quiet file watchers.** IDEs, `node --watch`, nodemon, and test runners see only the files that changed.
+- **No empty `outDir`.** Dependent packages, dev servers, and IDE type checking never see missing outputs, even mid-build or after a failed build.
+  With `tsc && tsc-after`, cleanup runs only after `tsc` succeeds.
 
 ## Install
 
 ```sh
 npm install --save-dev tsc-after
 ```
+
+Release notes are in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Usage
 
@@ -28,64 +44,68 @@ In `package.json`, replace the clean-then-compile command:
 + tsc && tsc-after
 ```
 
+> **Important:** If another tool or a script also writes into `outDir` or `declarationDir`, `tsc-after` removes those files as stale, because `tsc` doesn't emit them.
+> Point such tools at another directory, or bring single files in with `--copy`.
+
+Try it first with `--dry`, which lists what would be removed without changing any files:
+
+```sh
+npx tsc-after --dry
+```
+
+More examples:
+
+```sh
+# Clean up after a build that uses another tsconfig.
+tsc -p tsconfig.build.json && tsc-after -p tsconfig.build.json
+
+# Remove stale outputs, then copy src/schema.json to outDir/schema.json.
+tsc && tsc-after --copy src/schema.json:schema.json
+```
+
+Now that `outDir` survives between builds, turn on [`incremental`](https://www.typescriptlang.org/tsconfig/#incremental) in your tsconfig, so `tsc` re-emits only what changed.
+
 ## Options
 
-- `--project`, `-p`: Use the project given a config file or a directory containing `tsconfig.json`.
+- `--project`, `-p`: Use the project given the path to its configuration file, or to a directory with a `tsconfig.json`.
 - `--dry`, `-d`: Preview removals and copies without changing files.
 - `--verbose`: Enable verbose logging of removed, copied, and skipped entries.
-- `--copy <source:destination>`: Copy a file into `outDir` and keep its destination during cleanup.
-- `--noClean`: Disable removing stale outputs from `outDir`.
+- `--copy <source>:<destination>`: Copy a file to a path relative to `outDir`.
+  The source is relative to the current working directory.
+  Repeat the flag to copy more files.
+- `--noClean`: Skip cleanup and only run `--copy`.
 - `--help`, `-h`: Print the help message.
 - `--version`: Print the version.
 
-Relative `--copy` sources resolve from the current working directory, not `rootDir`, and destinations resolve from `outDir`.
-For example, with the current working directory at the project root and `outDir` set to `dist`, `--copy src/asset.json:asset.json` copies `src/asset.json` to `dist/asset.json`.
-
-`tsc-after` asks TypeScript which files the project emits, then removes every other regular file except `--copy` destinations in `outDir` and `declarationDir`, along with directories left empty.
-It skips symbolic links and entries on other devices inside `outDir` or `declarationDir`.
-
 ## Limitations
 
-`tsc-after` reads your tsconfig the way `tsc` does; this list covers only where it differs.
+`tsc-after` reads your tsconfig the way `tsc` does.
+This list covers only where it differs.
 
-- Anything in `outDir` or `declarationDir` other than TypeScript outputs or `--copy` destinations is removed as stale.
-- `--copy` copies single files; globs and directories are not supported.
+- `--copy` copies single files, not globs or directories.
 - `outFile` is rejected, and project references are not followed.
 - TypeScript 7.1 support follows its beta API and may change with TypeScript releases.
 
-For the roadmap, see [`product.md`](./docs/product.md) and the [vNext milestone](https://github.com/michal-kocarek/tsc-after/milestone/2).
+## Safety
 
-## Security measures
+`tsc-after` deletes files, so it is built to be predictable:
 
-- Cleanup is refused unless `outDir` is set and `noEmit` is disabled.
-- `outDir` and `declarationDir` must be inside, and not equal to, the current working directory.
-- Cleanup is refused when `outDir` or `declarationDir` contains a source file of the project.
-- Cleanup is refused when `outDir` or `declarationDir` is reached through a symbolic link.
-- `--copy` sources must be regular files inside the current working directory and outside `outDir` and `declarationDir`.
-- `--copy` destinations must stay inside `outDir` and cannot be written through symbolic links.
-- A `--project` path outside the current working directory is refused.
-- Without `--project`, only `tsconfig.json` in the current working directory is read; unlike `tsc`, parent directories are not searched.
+- **Checked against `tsc`.** [Tests](./src/__tests__/emittedLayouts.e2e.test.ts) compile real projects and compare what `tsc-after` keeps with `tsc --listEmittedFiles`.
+- **Tested where you run it.** [CI](./.github/workflows/ci.yaml) runs every test on Linux and Windows, on the oldest release of each supported Node.js line, and on TypeScript 4.2 through 7.1 beta.
+- **Published from CI.** GitHub Actions builds and publishes each release with [npm provenance](https://docs.npmjs.com/generating-provenance-statements), only after CI passes.
+- **Refuses rather than guesses.** It stops before changing any file when:
+  - `outDir` is not set, or `noEmit` is enabled.
+  - `outDir` or `declarationDir` is the current working directory or outside it, contains a source file of the project, or is reached through a symbolic link.
+  - A `--copy` source is not a regular file inside the current working directory, or lies inside `outDir` or `declarationDir`.
+  - A `--copy` destination leaves `outDir`, or would be written through a symbolic link.
+  - The `--project` path is outside the current working directory.
+  - `--project` is omitted and the current working directory has no `tsconfig.json`.
+    Unlike `tsc`, it doesn't search parent directories.
 
 ## Requirements
 
-- Node.js 16.19.0 or later, including the latest LTS.
-- TypeScript 4.2.4 through 7.x, including 7.1 beta (except 7.0, which has no API support).
-
-## Why not `rm -rf dist && tsc`?
-
-Wiping `outDir` before every build (`rm -rf dist && tsc`, `rimraf dist && tsc`, or a `prebuild` script) is the usual fix for stale outputs.
-On GitHub, about 274k `package.json` files run `rm -rf dist` and another 199k run `rimraf dist` (see [`market-research.md`](./docs/market-research.md)).
-
-`tsc-after` is intended to remove only stale outputs rather than wiping `outDir` and rebuilding everything.
-That brings:
-
-- Incremental builds without extra tooling: with `incremental` or `composite`, the `.tsbuildinfo` file and unchanged outputs survive, so `tsc` re-emits only what changed.
-- Less work for file watchers: IDEs, `tsc --watch` in dependent packages, `node --watch`, nodemon, and test runners see only the changed files instead of every output being deleted and recreated.
-- No missing outputs mid-build: dependent packages, running dev servers, and IDE type checking never see an empty `outDir`.
-- A failed build never leaves `outDir` empty: with `tsc && tsc-after`, cleanup runs only after `tsc` succeeds.
-
-**Using a bundler such as tsup, Vite, or esbuild?**<br>
-They already clean up after themselves, so you probably don't need `tsc-after`.
+- Node.js 16.19.0 or later.
+- TypeScript 4.2.4 to 6.x, or 7.1 beta to 7.x (7.0 has no API).
 
 ## Contributing
 
