@@ -56,8 +56,9 @@ jobs:
   # getOutputFileNames, 3.8 added watchOptions, and 3.9 is the oldest version
   # passing the suite unchanged (3.9.10 is the latest 3.9 patch).
   test:
-    name: Test (${{ matrix.os || 'ubuntu-latest' }}, Node.js ${{ matrix.node || 'default' }}, TypeScript ${{ matrix.typescript || 'locked' }})
-    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    # matrix.os is linux (default) or windows, short for the check name.
+    name: Test / ${{ matrix.os || 'linux' }} node/${{ matrix.node || 'default' }} typescript/${{ matrix.typescript || 'default' }}
+    runs-on: ${{ matrix.os == 'windows' && 'windows-latest' || 'ubuntu-latest' }}
     defaults:
       run:
         shell: bash
@@ -66,8 +67,8 @@ jobs:
       matrix:
         include:
           # Locked TypeScript and default Node.js on both operating systems.
-          - os: ubuntu-latest
-          - os: windows-latest
+          - os: linux
+          - os: windows
           # Locked TypeScript on the oldest Node.js 16; keep this axis in sync with engines.node.
           - node: 16.19.0
           # Locked TypeScript on the oldest supported Node.js 18.
@@ -90,7 +91,7 @@ jobs:
           - typescript: 7.1.0-beta
           # TS7 adapter on Windows.
           - typescript: 7.1.0-beta
-            os: windows-latest
+            os: windows
     env:
       TSC_AFTER_EXPECTED_NODE_VERSION: ${{ matrix.node || '' }}
       TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION: ${{ matrix.typescript || '' }}

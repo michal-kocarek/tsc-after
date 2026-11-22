@@ -89,6 +89,7 @@ The entries cover the locked TypeScript on Ubuntu and Windows, and on the lowest
 They also cover TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0, `.nvmrc`, and Windows.
 Vitest always runs on `.nvmrc`; the Node.js entry selects the Node.js that runs `tsc` and `tsc-after`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
+Branch protection requires only the `CI Gate` check, which fails unless every job in its `needs` succeeds; add each new CI job there instead of to the repository settings.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
 The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
 TypeScript 3.7 added `getOutputFileNames`, 3.8 added `watchOptions`, and 3.9 is the oldest version that passes the test suite unchanged; 3.9.10 is the latest patch of that release line.
