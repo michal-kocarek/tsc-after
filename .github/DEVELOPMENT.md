@@ -107,6 +107,13 @@ Testing a version does not by itself change the supported peer dependency range.
 ### Diagnosing CI failures
 
 Find `RUN_ID` after `/runs/` in the run URL, and `JOB_ID` after `/job/`.
+For a recently pushed commit, list its runs, including those still in progress:
+
+```shell
+gh run list --commit "$(git rev-parse HEAD)"
+```
+
+A run takes several minutes, so triage each failed job as soon as it finishes instead of waiting for the whole run; every command below except `--log-failed` works on an in-progress run.
 Start with the run summary, which lists failed jobs and Vitest annotations with each failed test's file, line, and error:
 
 ```shell
@@ -133,8 +140,7 @@ gh api --allow-escape-sequences "repos/michal-kocarek/tsc-after/actions/jobs/$JO
 
 Each failed test job uploads an artifact, kept for one day, with a Vitest JSON report per test run and `environment.json`.
 The environment report records the runner image, Node.js and TypeScript versions, CPUs, memory, load averages, disk space, temporary directory paths, and file name case sensitivity.
-Artifacts are available as soon as the failed job uploads them; there is no need to wait for the full run.
-Download the available artifacts with:
+Download the artifacts uploaded so far with:
 
 ```shell
 gh run download "$RUN_ID"
