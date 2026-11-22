@@ -90,13 +90,6 @@ if ! pnpm --dir "$snapshot_dir" add --save-dev --save-exact --ignore-scripts "ty
 	exit 1
 fi
 
-for executable in tsc tsserver; do
-	if ! ln -sf -- "../typescript/bin/$executable" "$snapshot_dir/node_modules/.bin/$executable"; then
-		printf '%s\n' "Could not select the TypeScript $executable executable in the snapshot." >&2
-		exit 1
-	fi
-done
-
 snapshot_working_dir=$snapshot_dir
 if [[ $relative_dir != . ]]; then
 	snapshot_working_dir="$snapshot_dir/$relative_dir"

@@ -100,6 +100,8 @@ To reproduce a matrix entry locally, run both test suites through the TypeScript
 TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=3.9.10 scripts/with-typescript-version 3.9.10 -- bash -c 'pnpm run test:unit --run && pnpm run test:e2e --run'
 ```
 
+The helper puts the snapshot's `node_modules/.bin` first on `PATH`, but pnpm can select a colliding binary such as `typescript-7` for bare `tsc`.
+Commands that need the requested compiler should resolve `typescript` from the snapshot instead of relying on `tsc` from `PATH`.
 Each invocation copies the Git-selected working tree into its own fresh `.tmp` workspace and runs the command there.
 Run only one E2E suite at a time because Vitest already runs compiler-spawning E2E tests concurrently.
 Run `pnpm clean` only after all helper invocations have exited.
