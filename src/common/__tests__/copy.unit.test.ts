@@ -146,7 +146,9 @@ describe(planCopyWithRoots, () => {
 				createProject(projectDir),
 				projectDir,
 			),
-		).toThrow("Refusing to copy 'src/linked.json': it is a symbolic link.");
+		).toThrow(
+			`Refusing to copy '${path.join("src", "linked.json")}': it is a symbolic link.`,
+		);
 	});
 
 	it("refuses sources outside the current working directory", ({
@@ -198,7 +200,7 @@ describe(planCopyWithRoots, () => {
 				projectDir,
 			),
 		).toThrow(
-			`Refusing to copy 'dist/schema.json': it is inside outDir 'dist'.`,
+			`Refusing to copy '${path.join("dist", "schema.json")}': it is inside outDir 'dist'.`,
 		);
 		expect(fs.existsSync(sourcePath)).toBe(true);
 	});
@@ -214,7 +216,7 @@ describe(planCopyWithRoots, () => {
 				projectDir,
 			),
 		).toThrow(
-			`Refusing to copy 'types/schema.d.ts': it is inside declarationDir 'types'.`,
+			`Refusing to copy '${path.join("types", "schema.d.ts")}': it is inside declarationDir 'types'.`,
 		);
 	});
 

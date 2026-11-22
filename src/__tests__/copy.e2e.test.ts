@@ -274,8 +274,9 @@ describe("copy", () => {
 			expect(cliOutcome(result)).toStrictEqual({
 				exitCode: 1,
 				hasStackTrace: false,
-				stderr:
+				stderr: toPlatformSep(
 					"error: Refusing to copy 'types/lib.d.ts': it is inside declarationDir 'types'.",
+				),
 			});
 			await expect(readTree(projectDir)).resolves.toStrictEqual(before);
 		});
