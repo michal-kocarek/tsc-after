@@ -1,0 +1,2 @@
+# Avoid "CRLF line endings on the shebang line break execution on Unix system" raised by pnpm build on Windows
+bin/*.js text eol=lf
