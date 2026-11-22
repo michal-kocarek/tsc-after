@@ -3,11 +3,12 @@ import path from "node:path";
 import { applyCleanup, planCleanup } from "../common/cleanup.ts";
 import { binName } from "../common/constants.ts";
 import { assertUnreachable } from "../common/errors.ts";
+import { realpath } from "../common/paths.ts";
 import { loadProject } from "../common/project.ts";
 import { type ParsedCliArgs, print, styleText } from "../common/util.ts";
 
 export async function mainAction(args: ParsedCliArgs): Promise<void> {
-	const cwd = process.cwd();
+	const cwd = realpath(process.cwd());
 	const project = await loadProject(args.values.project, cwd);
 	print(`Using tsconfig: ${path.relative(cwd, project.configFilePath)}`);
 

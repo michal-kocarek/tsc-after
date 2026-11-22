@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 
 export function isPathInside(
@@ -32,4 +33,12 @@ export function normalizePathForComparison(
 	return useCaseSensitiveFileNames
 		? normalizedPath
 		: normalizedPath.toLowerCase();
+}
+
+/**
+ * Uses the native realpath implementation to match TypeScript's canonical
+ * paths, including Windows 8.3 names and junctions.
+ */
+export function realpath(filePath: string): string {
+	return fs.realpathSync.native(filePath);
 }

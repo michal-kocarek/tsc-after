@@ -1,11 +1,12 @@
 import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import ts from "typescript";
 import { describe, it } from "vitest";
 
 import {
 	CLEAN_MODES,
 	cliOutcome,
+	e2eDir,
 	ISOLATED_COMPILER_OPTIONS,
 	pathExists,
 	readTree,
@@ -104,6 +105,45 @@ describe("outDir safety", () => {
 			},
 		);
 	}
+
+	it("cleans a package-based outDir when cwd is reached through a junction", async ({
+		expect,
+		task,
+	}) => {
+		await withProject(task, async (projectDir) => {
+			const linkedProjectDir = join(e2eDir, `${basename(projectDir)}-link`);
+			await symlink(projectDir, linkedProjectDir, "junction");
+			await writeJson(projectDir, "tsconfig.json", {
+				extends: "shared-config",
+			});
+			await writeJson(projectDir, "node_modules/shared-config/package.json", {
+				tsconfig: "config/tsconfig.json",
+			});
+			await writeJson(
+				projectDir,
+				"node_modules/shared-config/config/tsconfig.json",
+				{
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						outDir: "dist",
+						rootDir: "../../../src",
+					},
+				},
+			);
+			const staleOutput = join(
+				projectDir,
+				"node_modules/shared-config/config/dist/stale.js",
+			);
+			await mkdir(dirname(staleOutput), { recursive: true });
+			await writeFile(staleOutput, "stale");
+
+			const cleanup = await runTscAfter([], { cwd: linkedProjectDir });
+
+			expect(cleanup.exitCode).toBe(0);
+			expect(cleanup.stderr).toBe("");
+			await expect(pathExists(staleOutput)).resolves.toBe(false);
+		});
+	});
 
 	it.for(CLEAN_MODES)(
 		"refuses cleanup when noEmit is enabled ($mode)",

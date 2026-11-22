@@ -4,7 +4,7 @@ import path from "node:path";
 import type { Project } from "./project.ts";
 
 import { assertUnreachable, isNodeErrorOf, UserError } from "./errors.ts";
-import { isPathInside, normalizePathForComparison } from "./paths.ts";
+import { isPathInside, normalizePathForComparison, realpath } from "./paths.ts";
 
 type CleanupPlan = readonly RootCleanup[];
 
@@ -294,7 +294,7 @@ function resolveCleanupRoots(
 			const filePath = path.resolve(cwd, file);
 			let realFilePath = filePath;
 			try {
-				realFilePath = fs.realpathSync(filePath);
+				realFilePath = realpath(filePath);
 			} catch (error) {
 				if (!isNodeErrorOf(error, Error, "ENOENT")) {
 					throw error;

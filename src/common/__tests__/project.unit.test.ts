@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, it } from "vitest";
 
 import { UserError } from "../errors.ts";
+import { realpath } from "../paths.ts";
 import { loadProject } from "../project.ts";
 import { TYPESCRIPT_4_2, typescriptVersion } from "../typescript/version.ts";
 
@@ -262,7 +263,7 @@ function createTempProject(
 	onTestFinished: (cleanup: () => void) => void,
 	files: Record<string, string>,
 ): string {
-	const projectDir = fs.realpathSync.native(
+	const projectDir = realpath(
 		fs.mkdtempSync(path.join(os.tmpdir(), "tsc-after-")),
 	);
 	onTestFinished(() => {
