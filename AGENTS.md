@@ -47,7 +47,7 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 
 - For anything that maps to a compiler option, use the option name: `outDir`, `rootDir`, `declarationDir`, `outFile`, `tsBuildInfoFile`, `composite`, `incremental`.
   Don't use made-up names like "dist", "build dir", or "output folder" for `outDir`; `dist` is only an example value in user-facing docs.
-- Use the domain terms in [`GLOSSARY.md`](GLOSSARY.md) consistently.
+- Name domain concepts with the terms in [`GLOSSARY.md`](GLOSSARY.md).
 - When the TypeScript compiler API (`ts.*`) already has a name for something, use that name for identifiers (e.g. `options`, `fileNames`, `useCaseSensitiveFileNames`).
   Abbreviate "directory" as `Dir`, the way `tsc` does in `outDir` and `rootDir` (e.g. `dirPath`, not `folderPath`).
 - CLI flags use camelCase.
