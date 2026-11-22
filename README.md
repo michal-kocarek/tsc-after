@@ -44,6 +44,9 @@ tsc-after --project tsconfig.build.json
 tsc-after -p packages/core
 ```
 
+Relative `--copy` sources resolve from the current working directory, not `rootDir`, and destinations resolve from `outDir`.
+For example, with the current working directory at the project root and `outDir` set to `dist`, `--copy src/asset.json:asset.json` copies `src/asset.json` to `dist/asset.json`.
+
 `tsc-after` asks TypeScript which files the project emits, then removes every other regular file except `--copy` destinations in `outDir` and `declarationDir`, along with directories left empty.
 It skips symbolic links and entries on other devices inside `outDir` or `declarationDir`.
 
