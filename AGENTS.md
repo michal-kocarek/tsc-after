@@ -79,6 +79,10 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 - For snapshots of CLI output, strip colors with `stripVTControlCharacters` from `node:util`.
 - `CI=1` is set, so Vitest won't write new snapshots; create or update them explicitly with `vitest run -u` and review the result.
 
+## Branches
+
+When asked to name a branch, use a short kebab-case description, prefixed with the issue number when present (e.g. `14-typescript-version-snapshot` or `typescript-version-snapshot`).
+
 ## Commits
 
 When committing, follow the [Conventional Commit guidance](.github/CONTRIBUTING.md#sending-a-pull-request) and [formatting and hook guidance](.github/DEVELOPMENT.md#formatting).
