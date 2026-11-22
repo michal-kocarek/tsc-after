@@ -79,6 +79,8 @@ export function getOutputFileNames(
 		}
 	}
 
+	// loadProject refuses composite for now; keep tsc's rule so allowing it
+	// later needs no change here.
 	if (options.declaration === true || options.composite === true) {
 		const declarationDirectory = resolveOptionPath(
 			options.declarationDir ?? options.outDir,

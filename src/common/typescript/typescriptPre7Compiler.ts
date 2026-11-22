@@ -146,6 +146,8 @@ function parseCommandLine(configFilePath: string): ts.ParsedCommandLine {
 		getNewLine: () => ts.sys.newLine,
 	};
 	const checkConfigFile = (filePath: string) => {
+		// Before TS 7, a backslash path makes readConfigFile fail a debug assertion
+		// on Windows instead of reporting the diagnostic; TS 7 accepts both forms.
 		const config = ts.readConfigFile(filePath.replaceAll("\\", "/"), (name) =>
 			ts.sys.readFile(name),
 		);
