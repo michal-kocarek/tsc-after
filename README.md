@@ -5,6 +5,7 @@
 <p align="center">
 	<a href="https://npmjs.com/package/tsc-after"><img alt="npm version" src="https://img.shields.io/npm/v/tsc-after" /></a>
 	<a href="https://github.com/michal-kocarek/tsc-after/actions/workflows/ci.yaml?query=branch%3Amain"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/michal-kocarek/tsc-after/ci.yaml?branch=main&label=CI" /></a>
+	<a href="https://scorecard.dev/viewer/?uri=github.com/michal-kocarek/tsc-after"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/michal-kocarek/tsc-after/badge" /></a>
 	<a href="https://codecov.io/gh/michal-kocarek/tsc-after"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/michal-kocarek/tsc-after" /></a>
 	<a href="./LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" /></a>
 </p>

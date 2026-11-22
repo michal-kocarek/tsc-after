@@ -1,9 +1,6 @@
 # Security Policy
 
 We take all security vulnerabilities seriously.
-If you have a vulnerability or other security issues to disclose:
+Please report vulnerabilities using [GitHub's private vulnerability reporting](https://github.com/michal-kocarek/tsc-after/security/advisories/new).
 
-- Thank you very much, please do!
-- Please send them to us by emailing `undefined`
-
-We appreciate your efforts and responsible disclosure and will make every effort to acknowledge your contributions.
+We appreciate responsible disclosure and will make every effort to acknowledge your contributions.
