@@ -48,23 +48,29 @@ Use `--verbose` to add individual removed and skipped entries.
 
 `tsc-after` reads your tsconfig the way `tsc` does; this list covers only where it differs.
 
-- `outDir` must be set and hold only TypeScript outputs, and so must `declarationDir` when set.
-  Anything else there, including copied assets and tsconfig files, is removed as stale.
-- Cleanup is refused when `outDir` or `declarationDir` contains a source file of the project.
-- Cleanup is refused when `outDir` or `declarationDir` is reached through a symbolic link ([#6](https://github.com/michal-kocarek/tsc-after/issues/6)).
-- The project must be inside the current working directory, and parent directories are not searched for `tsconfig.json`.
-- `noEmit`, `outFile`, `composite`, `incremental`, and `tsBuildInfoFile` ([#4](https://github.com/michal-kocarek/tsc-after/issues/4)) are rejected, and project references are not followed.
-- TypeScript 3.9 through 4.1 require `rootDir` ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
-- TypeScript 3.9 support is limited: `emitDeclarationOnly` with `resolveJsonModule` and JSON source files, and `allowJs` with `jsx: preserve`, `declaration`, and `.jsx` source files are refused ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
+- `outDir` and `declarationDir` must hold only TypeScript outputs: anything else, including copied assets and tsconfig files, is removed as stale.
+- Parent directories are not searched for `tsconfig.json`.
+- `outFile`, `composite`, `incremental`, and `tsBuildInfoFile` ([#4](https://github.com/michal-kocarek/tsc-after/issues/4)) are rejected, and project references are not followed.
+- Support for TypeScript versions 3.9 - 4.1 is limited:
+  - `rootDir` is required ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
+  - 3.9 only: `emitDeclarationOnly` with `resolveJsonModule` and JSON source files, and `allowJs` with `jsx: preserve`, `declaration`, and `.jsx` source files are refused ([#15](https://github.com/michal-kocarek/tsc-after/issues/15)).
 - TypeScript 7.1 beta support is experimental.
 
 Planned: `--copy`, `--exclude`, and `--watch`.
 See [`product.md`](./docs/product.md) for the roadmap.
 
+## Security measures
+
+- Cleanup is refused unless `outDir` is set and `noEmit` is disabled.
+- `outDir` and `declarationDir` must be inside, and not equal to, the current working directory.
+- Cleanup is refused when `outDir` or `declarationDir` contains a source file of the project.
+- Cleanup is refused when `outDir` or `declarationDir` is reached through a symbolic link.
+- A `--project` path outside the current working directory is refused.
+
 ## Requirements
 
-- Node.js `^16.19.0 || >=18.11.0`.
-- TypeScript 3.9.10+, 4.x–6.x, and 7.1.0-beta through 7.x are supported; TypeScript 7.0 is not.
+- Node.js 16.19.0 or later, including the latest LTS.
+- TypeScript 3.9.10 through 7.x, including 7.1 beta (except 7.0, which has no API support).
 
 ## Exit codes
 
