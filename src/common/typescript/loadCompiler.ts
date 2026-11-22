@@ -1,3 +1,5 @@
+import ts from "typescript";
+
 import type { Compiler } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
@@ -9,6 +11,9 @@ import {
 } from "./version.ts";
 
 export async function loadCompiler(): Promise<Compiler> {
+	if (Number.isNaN(typescriptVersion)) {
+		throw new UserError(`Cannot parse TypeScript version '${ts.version}'.`);
+	}
 	if (typescriptVersion < TYPESCRIPT_3_9) {
 		throw new UserError(
 			"TypeScript 3.8 and earlier are not supported. Use TypeScript 3.9 or later.",
