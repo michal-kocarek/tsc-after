@@ -21,7 +21,7 @@ import {
 
 const require = createRequire(import.meta.url);
 
-const MINIMUM_TYPESCRIPT_3_9 = parseTypeScriptVersion("3.9.0");
+const MINIMUM_TYPESCRIPT_4_2 = parseTypeScriptVersion("4.2.0");
 const MINIMUM_TYPESCRIPT_5_9 = parseTypeScriptVersion("5.9.0");
 const MINIMUM_TYPESCRIPT_6_0 = parseTypeScriptVersion("6.0.0");
 
@@ -29,7 +29,7 @@ const starterProjects: readonly StarterProject[] = [
 	{
 		expectedStaleFiles: ["dist/utils/format.js"],
 		fixtureDir: join(repositoryRoot, "src/__tests__/fixtures/tsc-init-5.8"),
-		minimumTypeScriptVersion: MINIMUM_TYPESCRIPT_3_9,
+		minimumTypeScriptVersion: MINIMUM_TYPESCRIPT_4_2,
 		name: "tsc-init-5.8",
 	},
 	{

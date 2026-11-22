@@ -56,12 +56,11 @@ jobs:
         run: pnpm lint
 
   # TypeScript tests its own Node.js compatibility upstream, so test our adapters
-  # at the important edges rather than the full cross product. TypeScript 3.9–6.x
-  # shares one API path, checked locally across 3.9–5.8; CI tests its endpoints.
+  # at the important edges rather than the full cross product. TypeScript 4.2–6.x
+  # shares one API path, checked locally on 4.2 and 5.8; CI tests its endpoints.
   # Vitest runs on .nvmrc; tsc and tsc-after run on the selected Node.js.
-  # Node.js 16.19/18.11 added util.parseArgs `default`. TypeScript 3.7 added
-  # getOutputFileNames, 3.8 added watchOptions, and 3.9 is the oldest version
-  # passing the suite unchanged (3.9.10 is the latest 3.9 patch).
+  # Node.js 16.19/18.11 added util.parseArgs `default`. TypeScript 4.2 is the
+  # oldest supported minor and passes the suite (4.2.4 is its latest patch).
   test:
     # matrix.os is linux (default) or windows, short for the check name.
     name: Test / ${{ matrix.os || 'linux' }}, node ${{ matrix.node || 'default' }}, ts ${{ matrix.typescript || 'default' }}
@@ -93,7 +92,7 @@ jobs:
           # Locked TypeScript on the oldest supported Node.js 26.
           - node: 26.0.0
           # Oldest supported TypeScript on oldest Node.js; keep in sync with peerDependencies.
-          - typescript: 3.9.10
+          - typescript: 4.2.4
             node: 16.19.0
           # TS7 adapter on the oldest Node.js where the 7.1 beta tsc runs.
           - typescript: 7.1.0-beta

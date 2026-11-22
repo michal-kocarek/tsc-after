@@ -2,11 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { describe, it } from "vitest";
 
-import {
-	TYPESCRIPT_4_0,
-	TYPESCRIPT_4_2,
-	typescriptVersion,
-} from "../common/typescript/version.ts";
+import { typescriptVersion } from "../common/typescript/version.ts";
 import {
 	ISOLATED_COMPILER_OPTIONS,
 	listEmittedFiles,
@@ -23,13 +19,13 @@ import {
 interface EmittedLayout {
 	cleanupRoots?: string[];
 	compilerOptions?: Record<string, unknown>;
+	expectedEmittedFiles?: string[];
 	files?: string[];
 	fixtureDir?: string;
 	include?: string[];
 	name: string;
 	sourceFiles: Record<string, string>;
 	staleFiles?: string[];
-	typescript39Refusal?: string;
 }
 
 const defaultRootDirLayouts: EmittedLayout[] = [
@@ -85,8 +81,6 @@ const defaultRootDirLayouts: EmittedLayout[] = [
 		name: "allowJs JSX preserved with declarations",
 		sourceFiles: { "src/component.jsx": "export const view = <div />;" },
 		staleFiles: ["dist/stale.jsx", "dist/stale.jsx.map"],
-		typescript39Refusal:
-			"Refusing to clean outDir: TypeScript 3.9 cannot safely determine outputs for allowJs JSX preserve with declaration.",
 	},
 	{
 		compilerOptions: { jsx: "preserve", sourceMap: true },
@@ -411,6 +405,12 @@ const emittedLayouts: EmittedLayout[] = [
 			resolveJsonModule: true,
 			rootDir: ".",
 		},
+		expectedEmittedFiles: [
+			"dist/src/index.d.ts",
+			"dist/src/index.d.ts.map",
+			"dist/src/lib.d.ts",
+			"dist/src/lib.d.ts.map",
+		],
 		files: ["src/index.ts", "src/lib.ts"],
 		name: "emitDeclarationOnly with imported JSON",
 		sourceFiles: {
@@ -424,8 +424,6 @@ const emittedLayouts: EmittedLayout[] = [
 			"dist/src/index.js",
 			"dist/src/lib.js",
 		],
-		typescript39Refusal:
-			"Refusing to clean outDir: TypeScript 3.9 cannot safely determine outputs for emitDeclarationOnly with resolveJsonModule.",
 	},
 ];
 
@@ -487,49 +485,26 @@ describe("emitted output layouts", () => {
 					};
 					await writeJson(projectDir, "tsconfig.json", tsconfig);
 
-					const emittedFiles = await listEmittedFiles(projectDir);
+					if (layout.expectedEmittedFiles !== undefined) {
+						await expect(pathExists(join(projectDir, "dist"))).resolves.toBe(
+							false,
+						);
+					}
+					let emittedFiles = await listEmittedFiles(projectDir);
+					if (layout.expectedEmittedFiles !== undefined) {
+						// TypeScript 4.2–5.3 emits files for this layout but does not list them.
+						emittedFiles = Object.keys(await readTree(projectDir))
+							.filter((fileName) => fileName.startsWith("dist/"))
+							.sort();
+
+						expect(emittedFiles).toStrictEqual(layout.expectedEmittedFiles);
+					}
 
 					const staleFiles = [...STALE_FILES, ...(layout.staleFiles ?? [])];
 					for (const fileName of staleFiles) {
 						const filePath = join(projectDir, fileName);
 						await mkdir(dirname(filePath), { recursive: true });
 						await writeFile(filePath, "stale");
-					}
-
-					if (
-						typescriptVersion < TYPESCRIPT_4_2 &&
-						layout.compilerOptions?.["rootDir"] === undefined
-					) {
-						const before = await readTree(projectDir);
-						const cleanup = await runTscAfter(args, {
-							allowFailure: true,
-							cwd: projectDir,
-						});
-
-						expect(cleanup.exitCode).toBe(1);
-						expect(cleanup.stderr).toContain(
-							"Refusing to clean outDir: TypeScript 3.9 through 4.1 require rootDir to be set.",
-						);
-						await expect(readTree(projectDir)).resolves.toStrictEqual(before);
-
-						return;
-					}
-
-					if (
-						typescriptVersion < TYPESCRIPT_4_0 &&
-						layout.typescript39Refusal !== undefined
-					) {
-						const before = await readTree(projectDir);
-						const cleanup = await runTscAfter(args, {
-							allowFailure: true,
-							cwd: projectDir,
-						});
-
-						expect(cleanup.exitCode).toBe(1);
-						expect(cleanup.stderr).toContain(layout.typescript39Refusal);
-						await expect(readTree(projectDir)).resolves.toStrictEqual(before);
-
-						return;
 					}
 
 					expect(emittedFiles.length).toBeGreaterThan(0);

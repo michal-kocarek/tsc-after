@@ -95,19 +95,19 @@ TSC_AFTER_NODE_EXECUTABLE=/path/to/node TSC_AFTER_EXPECTED_NODE_VERSION=18.11.0 
 
 Every entry of the CI test job runs the full unit and end-to-end suites.
 The entries cover the locked TypeScript on Ubuntu and Windows, and on the lowest supported version of each Node.js line.
-They also cover TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0, `.nvmrc`, and Windows.
+They also cover TypeScript 4.2.4 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0, `.nvmrc`, and Windows.
 Vitest always runs on `.nvmrc`; the Node.js entry selects the Node.js that runs `tsc` and `tsc-after`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
 The `main branch required checks` ruleset requires `CI Gate` and `Conventional title`; `CI Gate` fails unless every job in its `needs` succeeds, so add each CI job that should block merging to its `needs` instead of listing it in the ruleset.
 Repository admins and deploy keys can bypass both checks on PRs and direct pushes, so use the bypass only when the checks cannot run.
 The non-required `Codecov` job runs after `CI Gate`, including on failure, and needs no change when gated jobs are added.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
-The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
-TypeScript 3.7 added `getOutputFileNames`, 3.8 added `watchOptions`, and 3.9 is the oldest version that passes the test suite unchanged; 3.9.10 is the latest patch of that release line.
+The TypeScript peer range is `>=4.2.4 <7 || >=7.1.0-beta <8`.
+TypeScript 4.2 is the oldest supported minor because earlier versions compute output paths differently without `rootDir`; 4.2.4 is the latest patch of that release line.
 To reproduce a matrix entry locally, run both test suites through the TypeScript version helper:
 
 ```shell
-TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=3.9.10 scripts/with-typescript-version 3.9.10 -- bash -c 'pnpm run test:unit --run && pnpm run test:e2e --run'
+TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=4.2.4 scripts/with-typescript-version 4.2.4 -- bash -c 'pnpm run test:unit --run && pnpm run test:e2e --run'
 ```
 
 The helper puts the snapshot's `node_modules/.bin` first on `PATH`, but pnpm can select a colliding binary such as `typescript-7` for bare `tsc`.

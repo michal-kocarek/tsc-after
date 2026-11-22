@@ -3,18 +3,13 @@ import ts from "typescript";
 import type { Compiler, ParsedProject } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
-import {
-	TYPESCRIPT_4_0,
-	TYPESCRIPT_4_2,
-	typescriptVersion,
-} from "./version.ts";
 
 type ConfigFileMetadata = Pick<
 	ts.TsConfigSourceFile,
 	"extendedSourceFiles" | "fileName"
 >;
 
-/** Uses the `typescript` API for TypeScript 3.9 through 6.x. */
+/** Uses the `typescript` API for TypeScript 4.2 through 6.x. */
 export class TypeScriptPre7Compiler implements Compiler {
 	readonly useCaseSensitiveFileNames: boolean;
 
@@ -53,40 +48,9 @@ export class TypeScriptPre7Compiler implements Compiler {
 		parsedCommandLine: ts.ParsedCommandLine,
 		sourceFileNames: string[],
 	): Set<string> {
-		if (
-			typescriptVersion < TYPESCRIPT_4_2 &&
-			parsedCommandLine.options.rootDir === undefined
-		) {
-			throw new UserError(
-				"Refusing to clean outDir: TypeScript 3.9 through 4.1 require rootDir to be set.",
-			);
-		}
-
 		const emittableFileNames = sourceFileNames.filter(
 			(fileName) => !isDeclarationFileName(fileName),
 		);
-		if (
-			typescriptVersion < TYPESCRIPT_4_0 &&
-			parsedCommandLine.options.emitDeclarationOnly === true &&
-			parsedCommandLine.options.resolveJsonModule === true &&
-			emittableFileNames.some((fileName) => fileName.endsWith(".json"))
-		) {
-			throw new UserError(
-				"Refusing to clean outDir: TypeScript 3.9 cannot safely determine outputs for emitDeclarationOnly with resolveJsonModule.",
-			);
-		}
-		if (
-			typescriptVersion < TYPESCRIPT_4_0 &&
-			parsedCommandLine.options.allowJs === true &&
-			parsedCommandLine.options.jsx === ts.JsxEmit.Preserve &&
-			parsedCommandLine.options.declaration === true &&
-			emittableFileNames.some((fileName) => fileName.endsWith(".jsx"))
-		) {
-			throw new UserError(
-				"Refusing to clean outDir: TypeScript 3.9 cannot safely determine outputs for allowJs JSX preserve with declaration.",
-			);
-		}
-
 		const outputCommandLine = {
 			...parsedCommandLine,
 			fileNames: emittableFileNames,
