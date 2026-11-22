@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.1](https://github.com/michal-kocarek/tsc-after/compare/v0.4.0...v0.4.1) (2026-11-22)
+
+### Bug Fixes
+
+* confine cleanup roots to the working directory ([08f99f9](https://github.com/michal-kocarek/tsc-after/commit/08f99f90b4c27163bde963c0c4499ed16ad2fcf3))
+* fix build on Windows by handling line endings of bin script ([4559782](https://github.com/michal-kocarek/tsc-after/commit/4559782d02f1fdfe342e10b13a83845a00bafc83))
+* handle Windows paths in config diagnostics ([3d8aefa](https://github.com/michal-kocarek/tsc-after/commit/3d8aefa84728e436f0e9d600a4967cb7d072af83))
+* preserve expected outputs on Windows ([816fbb4](https://github.com/michal-kocarek/tsc-after/commit/816fbb49d97f8e123af846b0170cf2b1aead6db6))
+* preserve TypeScript emitted outputs ([7dac5d3](https://github.com/michal-kocarek/tsc-after/commit/7dac5d3d76fa3fe544b5937a5f1fe3ac082df282))
+* resolve cross-platform CI failures ([4ecb5e0](https://github.com/michal-kocarek/tsc-after/commit/4ecb5e01e3a8b3b7ebc89f3a8bd9614a716d53dc))
+
 ## [0.4.0](https://github.com/michal-kocarek/tsc-after/compare/v0.3.0...v0.4.0) (2026-11-21)
 
 ### Features
