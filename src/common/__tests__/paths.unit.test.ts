@@ -42,4 +42,10 @@ describe(isPathInside, () => {
 			true,
 		);
 	});
+
+	it("normalizes paths before checking containment", ({ expect }) => {
+		expect(
+			isPathInside("project/dist/.", "project/dist/nested/../index.js", true),
+		).toBe(true);
+	});
 });

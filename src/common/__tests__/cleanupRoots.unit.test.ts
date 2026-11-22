@@ -180,7 +180,7 @@ describe(readCleanupRoot, () => {
 		fs.mkdirSync(emptyDirPath, { recursive: true });
 		fs.writeFileSync(staleFilePath, "stale");
 
-		expect(readCleanupRoot(root, new Set())).toStrictEqual([
+		expect(readCleanupRoot(root, new Set(), true)).toStrictEqual([
 			{ path: emptyDirPath, type: "removeDir" },
 			{ path: staleFilePath, type: "removeFile" },
 			{ path: root.path, type: "removeDir" },
@@ -198,7 +198,7 @@ describe(readCleanupRoot, () => {
 		fs.writeFileSync(expectedPath, "current");
 		fs.symlinkSync(expectedPath, linkPath);
 
-		const verdicts = readCleanupRoot(root, new Set([expectedPath]));
+		const verdicts = readCleanupRoot(root, new Set([expectedPath]), true);
 
 		expect(verdicts).toContainEqual({
 			path: expectedPath,
@@ -215,11 +215,56 @@ describe(readCleanupRoot, () => {
 		);
 	});
 
+	it("normalizes expected output separators before comparing paths", ({
+		expect,
+	}) => {
+		const projectDir = createTempDir();
+		const root = createRoot(projectDir);
+		const expectedPath = path.join(root.path, "current.js");
+		fs.mkdirSync(root.path, { recursive: true });
+		fs.writeFileSync(expectedPath, "current");
+
+		const expectedPathWithForwardSlashes = expectedPath.replaceAll("\\", "/");
+		const verdicts = readCleanupRoot(
+			root,
+			new Set([expectedPathWithForwardSlashes]),
+			true,
+		);
+
+		expect(verdicts).toContainEqual({
+			path: expectedPath,
+			reason: "expected output file",
+			type: "skipped",
+		});
+	});
+
+	it("compares expected output paths case-insensitively when requested", ({
+		expect,
+	}) => {
+		const projectDir = createTempDir();
+		const root = createRoot(projectDir);
+		const expectedPath = path.join(root.path, "current.js");
+		fs.mkdirSync(root.path, { recursive: true });
+		fs.writeFileSync(expectedPath, "current");
+
+		const verdicts = readCleanupRoot(
+			root,
+			new Set([path.join(root.path, "CURRENT.js")]),
+			false,
+		);
+
+		expect(verdicts).toContainEqual({
+			path: expectedPath,
+			reason: "expected output file",
+			type: "skipped",
+		});
+	});
+
 	it("returns no verdicts for a missing root", ({ expect }) => {
 		const projectDir = createTempDir();
 		const root = createRoot(projectDir);
 
-		expect(readCleanupRoot(root, new Set())).toStrictEqual([]);
+		expect(readCleanupRoot(root, new Set(), true)).toStrictEqual([]);
 	});
 
 	it("skips a child folder on another device", ({ expect }) => {
@@ -240,7 +285,7 @@ describe(readCleanupRoot, () => {
 				return stats;
 			});
 
-		const verdicts = readCleanupRoot(root, new Set());
+		const verdicts = readCleanupRoot(root, new Set(), true);
 
 		expect(lstatSync).toHaveBeenCalledWith(mountedDirPath);
 		expect(verdicts).toContainEqual({

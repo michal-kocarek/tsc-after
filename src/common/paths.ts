@@ -5,18 +5,31 @@ export function isPathInside(
 	filePath: string,
 	useCaseSensitiveFileNames: boolean,
 ): boolean {
-	const normalizedDirPath = useCaseSensitiveFileNames
-		? dirPath
-		: dirPath.toLowerCase();
-	const normalizedFilePath = useCaseSensitiveFileNames
-		? filePath
-		: filePath.toLowerCase();
-	const relativePath = path.relative(normalizedDirPath, normalizedFilePath);
+	const normalizedDirPath = normalizePathForComparison(
+		dirPath,
+		useCaseSensitiveFileNames,
+	);
+	const normalizedFilePath = normalizePathForComparison(
+		filePath,
+		useCaseSensitiveFileNames,
+	);
 
 	return (
-		relativePath === "" ||
-		(!path.isAbsolute(relativePath) &&
-			relativePath !== ".." &&
-			!relativePath.startsWith(`..${path.sep}`))
+		normalizedDirPath === normalizedFilePath ||
+		normalizedFilePath.startsWith(
+			normalizedDirPath.endsWith(path.sep)
+				? normalizedDirPath
+				: `${normalizedDirPath}${path.sep}`,
+		)
 	);
+}
+
+export function normalizePathForComparison(
+	filePath: string,
+	useCaseSensitiveFileNames: boolean,
+): string {
+	const normalizedPath = path.resolve(filePath);
+	return useCaseSensitiveFileNames
+		? normalizedPath
+		: normalizedPath.toLowerCase();
 }

@@ -35,17 +35,21 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 			const configFilePath = path.join(projectDir, "tsconfig.json");
 			const project = compiler.parseProject(configFilePath);
 
-			expect(project.fileNames).toStrictEqual([
+			expect(project.fileNames.map(path.normalize)).toStrictEqual([
 				path.join(projectDir, "src/index.ts"),
 			]);
-			expect(project.programFileNames.sort()).toStrictEqual(
+			expect(project.programFileNames.map(path.normalize).sort()).toStrictEqual(
 				[
 					path.join(projectDir, "src/index.ts"),
 					path.join(projectDir, "lib/imported.ts"),
 				].sort(),
 			);
-			expect(project.options.outDir).toBe(path.join(projectDir, "dist"));
-			expect(project.configFilePath).toBe(configFilePath);
+			expect(path.normalize(project.options.outDir ?? "")).toBe(
+				path.join(projectDir, "dist"),
+			);
+			expect(path.normalize(project.configFilePath)).toBe(
+				path.normalize(configFilePath),
+			);
 		});
 
 		it("returns JavaScript, declaration, and map output paths", ({
@@ -73,7 +77,13 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 				path.join(projectDir, "tsconfig.json"),
 			);
 
-			expect(compiler.getOutputPaths(project)).toStrictEqual(
+			expect(
+				new Set(
+					[...compiler.getOutputPaths(project)].map((outputPath) =>
+						path.normalize(outputPath),
+					),
+				),
+			).toStrictEqual(
 				new Set([
 					path.join(projectDir, "dist/index.d.ts"),
 					path.join(projectDir, "dist/index.d.ts.map"),

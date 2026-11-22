@@ -96,7 +96,11 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 	}
 
 	const results = cleanupRoots.map((root) =>
-		readCleanupRoot(root, expectedOutDirPaths),
+		readCleanupRoot(
+			root,
+			expectedOutDirPaths,
+			compiler.useCaseSensitiveFileNames,
+		),
 	);
 
 	const { dry, verbose } = args.values;

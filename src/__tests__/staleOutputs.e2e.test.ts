@@ -64,6 +64,46 @@ describe("stale outputs", () => {
 		});
 	});
 
+	it("retains outputs when declarationDir is separate from outDir", async ({
+		expect,
+		task,
+	}) => {
+		await withProject(task, async (projectDir) => {
+			await writeJson(projectDir, "tsconfig.json", {
+				compilerOptions: {
+					...ISOLATED_COMPILER_OPTIONS,
+					declaration: true,
+					declarationDir: "types",
+					outDir: "dist",
+					rootDir: "src",
+				},
+			});
+			await runTsc([], { cwd: projectDir });
+			const outputs = [
+				join(projectDir, "dist/index.js"),
+				join(projectDir, "types/index.d.ts"),
+			];
+			const contents = await Promise.all(
+				outputs.map((file) => readFile(file, "utf8")),
+			);
+			await writeFile(join(projectDir, "dist/stale.js"), "stale");
+			await writeFile(join(projectDir, "types/stale.d.ts"), "stale");
+
+			const cleanup = await runTscAfter([], { cwd: projectDir });
+
+			expect(cleanup.exitCode).toBe(0);
+			await expect(
+				Promise.all(outputs.map((file) => readFile(file, "utf8"))),
+			).resolves.toStrictEqual(contents);
+			await expect(pathExists(join(projectDir, "dist/stale.js"))).resolves.toBe(
+				false,
+			);
+			await expect(
+				pathExists(join(projectDir, "types/stale.d.ts")),
+			).resolves.toBe(false);
+		});
+	});
+
 	it.for(
 		withCleanModes([
 			{ configLocation: "root" },

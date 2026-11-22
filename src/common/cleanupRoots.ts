@@ -4,7 +4,7 @@ import path from "node:path";
 import type { Project } from "./typescript/compiler.ts";
 
 import { isNodeErrorOf, UserError } from "./errors.ts";
-import { isPathInside } from "./paths.ts";
+import { isPathInside, normalizePathForComparison } from "./paths.ts";
 
 export const MISSING_OUT_DIR_ERROR =
 	'outDir is not set in tsconfig.json; tsc-after only cleans a dedicated outDir. Set compilerOptions.outDir, e.g. "dist".';
@@ -25,6 +25,7 @@ export type Verdict =
 export function readCleanupRoot(
 	root: CleanupRoot,
 	expectedOutputPaths: ReadonlySet<string>,
+	useCaseSensitiveFileNames: boolean,
 ): Verdict[] {
 	try {
 		fs.lstatSync(root.path);
@@ -35,6 +36,11 @@ export function readCleanupRoot(
 		throw error;
 	}
 
+	const normalizedExpectedOutputPaths = new Set(
+		[...expectedOutputPaths].map((filePath) =>
+			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
+		),
+	);
 	return readDir(root.path);
 
 	function readDir(dirPath: string): Verdict[] {
@@ -71,7 +77,11 @@ export function readCleanupRoot(
 			}
 
 			if (fullPathStat.isFile()) {
-				if (expectedOutputPaths.has(fullPath)) {
+				if (
+					normalizedExpectedOutputPaths.has(
+						normalizePathForComparison(fullPath, useCaseSensitiveFileNames),
+					)
+				) {
 					verdicts.push({
 						path: fullPath,
 						reason: "expected output file",
