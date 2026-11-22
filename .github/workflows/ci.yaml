@@ -69,7 +69,7 @@ jobs:
   # TypeScript tests its own Node.js compatibility upstream, so test our adapters
   # at the important edges rather than the full cross product. TypeScript 3.9–6.x
   # shares one API path, checked locally across 3.9–5.8; CI tests its endpoints.
-  # tsc and Vitest run on .nvmrc; only tsc-after runs on the selected Node.js.
+  # Vitest runs on .nvmrc; tsc and tsc-after run on the selected Node.js.
   # Node.js 16.19/18.11 added util.parseArgs `default`. TypeScript 3.7 added
   # getOutputFileNames, 3.8 added watchOptions, and 3.9 is the oldest version
   # passing the suite unchanged (3.9.10 is the latest 3.9 patch).

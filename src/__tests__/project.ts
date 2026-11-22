@@ -134,7 +134,7 @@ export async function readTree(
 }
 
 export function runTsc(args: readonly string[], opts: RunOptions = {}) {
-	return execa(tscPath, args, {
+	return execa(getNodeExecutable(), [tscPath, ...args], {
 		...(opts.cwd === undefined ? {} : { cwd: opts.cwd }),
 		reject: !(opts.allowFailure ?? false),
 	});
@@ -144,10 +144,7 @@ export async function runTscAfter(
 	args: readonly string[],
 	opts: RunOptions = {},
 ) {
-	const nodeExecutable =
-		// eslint-disable-next-line n/no-process-env -- CLI runtime override.
-		process.env["TSC_AFTER_NODE_EXECUTABLE"] ?? process.execPath;
-	const result = await execa(nodeExecutable, [tscAfterPath, ...args], {
+	const result = await execa(getNodeExecutable(), [tscAfterPath, ...args], {
 		...(opts.cwd === undefined ? {} : { cwd: opts.cwd }),
 		env: {
 			FORCE_COLOR: undefined,
@@ -211,4 +208,9 @@ export async function writeJson(
 	const filePath = join(projectDir, relativePath);
 	await mkdir(dirname(filePath), { recursive: true });
 	await writeFile(filePath, JSON.stringify(value));
+}
+
+function getNodeExecutable() {
+	// eslint-disable-next-line n/no-process-env -- CLI runtime override.
+	return process.env["TSC_AFTER_NODE_EXECUTABLE"] ?? process.execPath;
 }
