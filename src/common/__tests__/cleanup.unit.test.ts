@@ -5,6 +5,7 @@ import { describe, it, vi } from "vitest";
 
 import { applyCleanup, planCleanup } from "../cleanup.ts";
 import { UserError } from "../errors.ts";
+import { realpath } from "../paths.ts";
 
 describe(planCleanup, () => {
 	it("refuses roots outside cwd or containing cwd", ({
@@ -501,7 +502,9 @@ function createProject(
 }
 
 function createTempDir(onTestFinished: (cleanup: () => void) => void): string {
-	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "tsc-after-"));
+	const projectDir = realpath(
+		fs.mkdtempSync(path.join(os.tmpdir(), "tsc-after-")),
+	);
 	onTestFinished(() => {
 		fs.rmSync(projectDir, { force: true, recursive: true });
 	});

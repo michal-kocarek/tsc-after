@@ -107,28 +107,34 @@ Testing a version does not by itself change the supported peer dependency range.
 ### Diagnosing CI failures
 
 Find `RUN_ID` after `/runs/` in the run URL, and `JOB_ID` after `/job/`.
-Vitest reports each failed test as a GitHub annotation with its file, line, name, and error.
-Start with the run summary, which lists the failed jobs and their annotations:
+Start with the run summary, which lists failed jobs and Vitest annotations with each failed test's file, line, and error:
 
 ```shell
 gh run view "$RUN_ID"
 ```
 
-For the complete annotations of one job, query the API:
+The run summary may omit the test name; query the annotations API for the complete annotations of one job:
 
 ```shell
 gh api "repos/michal-kocarek/tsc-after/check-runs/$JOB_ID/annotations"
 ```
 
-If the annotations are not enough, read the failed steps' logs:
+`gh run view --log-failed` works after the entire run finishes:
 
 ```shell
 gh run view "$RUN_ID" --log-failed
 ```
 
+While a run is in progress, retrieve logs for a finished job directly:
+
+```shell
+gh api --allow-escape-sequences "repos/michal-kocarek/tsc-after/actions/jobs/$JOB_ID/logs"
+```
+
 Each failed test job uploads an artifact, kept for one day, with a Vitest JSON report per test run and `environment.json`.
 The environment report records the runner image, Node.js and TypeScript versions, CPUs, memory, load averages, disk space, temporary directory paths, and file name case sensitivity.
-Download the artifacts with:
+Artifacts are available as soon as the failed job uploads them; there is no need to wait for the full run.
+Download the available artifacts with:
 
 ```shell
 gh run download "$RUN_ID"
