@@ -67,6 +67,7 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 - For CI failure triage, follow [Diagnosing CI failures](.github/DEVELOPMENT.md#diagnosing-ci-failures).
 - Run `pnpm typecheck` when validating code changes; `pnpm build` uses tsdown and does not typecheck.
 - Tests use Vitest and live in `__tests__` next to the code: `*.unit.test.ts` for unit tests, `*.e2e.test.ts` for end-to-end tests.
+- When running or writing E2E tests, including work outside `src/__tests__/`, follow [`src/__tests__/AGENTS.md`](src/__tests__/AGENTS.md).
 - Use `expect` from the test context (`it("...", ({ expect }) => { ... })`), not the global one.
 - In unit tests, root-level `describe(fn, ...)` blocks test the module's exported functions, one block per function (pass the function itself, not its name as a string).
 - Avoid excessive mocking; prefer testing real behavior.
