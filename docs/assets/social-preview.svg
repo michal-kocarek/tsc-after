@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+	<rect width="1280" height="640" fill="#0d1117" />
+	<rect width="1280" height="12" fill="#3178c6" />
+
+	<text x="92" y="196" font-family="DejaVu Sans Mono, monospace" font-size="104" font-weight="700" fill="#f0f6fc">tsc-after</text>
+
+	<text x="96" y="266" font-family="Ubuntu Sans, DejaVu Sans, sans-serif" font-size="42" fill="#9198a1">
+		Your <tspan font-family="Ubuntu Sans Mono, DejaVu Sans Mono, monospace" fill="#f0f6fc">dist</tspan>, as
+		<tspan font-family="Ubuntu Sans Mono, DejaVu Sans Mono, monospace" fill="#f0f6fc">tsc</tspan> should’ve left it.
+	</text>
+
+	<rect x="96" y="320" width="1088" height="168" rx="16" fill="#151b23" stroke="#3d444d" stroke-width="2" />
+	<rect x="98" y="344" width="1084" height="56" fill="#f85149" fill-opacity="0.15" />
+	<rect x="98" y="408" width="1084" height="56" fill="#2ea043" fill-opacity="0.15" />
+	<g font-family="Ubuntu Sans Mono, DejaVu Sans Mono, monospace" font-size="42">
+		<text x="128" y="386" fill="#ff7b72">-  rm -rf dist &amp;&amp; tsc</text>
+		<text x="128" y="450" fill="#7ee787">+  tsc &amp;&amp; tsc-after</text>
+	</g>
+
+	<g font-family="Ubuntu Sans, DejaVu Sans, sans-serif" font-size="28" fill="#9198a1">
+		<text x="96" y="568">Removes only stale outputs · incremental-friendly · zero dependencies</text>
+	</g>
+</svg>
