@@ -262,7 +262,7 @@ function createTempProject(
 	onTestFinished: (cleanup: () => void) => void,
 	files: Record<string, string>,
 ): string {
-	const projectDir = fs.realpathSync(
+	const projectDir = fs.realpathSync.native(
 		fs.mkdtempSync(path.join(os.tmpdir(), "tsc-after-")),
 	);
 	onTestFinished(() => {

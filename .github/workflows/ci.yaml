@@ -74,8 +74,11 @@ jobs:
   # getOutputFileNames, 3.8 added watchOptions, and 3.9 is the oldest version
   # passing the suite unchanged (3.9.10 is the latest 3.9 patch).
   compatibility:
-    name: Compatibility (Node.js ${{ matrix.node || 'default' }}, TypeScript ${{ matrix.typescript || 'locked' }})
-    runs-on: ubuntu-latest
+    name: Compatibility (Node.js ${{ matrix.node || 'default' }}, TypeScript ${{ matrix.typescript || 'locked' }}, ${{ matrix.os || 'ubuntu-latest' }})
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -100,6 +103,9 @@ jobs:
             node: 22.0.0
           # TS7 adapter on the newest Node.js (.nvmrc).
           - typescript: 7.1.0-beta
+          # TS7 adapter on Windows.
+          - typescript: 7.1.0-beta
+            os: windows-latest
     env:
       TSC_AFTER_EXPECTED_NODE_VERSION: ${{ matrix.node || '' }}
       TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION: ${{ matrix.typescript || '' }}

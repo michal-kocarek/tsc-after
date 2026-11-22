@@ -85,7 +85,7 @@ TSC_AFTER_NODE_EXECUTABLE=/path/to/node TSC_AFTER_EXPECTED_NODE_VERSION=18.11.0 
 ```
 
 The compatibility job runs end-to-end tests on the lowest supported version of each Node.js line with the locked TypeScript.
-It also tests TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0 and `.nvmrc`.
+It also tests TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0 and `.nvmrc`, plus Windows.
 Those overridden TypeScript entries also run the compiler unit tests in `src/common/typescript/__tests__/` and the project-loading tests in `src/common/__tests__/project.unit.test.ts`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
