@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/michal-kocarek/tsc-after/compare/v0.4.1...v0.5.0) (2026-11-22)
+
+### Features
+
+* preserve incremental build state during cleanup ([7c51c2b](https://github.com/michal-kocarek/tsc-after/commit/7c51c2b5e5d2be3468a75998b87136a64dffa7cf))
+
+### Bug Fixes
+
+* canonicalize cleanup test temp paths ([6ee16d7](https://github.com/michal-kocarek/tsc-after/commit/6ee16d7f50cfcea6a402b2096b5528b7c52ab796))
+* compare paths using the native realpath ([424f341](https://github.com/michal-kocarek/tsc-after/commit/424f34184a4d55c52154b221c499d046ab2219fb))
+* refuse a TypeScript version that cannot be parsed ([2f26e53](https://github.com/michal-kocarek/tsc-after/commit/2f26e53137624db41125aacbedbc8892cd82fd2d))
+
 ## [0.4.1](https://github.com/michal-kocarek/tsc-after/compare/v0.4.0...v0.4.1) (2026-11-22)
 
 ### Bug Fixes
