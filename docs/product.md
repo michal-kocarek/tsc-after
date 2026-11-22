@@ -113,6 +113,12 @@ Typical `package.json` wiring:
 }
 ```
 
+### Exit codes
+
+- `0` for success, including a dry run or nothing to remove
+- `1` for a configuration or cleanup error
+- `2` for invalid command-line arguments
+
 ---
 
 ## Copy design (v1)

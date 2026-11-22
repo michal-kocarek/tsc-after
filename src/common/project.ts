@@ -88,22 +88,17 @@ function resolveOutputDirs(
 	if (options.outFile !== undefined) {
 		throw new UserError("outFile is not supported");
 	}
-	if (options.incremental === true) {
-		throw new UserError("Incremental mode is not supported");
-	}
-	if (options.tsBuildInfoFile !== undefined) {
-		throw new UserError("tsBuildInfoFile is not supported");
-	}
-	if (options.composite === true) {
-		throw new UserError("Composite mode is not supported");
-	}
 	if (options.project !== undefined) {
 		throw new UserError("Project mode is not supported");
 	}
 	if (options.outDir === undefined) {
 		throw new UserError(MISSING_OUT_DIR_ERROR);
 	}
-	if (options.declarationDir !== undefined && options.declaration !== true) {
+	if (
+		options.declarationDir !== undefined &&
+		options.declaration !== true &&
+		options.composite !== true
+	) {
 		throw new UserError(DECLARATION_DISABLED_ERROR);
 	}
 

@@ -82,6 +82,84 @@ describe(loadProject, () => {
 		);
 	});
 
+	it.for([
+		{
+			compilerOptions: { incremental: true },
+			name: "the build-info file for incremental",
+			outputPaths: ["dist/src/index.js", "dist/tsconfig.tsbuildinfo"],
+		},
+		{
+			compilerOptions: { composite: true },
+			name: "the build-info file for composite",
+			outputPaths: [
+				"dist/src/index.js",
+				"dist/src/index.d.ts",
+				"dist/tsconfig.tsbuildinfo",
+			],
+		},
+		{
+			compilerOptions: {
+				incremental: true,
+				tsBuildInfoFile: "dist/build.json",
+			},
+			name: "tsBuildInfoFile",
+			outputPaths: ["dist/src/index.js", "dist/build.json"],
+		},
+		{
+			compilerOptions: { tsBuildInfoFile: "dist/build.json" },
+			name: "no build-info file without incremental or composite",
+			outputPaths: ["dist/src/index.js"],
+		},
+	])(
+		"returns $name",
+		async ({ compilerOptions, outputPaths }, { expect, onTestFinished }) => {
+			const projectDir = createTempProject(onTestFinished, {
+				...SOURCE_FILES,
+				"tsconfig.json": JSON.stringify({
+					compilerOptions: { ...compilerOptions, outDir: "dist", rootDir: "." },
+					include: ["src"],
+				}),
+			});
+
+			const project = await loadProject(".", projectDir);
+
+			expect(normalizePaths(project.outputPaths)).toStrictEqual(
+				new Set(
+					outputPaths.map((outputPath) => path.join(projectDir, outputPath)),
+				),
+			);
+		},
+	);
+
+	it("accepts declarationDir when composite enables declarations", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempProject(onTestFinished, {
+			...SOURCE_FILES,
+			"tsconfig.json": JSON.stringify({
+				compilerOptions: {
+					composite: true,
+					declarationDir: "types",
+					outDir: "dist",
+					rootDir: "src",
+				},
+				include: ["src"],
+			}),
+		});
+
+		const project = await loadProject(".", projectDir);
+
+		expect(project.declarationDir).toBe(path.join(projectDir, "types"));
+		expect(normalizePaths(project.outputPaths)).toStrictEqual(
+			new Set([
+				path.join(projectDir, "dist/index.js"),
+				path.join(projectDir, "tsconfig.tsbuildinfo"),
+				path.join(projectDir, "types/index.d.ts"),
+			]),
+		);
+	});
+
 	it("derives output paths when noEmitOnError is enabled", async ({
 		expect,
 		onTestFinished,
@@ -203,18 +281,6 @@ describe(loadProject, () => {
 				outFile: "dist/bundle.js",
 			},
 			message: "outFile is not supported",
-		},
-		{
-			compilerOptions: { incremental: true, outDir: "dist" },
-			message: "Incremental mode is not supported",
-		},
-		{
-			compilerOptions: { outDir: "dist", tsBuildInfoFile: "build.tsbuildinfo" },
-			message: "tsBuildInfoFile is not supported",
-		},
-		{
-			compilerOptions: { composite: true, outDir: "dist" },
-			message: "Composite mode is not supported",
 		},
 		{
 			compilerOptions: {},

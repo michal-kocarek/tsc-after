@@ -101,6 +101,12 @@ export class TypeScriptPre7Compiler implements Compiler {
 				outputPaths.add(outputPath);
 			}
 		}
+		const tsBuildInfoFile = ts.getTsBuildInfoEmitOutputFilePath(
+			parsedCommandLine.options,
+		);
+		if (tsBuildInfoFile !== undefined) {
+			outputPaths.add(tsBuildInfoFile);
+		}
 
 		return outputPaths;
 	}

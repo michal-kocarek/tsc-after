@@ -192,6 +192,48 @@ const emittedLayouts: EmittedLayout[] = [
 		sourceFiles: { "src/lib.ts": "export const value = 1;" },
 		staleFiles: ["dist/.tsc-after-stale.d.ts", "dist/js/.tsc-after-stale.js"],
 	},
+	{
+		compilerOptions: { incremental: true, rootDir: "src" },
+		include: ["src"],
+		name: "incremental with build info outside outDir",
+		sourceFiles: { "src/lib.ts": "export const value = 1;" },
+		staleFiles: ["dist/tsconfig.tsbuildinfo"],
+	},
+	{
+		compilerOptions: { incremental: true },
+		include: ["src"],
+		name: "incremental with build info in outDir",
+		sourceFiles: { "src/lib.ts": "export const value = 1;" },
+	},
+	{
+		compilerOptions: { composite: true },
+		include: ["src"],
+		name: "composite",
+		sourceFiles: { "src/lib.ts": "export const value = 1;" },
+	},
+	{
+		compilerOptions: {
+			incremental: true,
+			rootDir: "src",
+			tsBuildInfoFile: "dist/state/build.json",
+		},
+		include: ["src"],
+		name: "tsBuildInfoFile in outDir",
+		sourceFiles: { "src/lib.ts": "export const value = 1;" },
+		staleFiles: ["dist/state/previous.json", "dist/tsconfig.tsbuildinfo"],
+	},
+	{
+		cleanupRoots: ["dist", "types"],
+		compilerOptions: {
+			composite: true,
+			declarationDir: "types",
+			rootDir: "src",
+		},
+		include: ["src"],
+		name: "composite with declarationDir",
+		sourceFiles: { "src/lib.ts": "export const value = 1;" },
+		staleFiles: ["types/.tsc-after-stale.d.ts"],
+	},
 	...defaultRootDirLayouts,
 	...defaultRootDirLayouts.map((layout) => ({
 		...layout,

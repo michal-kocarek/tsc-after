@@ -2,7 +2,10 @@ import path from "node:path";
 import ts from "typescript";
 import { describe, it } from "vitest";
 
-import { getOutputFileNames } from "../outputPaths.ts";
+import {
+	getOutputFileNames,
+	getTsBuildInfoEmitOutputFilePath,
+} from "../outputPaths.ts";
 import {
 	TYPESCRIPT_6_0,
 	TYPESCRIPT_7_0,
@@ -12,6 +15,12 @@ import {
 const projectDir = path.resolve("/project");
 const configFilePath = path.join(projectDir, "tsconfig.json");
 const outputDir = path.join(projectDir, "dist");
+const parseConfigHost: ts.ParseConfigHost = {
+	fileExists: () => false,
+	readDirectory: () => [],
+	readFile: () => undefined,
+	useCaseSensitiveFileNames: true,
+};
 
 describe(getOutputFileNames, () => {
 	const outputCases = [
@@ -204,13 +213,6 @@ describe(getOutputFileNames, () => {
 		},
 	] as const;
 
-	const parseConfigHost: ts.ParseConfigHost = {
-		fileExists: () => false,
-		readDirectory: () => [],
-		readFile: () => undefined,
-		useCaseSensitiveFileNames: true,
-	};
-
 	it.for(outputCases)(
 		"$name",
 		({ fileName, options, outputFileNames }, { expect }) => {
@@ -251,3 +253,120 @@ describe(getOutputFileNames, () => {
 		});
 	});
 });
+
+describe(getTsBuildInfoEmitOutputFilePath, () => {
+	const buildInfoCases = [
+		{
+			configFileName: "tsconfig.json",
+			name: "writes none without incremental or composite",
+			options: { outDir: "dist" },
+			tsBuildInfoFile: undefined,
+		},
+		{
+			configFileName: "tsconfig.json",
+			name: "ignores tsBuildInfoFile without incremental or composite",
+			options: { outDir: "dist", tsBuildInfoFile: "dist/build.json" },
+			tsBuildInfoFile: undefined,
+		},
+		{
+			configFileName: "tsconfig.json",
+			name: "names it after the config in outDir for incremental",
+			options: { incremental: true, outDir: "dist" },
+			tsBuildInfoFile: path.join(outputDir, "tsconfig.tsbuildinfo"),
+		},
+		{
+			configFileName: "tsconfig.json",
+			name: "names it after the config in outDir for composite",
+			options: { composite: true, outDir: "dist" },
+			tsBuildInfoFile: path.join(outputDir, "tsconfig.tsbuildinfo"),
+		},
+		{
+			configFileName: "tsconfig.json",
+			name: "places it in outDir when rootDir is the config directory",
+			options: { incremental: true, outDir: "dist", rootDir: "." },
+			tsBuildInfoFile: path.join(outputDir, "tsconfig.tsbuildinfo"),
+		},
+		{
+			configFileName: "tsconfig.json",
+			name: "places it relative to rootDir",
+			options: { incremental: true, outDir: "dist", rootDir: "src" },
+			tsBuildInfoFile: path.join(projectDir, "tsconfig.tsbuildinfo"),
+		},
+		{
+			configFileName: "tsconfig.json",
+			name: "places it next to the config without outDir",
+			options: { incremental: true },
+			tsBuildInfoFile: path.join(projectDir, "tsconfig.tsbuildinfo"),
+		},
+		{
+			configFileName: "tsconfig.json",
+			name: "uses tsBuildInfoFile",
+			options: {
+				incremental: true,
+				outDir: "dist",
+				tsBuildInfoFile: "dist/state/build.json",
+			},
+			tsBuildInfoFile: path.join(outputDir, "state/build.json"),
+		},
+		{
+			configFileName: "myconfig",
+			name: "names it after a config without an extension",
+			options: { incremental: true, outDir: "dist" },
+			tsBuildInfoFile: path.join(outputDir, "myconfig.tsbuildinfo"),
+		},
+		{
+			configFileName: "tsconfig.custom",
+			name: "keeps an unknown config extension",
+			options: { incremental: true, outDir: "dist" },
+			tsBuildInfoFile: path.join(outputDir, "tsconfig.custom.tsbuildinfo"),
+		},
+	] as const;
+
+	it.for(buildInfoCases)(
+		"$name",
+		({ configFileName, options, tsBuildInfoFile }, { expect }) => {
+			expect(
+				getTsBuildInfoEmitOutputFilePath({
+					configFilePath: getConfigFilePath(configFileName),
+					...options,
+				}),
+			).toBe(tsBuildInfoFile);
+		},
+	);
+
+	describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
+		"matches ts.getTsBuildInfoEmitOutputFilePath",
+		() => {
+			it.for(buildInfoCases)(
+				"$name",
+				({ configFileName, options }, { expect }) => {
+					const caseConfigFilePath = getConfigFilePath(configFileName);
+					const parsed = ts.parseJsonConfigFileContent(
+						{ compilerOptions: options, files: ["src/index.ts"] },
+						parseConfigHost,
+						projectDir,
+						undefined,
+						caseConfigFilePath,
+					);
+					const predicted = getTsBuildInfoEmitOutputFilePath({
+						configFilePath: caseConfigFilePath,
+						...options,
+					});
+					const compilerOutput = ts.getTsBuildInfoEmitOutputFilePath(
+						parsed.options,
+					);
+
+					expect(
+						compilerOutput === undefined
+							? undefined
+							: path.normalize(compilerOutput),
+					).toBe(predicted);
+				},
+			);
+		},
+	);
+});
+
+function getConfigFilePath(configFileName: string): string {
+	return path.join(projectDir, configFileName);
+}

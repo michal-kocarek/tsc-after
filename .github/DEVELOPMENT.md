@@ -167,16 +167,19 @@ Keep E2E test files flat in `src/__tests__/`, grouped by feature area:
 
 - `project.e2e.test.ts` tests the isolated-project harness.
 - `emittedLayouts.e2e.test.ts` compares expected outputs with `tsc --listEmittedFiles`.
+- `incremental.e2e.test.ts` tests incremental build state across cleanup.
 - `staleOutputs.e2e.test.ts` tests stale output cleanup.
 - `projectOption.e2e.test.ts` tests `--project` and config handling.
 - `outDirSafety.e2e.test.ts` tests safety refusals involving `outDir`.
 - `main.e2e.test.ts` tests CLI arguments, help, and version.
 
 Name new files after the `tsc` feature they cover, such as `watch.e2e.test.ts` or `build.e2e.test.ts`.
-Keep `declarationDir` output comparisons in `emittedLayouts.e2e.test.ts`; keep `tsBuildInfoFile` and `outFile` output tests in `staleOutputs.e2e.test.ts` until they need their own file.
+Keep `declarationDir` output comparisons in `emittedLayouts.e2e.test.ts`; keep `outFile` output tests in `staleOutputs.e2e.test.ts` until they need their own file.
 
 Use one behavior per `it` and one named variant per `it.for` row; do not loop over subprocess runs inside a test.
-Each test should create its own project with `withProject` and run at most one `tsc` and one `tsc-after`, keeping the default five-second timeout practical.
+Each test should create its own project with `withProject`.
+Most flows need at most one `tsc` and one `tsc-after`; a single flow may run multiple compiler commands when a later build verifies the result of earlier cleanup.
+Give flows with multiple compiler commands an explicit larger timeout.
 Use `CLEAN_MODES` or `withCleanModes` for normal and `--dry` variants.
 
 The E2E project uses one worker and allows two concurrent tests in CI or three locally, as configured in `vitest.config.ts`.

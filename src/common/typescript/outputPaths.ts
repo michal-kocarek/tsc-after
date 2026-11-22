@@ -1,7 +1,8 @@
 import path from "node:path";
 
 // Inspired by the TypeScript native compiler's output-path rules; cross-check
-// its GetOutputPathsFor and GetCommonSourceDirectory implementations here:
+// its GetOutputPathsFor, GetBuildInfoFileName and GetCommonSourceDirectory
+// implementations here:
 // https://github.com/microsoft/TypeScript/blob/01f1a759d92b19ea7024776da02358995d56a7ff/tsc/internal/outputpaths/outputpaths.go
 // https://github.com/microsoft/TypeScript/blob/01f1a759d92b19ea7024776da02358995d56a7ff/tsc/internal/outputpaths/commonsourcedirectory.go
 // The supported TS 7 layouts must match tsc --listEmittedFiles, as checked by
@@ -14,15 +15,29 @@ export interface OutputOptions {
 	declarationDir?: string | undefined;
 	declarationMap?: boolean | undefined;
 	emitDeclarationOnly?: boolean | undefined;
+	incremental?: boolean | undefined;
 	jsx?: string | undefined;
 	outDir?: string | undefined;
 	rootDir?: string | undefined;
 	sourceMap?: boolean | undefined;
+	tsBuildInfoFile?: string | undefined;
 }
 
 const declarationFileExtensions = [".d.ts", ".d.mts", ".d.cts"];
+const tsBuildInfoExtension = ".tsbuildinfo";
 const esmFileExtensions = [".mts", ".mjs"];
 const cjsFileExtensions = [".cts", ".cjs"];
+// Mirrors extensionsToRemove in TypeScript's removeFileExtension.
+const knownFileExtensions = [
+	...declarationFileExtensions,
+	...esmFileExtensions,
+	...cjsFileExtensions,
+	".ts",
+	".js",
+	".tsx",
+	".jsx",
+	".json",
+];
 
 export function getOutputFileNames(
 	options: OutputOptions,
@@ -79,8 +94,6 @@ export function getOutputFileNames(
 		}
 	}
 
-	// loadProject refuses composite for now; keep tsc's rule so allowing it
-	// later needs no change here.
 	if (options.declaration === true || options.composite === true) {
 		const declarationDirectory = resolveOptionPath(
 			options.declarationDir ?? options.outDir,
@@ -102,6 +115,38 @@ export function getOutputFileNames(
 	}
 
 	return outputFileNames;
+}
+
+/** Returns the build-info file `tsc` writes, or `undefined` when it writes none. */
+export function getTsBuildInfoEmitOutputFilePath(
+	options: OutputOptions,
+): string | undefined {
+	if (options.incremental !== true && options.composite !== true) {
+		return undefined;
+	}
+	const { configFilePath } = options;
+	const tsBuildInfoFile = resolveOptionPath(
+		options.tsBuildInfoFile,
+		configFilePath,
+	);
+	if (tsBuildInfoFile !== undefined) {
+		return tsBuildInfoFile;
+	}
+
+	const outDir = resolveOptionPath(options.outDir, configFilePath);
+	let buildInfoPath = configFilePath;
+	if (outDir !== undefined) {
+		buildInfoPath =
+			options.rootDir === undefined
+				? path.join(outDir, path.basename(configFilePath))
+				: getOutputPath(
+						configFilePath,
+						outDir,
+						options.rootDir,
+						configFilePath,
+					);
+	}
+	return `${removeFileExtension(buildInfoPath)}${tsBuildInfoExtension}`;
 }
 
 function getDeclarationExtension(sourceExtension: string): string {
@@ -162,6 +207,15 @@ function isDeclarationFile(fileName: string): boolean {
 			fileName.endsWith(extension),
 		) || /\.d\..+\.ts$/u.test(path.basename(fileName))
 	);
+}
+
+function removeFileExtension(fileName: string): string {
+	const extension = knownFileExtensions.find((knownExtension) =>
+		fileName.endsWith(knownExtension),
+	);
+	return extension === undefined
+		? fileName
+		: fileName.slice(0, -extension.length);
 }
 
 function replaceExtension(fileName: string, extension: string): string {

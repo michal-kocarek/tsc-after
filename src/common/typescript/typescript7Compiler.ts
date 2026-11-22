@@ -5,7 +5,11 @@ import fs from "node:fs";
 import type { Compiler, ParsedProject } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
-import { getOutputFileNames, type OutputOptions } from "./outputPaths.ts";
+import {
+	getOutputFileNames,
+	getTsBuildInfoEmitOutputFilePath,
+	type OutputOptions,
+} from "./outputPaths.ts";
 
 const syncModuleSpecifier = "typescript/sync";
 
@@ -103,12 +107,18 @@ export class TypeScript7Compiler implements Compiler {
 					: undefined,
 		};
 		return {
-			getOutputPaths: () =>
-				new Set(
+			getOutputPaths: () => {
+				const outputPaths = new Set(
 					sourceFileNames.flatMap((fileName) =>
 						getOutputFileNames(outputOptions, fileName),
 					),
-				),
+				);
+				const tsBuildInfoFile = getTsBuildInfoEmitOutputFilePath(outputOptions);
+				if (tsBuildInfoFile !== undefined) {
+					outputPaths.add(tsBuildInfoFile);
+				}
+				return outputPaths;
+			},
 			options: config.options,
 			sourceFileNames,
 		};
