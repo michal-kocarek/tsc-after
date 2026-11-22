@@ -89,8 +89,8 @@ The entries cover the locked TypeScript on Ubuntu and Windows, and on the lowest
 They also cover TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0, `.nvmrc`, and Windows.
 Vitest always runs on `.nvmrc`; the Node.js entry selects the Node.js that runs `tsc` and `tsc-after`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
-The `main branch CI gate` ruleset requires only `CI Gate`, which fails unless every job in its `needs` succeeds; add each new CI job there instead of to the repository settings.
-Repository admins and deploy keys can bypass this check, so use the bypass only when the checks cannot run; the admin bypass also permits direct pushes to `main`.
+The `main branch required checks` ruleset requires `CI Gate` and `Conventional title`; `CI Gate` fails unless every job in its `needs` succeeds, so add each CI job that should block merging to its `needs` instead of listing it in the ruleset.
+Repository admins and deploy keys can bypass both checks on PRs and direct pushes, so use the bypass only when the checks cannot run.
 The non-required `Codecov` job runs after `CI Gate`, including on failure, and needs no change when gated jobs are added.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
 The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
@@ -206,6 +206,7 @@ Squash is the only enabled merge method.
 Follow the title and blank-body guidance in [CONTRIBUTING.md](./CONTRIBUTING.md), check that `Conventional title` passed, and preserve the title in the merge dialog.
 Include any `Co-authored-by:` lines needed to credit other authors.
 Auto-merge and branch-update suggestions are enabled, but branches do not need to be up to date before merging.
+The `main branch is immutable` ruleset prevents deletion, force pushes, and merge commits; ordinary direct pushes remain allowed.
 The signature ruleset permits repository admins to bypass signatures for PR merges, without guaranteeing the resulting commit is signed; direct pushes need signed commits except when using a deploy key.
 The `v*` tag rulesets let deploy keys create tags and prevent everyone, including deploy keys, from updating or deleting them.
 Conversation resolution is not required because GitHub couples that ruleset option to requiring PRs, which would block direct pushes.
@@ -239,7 +240,6 @@ Git hooks run [commitlint](https://commitlint.js.org) on every new commit messag
 The PR-title check in `.github/workflows/pr-title.yaml` uses `pull_request_target` so it can validate title edits, but checks out only the trusted default branch and never PR code.
 Keep its GitHub Actions event policy scoped to that workflow, and do not fetch or execute pull-request content in it.
 The check validates the PR title, not the final squash message, which GitHub lets the merger edit; preserve the checked title when merging.
-Require the check only after the workflow is on `main` and a PR run confirms its status-check name.
 
 npm authenticates the workflow through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (no token) and adds provenance automatically.
 The trusted publisher on npm must point to workflow `release.yaml` and environment `npm-release`.
