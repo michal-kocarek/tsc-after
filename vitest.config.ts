@@ -31,6 +31,8 @@ export default defineConfig({
 					maxConcurrency: (process.env["CI"] ?? "") === "" ? 3 : 2,
 					maxWorkers: 1,
 					name: { color: "cyan", label: "e2e" },
+					// Prolong as on GH runners, tests can take a while under old TypeScript versions.
+					testTimeout: 10_000,
 				},
 			},
 		],
