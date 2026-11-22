@@ -12,7 +12,7 @@ export default defineConfig({
 	test: {
 		coverage: {
 			exclude: [FIXTURES_GLOB],
-			include: ["src"],
+			include: ["src/**/*.ts"],
 			reporter: ["html", "lcov"],
 		},
 		detectAsyncLeaks: true,
@@ -30,7 +30,7 @@ export default defineConfig({
 							`${testResultsFileName}.junit.xml`,
 						),
 					},
-					// Listing reporters disables the automatic github-actions reporter.
+					// Listing reporters disables the automatic GitHub Actions reporter.
 					reporters: ["default", "github-actions", "json", "junit"],
 				}),
 		projects: [
