@@ -27,7 +27,8 @@ export default defineConfig({
 				extends: true,
 				test: {
 					include: ["src/**/*.e2e.test.ts"],
-					maxConcurrency: 2,
+					// eslint-disable-next-line n/no-process-env -- Keep CI subprocess contention low.
+					maxConcurrency: (process.env["CI"] ?? "") === "" ? 3 : 2,
 					maxWorkers: 1,
 					name: { color: "cyan", label: "e2e" },
 				},

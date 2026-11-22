@@ -132,7 +132,12 @@ Keep `declarationDir` output comparisons in `emittedLayouts.e2e.test.ts`; keep `
 Use one behavior per `it` and one named variant per `it.for` row; do not loop over subprocess runs inside a test.
 Each test should create its own project with `withProject` and run at most one `tsc` and one `tsc-after`, keeping the default five-second timeout practical.
 Use `CLEAN_MODES` or `withCleanModes` for normal and `--dry` variants.
-The E2E project uses one worker and allows two concurrent tests to limit subprocess contention; both limits are configured in `vitest.config.ts`.
+
+The E2E project uses one worker and allows two concurrent tests in CI or three locally, as configured in `vitest.config.ts`.
+E2E tests run `tsc` and `tsc-after` subprocesses, so excessive parallelism can starve CPU on resource-constrained GitHub Actions runners and cause timeouts.
+Keeping one worker prevents concurrent test limits from multiplying across files.
+For different local limits, adjust the E2E project's `maxConcurrency` in `vitest.config.ts`; higher values may cause timeouts.
+Vitest's `--maxConcurrency` flag does not override this project-level setting.
 
 Reuse `src/__tests__/fixtures/simple` and adjust it in the test with helpers such as `writeJson`.
 Add a separate `fixtures/<name>/` directory and pass `fixtureDir` to `withProject` only when setup needs more than a few `writeJson` calls.
