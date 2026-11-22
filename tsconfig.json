@@ -12,5 +12,6 @@
 		// Explicitly state to allow JetBrains autocomplete importing `.ts` extensions
 		"allowImportingTsExtensions": true
 	},
-	"include": ["src", "*.config.ts", "*.config.js"]
+	"include": ["src", "*.config.ts", "*.config.js"],
+	"exclude": ["src/__tests__/fixtures"]
 }

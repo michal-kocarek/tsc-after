@@ -64,6 +64,61 @@ describe("stale outputs", () => {
 		});
 	});
 
+	it.for(
+		withCleanModes([
+			{ configLocation: "root" },
+			{ configLocation: "inherited" },
+		]),
+	)(
+		"cleans outputs when watchOptions are in the $configLocation config ($mode)",
+		async ({ args, configLocation, mode }, { expect, task }) => {
+			const cleanupState = await withProject(task, async (projectDir) => {
+				const compilerOptions = {
+					outDir: "dist",
+					rootDir: "src",
+					...ISOLATED_COMPILER_OPTIONS,
+				};
+				const configWithWatchOptions = {
+					compilerOptions,
+					watchOptions: { watchFile: "useFsEvents" },
+				};
+				if (configLocation === "root") {
+					await writeJson(projectDir, "tsconfig.json", configWithWatchOptions);
+				} else {
+					await writeJson(projectDir, "base.json", configWithWatchOptions);
+					await writeJson(projectDir, "tsconfig.json", {
+						extends: "./base.json",
+					});
+				}
+
+				const compilation = await runTsc([], { cwd: projectDir });
+				const emittedOutputPath = join(projectDir, "dist/index.js");
+				const staleOutputPath = join(projectDir, "dist/stale.js");
+				await writeFile(staleOutputPath, "stale output");
+				const cleanup = await runTscAfter(args, {
+					allowFailure: true,
+					cwd: projectDir,
+				});
+
+				return {
+					cleanupExitCode: cleanup.exitCode,
+					compilationExitCode: compilation.exitCode,
+					emittedOutputExists: await pathExists(emittedOutputPath),
+					staleOutputExists: await pathExists(staleOutputPath),
+					stderr: cleanup.stderr,
+				};
+			});
+
+			expect(cleanupState).toStrictEqual({
+				cleanupExitCode: 0,
+				compilationExitCode: 0,
+				emittedOutputExists: true,
+				staleOutputExists: mode === "dry",
+				stderr: "",
+			});
+		},
+	);
+
 	it("removes stale outputs after tsc emits the project", async ({
 		expect,
 		task,

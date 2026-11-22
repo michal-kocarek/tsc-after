@@ -6,9 +6,8 @@ export interface Compiler {
 }
 
 export interface Project {
-	configFilePaths: string[];
+	configFilePath: string;
 	fileNames: string[];
-	hasWatchOptions: boolean;
 	options: CompilerOptions;
 	programFileNames: string[];
 }

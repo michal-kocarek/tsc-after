@@ -27,6 +27,6 @@ export async function loadCompiler(): Promise<Compiler> {
 		);
 	}
 
-	const compilerModule = await import("./typescript7Compiler.ts");
-	return compilerModule.TypeScript7Compiler.create();
+	const { TypeScript7Compiler } = await import("./typescript7Compiler.ts");
+	return TypeScript7Compiler.create();
 }

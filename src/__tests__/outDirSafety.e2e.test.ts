@@ -51,75 +51,90 @@ describe("outDir safety", () => {
 
 	if (Number.parseInt(ts.version, 10) >= 7) {
 		// These cases cover the TypeScript 7 adapter, which is not used by older compilers.
-		// eslint-disable-next-line vitest/no-conditional-tests
-		it("refuses cleanup when an extended package config cannot be resolved safely", async ({
-			expect,
-			task,
-		}) => {
-			await withProject(task, async (projectDir) => {
-				await writeJson(projectDir, "tsconfig.json", {
-					compilerOptions: {
-						...ISOLATED_COMPILER_OPTIONS,
-						outDir: "node_modules",
-						rootDir: "src",
-					},
-					extends: "shared-config",
-				});
-				await writeJson(projectDir, "outside.json", {});
-				await writeJson(projectDir, "node_modules/shared-config/package.json", {
-					main: "../../outside.json",
-					tsconfig: "base.json",
-				});
-				await writeJson(projectDir, "node_modules/shared-config/base.json", {});
-				await writeFile(join(projectDir, "node_modules/stale.js"), "keep");
-				const before = await readTree(projectDir);
+		it.for(CLEAN_MODES)(
+			"resolves a bare package config using TypeScript's parser ($mode)",
+			async ({ args, mode }, { expect, task }) => {
+				await withProject(task, async (projectDir) => {
+					await writeJson(projectDir, "tsconfig.json", {
+						compilerOptions: {
+							...ISOLATED_COMPILER_OPTIONS,
+							outDir: "dist",
+							rootDir: "src",
+						},
+						extends: "shared-config",
+					});
+					await writeJson(
+						projectDir,
+						"node_modules/shared-config/package.json",
+						{
+							tsconfig: "base.json",
+						},
+					);
+					await writeJson(
+						projectDir,
+						"node_modules/shared-config/base.json",
+						{},
+					);
+					await mkdir(join(projectDir, "dist"));
+					await writeFile(join(projectDir, "dist/stale.js"), "stale");
 
-				const cleanup = await runTscAfter([], {
-					allowFailure: true,
-					cwd: projectDir,
-				});
+					const cleanup = await runTscAfter(args, {
+						cwd: projectDir,
+					});
 
-				expect(cleanup.exitCode).toBe(1);
-				expect(cleanup.stderr).toContain(
-					"Could not safely determine extended config",
-				);
-				await expect(readTree(projectDir)).resolves.toStrictEqual(before);
-			});
-		});
-
-		// eslint-disable-next-line vitest/no-conditional-tests
-		it("refuses cleanup when a transitively extended config is inside outDir", async ({
-			expect,
-			task,
-		}) => {
-			await withProject(task, async (projectDir) => {
-				await writeJson(projectDir, "tsconfig.json", {
-					compilerOptions: {
-						...ISOLATED_COMPILER_OPTIONS,
-						outDir: "dist",
-						rootDir: "src",
-					},
-					extends: ["./first.json"],
+					expect(cleanup.exitCode).toBe(0);
+					expect(cleanup.stderr).toBe("");
+					expect(await pathExists(join(projectDir, "dist/stale.js"))).toBe(
+						mode === "dry",
+					);
+					expect(
+						await pathExists(
+							join(projectDir, "node_modules/shared-config/base.json"),
+						),
+					).toBe(true);
 				});
-				await writeJson(projectDir, "first.json", {
-					extends: "./dist/base.json",
-				});
-				await writeJson(projectDir, "dist/base.json", {});
-				await writeFile(join(projectDir, "dist/stale.js"), "keep");
-				const before = await readTree(projectDir);
+			},
+		);
 
-				const cleanup = await runTscAfter([], {
-					allowFailure: true,
-					cwd: projectDir,
-				});
+		it.for(CLEAN_MODES)(
+			"cleans a transitively extended config inside outDir ($mode)",
+			async ({ args, mode }, { expect, task }) => {
+				await withProject(task, async (projectDir) => {
+					await writeJson(projectDir, "tsconfig.json", {
+						compilerOptions: {
+							...ISOLATED_COMPILER_OPTIONS,
+							outDir: "dist",
+							rootDir: "src",
+						},
+						extends: ["./first.json"],
+					});
+					await writeJson(projectDir, "first.json", {
+						extends: "./dist/base.json",
+					});
+					await writeJson(projectDir, "dist/base.json", {});
+					await writeFile(join(projectDir, "dist/stale.js"), "keep");
 
-				expect(cleanup.exitCode).toBe(1);
-				expect(cleanup.stderr).toContain(
-					"contains config file 'dist/base.json'",
-				);
-				await expect(readTree(projectDir)).resolves.toStrictEqual(before);
-			});
-		});
+					const cleanup = await runTscAfter(args, {
+						cwd: projectDir,
+					});
+
+					expect(cleanup.exitCode).toBe(0);
+					expect(cleanup.stderr).toBe("");
+					expect(await pathExists(join(projectDir, "dist/base.json"))).toBe(
+						mode === "dry",
+					);
+					expect(await pathExists(join(projectDir, "dist/stale.js"))).toBe(
+						mode === "dry",
+					);
+
+					if (mode === "dry") {
+						expect(cleanup.stdout).toContain(
+							"Would remove file: dist/base.json",
+						);
+					}
+				});
+			},
+		);
 	}
 
 	it.for(CLEAN_MODES)(
@@ -200,37 +215,37 @@ describe("outDir safety", () => {
 		},
 	);
 
-	it("refuses to clean when the project config is inside outDir", async ({
-		expect,
-		task,
-	}) => {
-		await withProject(task, async (projectDir) => {
-			const configPath = join(projectDir, "dist/tsconfig.json");
-			const configContents = JSON.stringify({
-				compilerOptions: { outDir: ".", rootDir: "../src" },
-				include: ["../src"],
-			});
-			const staleOutputPath = join(projectDir, "dist/stale.js");
-			await mkdir(dirname(configPath), { recursive: true });
-			await writeFile(configPath, configContents);
-			await writeFile(staleOutputPath, "keep stale output\n");
-			const before = await readTree(projectDir);
+	it.for(CLEAN_MODES)(
+		"cleans when the project config is inside outDir ($mode)",
+		async ({ args, mode }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				const configPath = join(projectDir, "dist/tsconfig.json");
+				const configContents = JSON.stringify({
+					compilerOptions: { outDir: ".", rootDir: "../src" },
+					include: ["../src"],
+				});
+				const staleOutputPath = join(projectDir, "dist/stale.js");
+				await mkdir(dirname(configPath), { recursive: true });
+				await writeFile(configPath, configContents);
+				await writeFile(staleOutputPath, "keep stale output\n");
 
-			const cleanup = await runTscAfter(["--project", "dist"], {
-				allowFailure: true,
-				cwd: projectDir,
-			});
+				const cleanup = await runTscAfter([...args, "--project", "dist"], {
+					cwd: projectDir,
+				});
 
-			expect(cliOutcome(cleanup)).toStrictEqual({
-				exitCode: 1,
-				hasStackTrace: false,
-				stderr: expect.stringContaining(
-					"Refusing to clean outDir 'dist': it contains config file 'dist/tsconfig.json'.",
-				),
+				expect(cleanup.exitCode).toBe(0);
+				expect(cleanup.stderr).toBe("");
+				expect(await pathExists(configPath)).toBe(mode === "dry");
+				expect(await pathExists(staleOutputPath)).toBe(mode === "dry");
+
+				if (mode === "dry") {
+					expect(cleanup.stdout).toContain(
+						"Would remove file: dist/tsconfig.json",
+					);
+				}
 			});
-			await expect(readTree(projectDir)).resolves.toStrictEqual(before);
-		});
-	});
+		},
+	);
 
 	it.for(CLEAN_MODES)(
 		"does not treat a non-directory outDir as missing ($mode)",
@@ -251,8 +266,13 @@ describe("outDir safety", () => {
 					cwd: projectDir,
 				});
 
-				expect(cleanup.exitCode).toBe(1);
-				expect(cleanup.stderr).toContain("Not a directory");
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean outDir 'not-a-directory': 'not-a-directory' is not a directory.",
+					),
+				});
 				expect(cleanup.stdout).toContain("Using tsconfig: tsconfig.json");
 				expect(await readTree(projectDir)).toStrictEqual(before);
 			});
@@ -280,10 +300,82 @@ describe("outDir safety", () => {
 					cwd: projectDir,
 				});
 
-				expect(cleanup.exitCode).toBe(1);
-				expect(cleanup.stderr).toContain("ENOTDIR");
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						"Refusing to clean outDir 'not-a-directory/dist': 'not-a-directory' is not a directory.",
+					),
+				});
 				expect(cleanup.stdout).toContain("Using tsconfig: tsconfig.json");
 				expect(await readTree(projectDir)).toStrictEqual(before);
+			});
+		},
+	);
+
+	it.for(
+		withCleanModes([
+			{ kind: "missing", name: "missing root under a symlink" },
+			{ kind: "dangling", name: "dangling root symlink" },
+			{ kind: "declaration", name: "declarationDir under a symlink" },
+			{ kind: "escape", name: "symlink escaping cwd" },
+		]),
+	)(
+		"refuses $name without changing files ($mode)",
+		async ({ args, kind }, { expect, task }) => {
+			await withProject(task, async (projectDir) => {
+				const cwd = kind === "escape" ? join(projectDir, "nested") : projectDir;
+				if (kind === "escape") {
+					await mkdir(join(cwd, "src"), { recursive: true });
+					await writeFile(join(cwd, "src/index.ts"), "export const value = 1;");
+				}
+				const targetDir =
+					kind === "escape" ? join(projectDir, "outside") : join(cwd, "target");
+				const rootPath =
+					kind === "dangling"
+						? "dist"
+						: kind === "declaration"
+							? "linked/types"
+							: "linked/dist";
+				const linkPath = kind === "dangling" ? "dist" : "linked";
+				if (kind !== "dangling") {
+					await mkdir(targetDir, { recursive: true });
+				}
+				if (kind === "escape") {
+					await mkdir(join(targetDir, "dist"));
+					await writeFile(join(targetDir, "dist/stale.js"), "outside file");
+				}
+				await symlink(targetDir, join(cwd, linkPath), "dir");
+				if (kind === "declaration") {
+					await mkdir(join(cwd, "dist"));
+					await writeFile(join(cwd, "dist/stale.js"), "keep");
+				}
+				await writeJson(cwd, "tsconfig.json", {
+					compilerOptions: {
+						...ISOLATED_COMPILER_OPTIONS,
+						outDir: kind === "declaration" ? "dist" : rootPath,
+						rootDir: "src",
+						...(kind === "declaration"
+							? { declaration: true, declarationDir: rootPath }
+							: {}),
+					},
+				});
+				const before = await readTree(projectDir);
+
+				const cleanup = await runTscAfter(args, { allowFailure: true, cwd });
+
+				expect(cliOutcome(cleanup)).toStrictEqual({
+					exitCode: 1,
+					hasStackTrace: false,
+					stderr: expect.stringContaining(
+						`Refusing to clean ${kind === "declaration" ? "declarationDir" : "outDir"} through a symbolic link: ${rootPath}!`,
+					),
+				});
+				expect(await readTree(projectDir)).toStrictEqual(before);
+
+				if (kind === "escape") {
+					expect(await pathExists(join(targetDir, "dist/stale.js"))).toBe(true);
+				}
 			});
 		},
 	);
@@ -569,8 +661,8 @@ describe("outDir safety", () => {
 	);
 
 	it.for(CLEAN_MODES)(
-		"refuses to clean when declarationDir contains an extended config ($mode)",
-		async ({ args }, { expect, task }) => {
+		"cleans an extended config under declarationDir ($mode)",
+		async ({ args, mode }, { expect, task }) => {
 			await withProject(task, async (projectDir) => {
 				await writeJson(projectDir, "types/base.json", {});
 				await writeJson(projectDir, "tsconfig.json", {
@@ -585,21 +677,22 @@ describe("outDir safety", () => {
 				});
 				await mkdir(join(projectDir, "dist"));
 				await writeFile(join(projectDir, "dist/stale.js"), "keep");
-				const before = await readTree(projectDir);
 
 				const cleanup = await runTscAfter(args, {
-					allowFailure: true,
 					cwd: projectDir,
 				});
 
-				expect(cliOutcome(cleanup)).toStrictEqual({
-					exitCode: 1,
-					hasStackTrace: false,
-					stderr: expect.stringContaining(
-						"Refusing to clean declarationDir 'types': it contains config file 'types/base.json'.",
-					),
-				});
-				expect(await readTree(projectDir)).toStrictEqual(before);
+				expect(cleanup.exitCode).toBe(0);
+				expect(cleanup.stderr).toBe("");
+				expect(await pathExists(join(projectDir, "types/base.json"))).toBe(
+					mode === "dry",
+				);
+
+				if (mode === "dry") {
+					expect(cleanup.stdout).toContain(
+						"Would remove file: types/base.json",
+					);
+				}
 			});
 		},
 	);
@@ -724,8 +817,8 @@ describe("outDir safety", () => {
 	);
 
 	it.for(CLEAN_MODES)(
-		"refuses to clean when outDir contains an extended config ($mode)",
-		async ({ args }, { expect, task }) => {
+		"cleans an extended config under outDir ($mode)",
+		async ({ args, mode }, { expect, task }) => {
 			await withProject(task, async (projectDir) => {
 				const extendedConfigPath = join(projectDir, "dist/base.json");
 				const configPath = join(projectDir, "tsconfig.json");
@@ -737,21 +830,18 @@ describe("outDir safety", () => {
 				await mkdir(dirname(extendedConfigPath), { recursive: true });
 				await writeFile(extendedConfigPath, extendedConfigContents);
 				await writeFile(configPath, configContents);
-				const before = await readTree(projectDir);
 
 				const cleanup = await runTscAfter(args, {
-					allowFailure: true,
 					cwd: projectDir,
 				});
 
-				expect(cliOutcome(cleanup)).toStrictEqual({
-					exitCode: 1,
-					hasStackTrace: false,
-					stderr: expect.stringContaining(
-						"Refusing to clean outDir 'dist': it contains config file 'dist/base.json'.",
-					),
-				});
-				expect(await readTree(projectDir)).toStrictEqual(before);
+				expect(cleanup.exitCode).toBe(0);
+				expect(cleanup.stderr).toBe("");
+				expect(await pathExists(extendedConfigPath)).toBe(mode === "dry");
+
+				if (mode === "dry") {
+					expect(cleanup.stdout).toContain("Would remove file: dist/base.json");
+				}
 			});
 		},
 	);

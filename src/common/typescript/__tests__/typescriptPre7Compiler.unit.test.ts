@@ -14,7 +14,7 @@ import {
 describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 	TypeScriptPre7Compiler,
 	() => {
-		it("parses project files and inherited config paths", ({ expect }) => {
+		it("parses project files and keeps the root config path", ({ expect }) => {
 			const projectDir = createTempProject({
 				"base.json": JSON.stringify({
 					compilerOptions: { outDir: "dist" },
@@ -45,33 +45,7 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 				].sort(),
 			);
 			expect(project.options.outDir).toBe(path.join(projectDir, "dist"));
-			expect(project.configFilePaths).toStrictEqual([
-				configFilePath,
-				path.join(projectDir, "base.json"),
-			]);
-			expect(project.hasWatchOptions).toBe(false);
-		});
-
-		it("records watch options", ({ expect }) => {
-			const projectDir = createTempProject({
-				"src/index.ts": 'import "./lib";\nexport const value = 1;',
-				"src/lib.ts": "export const imported = true;",
-				"tsconfig.json": JSON.stringify({
-					compilerOptions: { outDir: "dist" },
-					watchOptions: { watchFile: "useFsEvents" },
-				}),
-			});
-			const compiler = new TypeScriptPre7Compiler();
-			onTestFinished(() => {
-				compiler.close();
-				fs.rmSync(projectDir, { force: true, recursive: true });
-			});
-
-			const project = compiler.parseProject(
-				path.join(projectDir, "tsconfig.json"),
-			);
-
-			expect(project.hasWatchOptions).toBe(true);
+			expect(project.configFilePath).toBe(configFilePath);
 		});
 
 		it("returns JavaScript, declaration, and map output paths", ({

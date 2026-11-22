@@ -8,7 +8,9 @@ import { TypeScript7Compiler } from "../typescript7Compiler.ts";
 import { TYPESCRIPT_7_1, typescriptVersion } from "../version.ts";
 
 describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
-	it("parses project files and inherited config paths", async ({ expect }) => {
+	it("parses project files and keeps the root config path", async ({
+		expect,
+	}) => {
 		const projectDir = createTempProject({
 			"base.json": JSON.stringify({
 				compilerOptions: { outDir: "dist" },
@@ -38,34 +40,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 			].sort(),
 		);
 		expect(project.options.outDir).toBe(path.join(projectDir, "dist"));
-		expect(project.configFilePaths).toStrictEqual([
-			configFilePath,
-			path.join(projectDir, "base.json"),
-		]);
-		expect(project.hasWatchOptions).toBe(false);
-	});
-
-	it("records watch options from the config chain", async ({ expect }) => {
-		const projectDir = createTempProject({
-			"base.json": JSON.stringify({
-				compilerOptions: { outDir: "dist" },
-				watchOptions: { watchFile: "useFsEvents" },
-			}),
-			"src/index.ts": "export const value = 1;",
-			"tsconfig.json": JSON.stringify({
-				extends: "./base.json",
-			}),
-		});
-		onTestFinished(() => {
-			fs.rmSync(projectDir, { force: true, recursive: true });
-		});
-		const compiler = await createCompiler();
-
-		const project = compiler.parseProject(
-			path.join(projectDir, "tsconfig.json"),
-		);
-
-		expect(project.hasWatchOptions).toBe(true);
+		expect(project.configFilePath).toBe(configFilePath);
 	});
 
 	it("returns JavaScript, declaration, and map output paths", async ({
@@ -153,15 +128,38 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		).toThrow("error TS5083");
 	});
 
-	it("refuses package-based extends", async ({ expect }) => {
+	it("resolves package-based extends", async ({ expect }) => {
 		const projectDir = createTempProject({
-			"node_modules/package-config/tsconfig.json": JSON.stringify({
+			"node_modules/package-config/config/tsconfig.json": JSON.stringify({
 				compilerOptions: { outDir: "dist" },
+			}),
+			"node_modules/package-config/package.json": JSON.stringify({
+				tsconfig: "config/tsconfig.json",
 			}),
 			"src/index.ts": "export const value = 1;",
 			"tsconfig.json": JSON.stringify({
-				extends: "package-config/tsconfig.json",
+				extends: "package-config",
 			}),
+		});
+		onTestFinished(() => {
+			fs.rmSync(projectDir, { force: true, recursive: true });
+		});
+		const compiler = await createCompiler();
+
+		const configFilePath = path.join(projectDir, "tsconfig.json");
+		const project = compiler.parseProject(configFilePath);
+
+		expect(project.configFilePath).toBe(configFilePath);
+		expect(project.options.outDir).toBe(
+			path.join(projectDir, "node_modules/package-config/config/dist"),
+		);
+	});
+
+	it("reports malformed inherited config diagnostics", async ({ expect }) => {
+		const projectDir = createTempProject({
+			"base.json": "{",
+			"src/index.ts": "export const value = 1;",
+			"tsconfig.json": JSON.stringify({ extends: "./base.json" }),
 		});
 		onTestFinished(() => {
 			fs.rmSync(projectDir, { force: true, recursive: true });
@@ -170,7 +168,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 
 		expect(() =>
 			compiler.parseProject(path.join(projectDir, "tsconfig.json")),
-		).toThrow("Could not safely determine extended config");
+		).toThrow(UserError);
 	});
 
 	it("uses case sensitivity detected by the API", async ({ expect }) => {

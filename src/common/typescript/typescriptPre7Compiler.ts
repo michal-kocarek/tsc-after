@@ -140,12 +140,8 @@ export class TypeScriptPre7Compiler implements Compiler {
 			parsedCommandLine.options,
 		);
 		const project: Project = {
-			configFilePaths: [
-				configFile?.fileName ?? configFilePath,
-				...(configFile?.extendedSourceFiles ?? []),
-			],
+			configFilePath: configFile?.fileName ?? configFilePath,
 			fileNames: parsedCommandLine.fileNames,
-			hasWatchOptions: parsedCommandLine.watchOptions !== undefined,
 			options: parsedCommandLine.options,
 			programFileNames: program
 				.getSourceFiles()

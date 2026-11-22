@@ -84,6 +84,14 @@ describe("tsc-after", () => {
 		expect(result.stdout).toBe("");
 	});
 
+	it("should keep --watch unsupported", async ({ expect }) => {
+		const result = await runTscAfter(["--watch"], { allowFailure: true });
+
+		expect(result.exitCode).toBe(2);
+		expect(result.stderr).toBe("error: Unknown option '--watch'.");
+		expect(result.stdout).toBe("");
+	});
+
 	it("should reject invalid boolean values with exit code 2", async ({
 		expect,
 	}) => {
