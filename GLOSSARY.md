@@ -5,7 +5,7 @@ Cleanup of stale outputs that `tsc` leaves behind in a project's `outDir`, and c
 ## Language
 
 **Project**:
-A tsconfig file selected with `--project`, or the `tsconfig.json` in a selected folder.
+A tsconfig file selected with `--project`, or the `tsconfig.json` in a selected directory.
 _Avoid_: config, workspace
 
 **Source files**:

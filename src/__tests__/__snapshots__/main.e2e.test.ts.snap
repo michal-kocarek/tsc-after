@@ -23,9 +23,9 @@ COMMAND LINE FLAGS
 
       --version  Print the version.
 
-  --project, -p  Use the project given the path to its configuration file, or to a folder with a 'tsconfig.json'.
+  --project, -p  Use the project given the path to its configuration file, or to a directory with a 'tsconfig.json'.
 
-      --noClean  Disable removing stale outputs from 'outDir'.
+      --noClean  Skip cleanup and only run '--copy'.
 
          --copy  Copy a file to a path relative to 'outDir', given as '<source>:<destination>'.
 

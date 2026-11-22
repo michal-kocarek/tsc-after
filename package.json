@@ -1,24 +1,32 @@
 {
 	"name": "tsc-after",
 	"version": "0.5.0",
-	"description": "Remove stale build output that tsc leaves behind when you delete or rename source files. Tsconfig-aware: just run tsc && tsc-after. 🧹",
+	"description": "Remove the stale files tsc leaves in outDir. A safe, incremental-friendly replacement for rm -rf dist && tsc, with zero dependencies. 🧹",
 	"keywords": [
-		"build",
 		"clean",
-		"dist",
+		"cleanup",
+		"cli",
+		"incremental",
 		"orphan",
 		"outDir",
+		"rimraf",
+		"rm-rf",
 		"stale",
 		"tsc",
+		"tsconfig",
 		"typescript"
 	],
+	"homepage": "https://github.com/michal-kocarek/tsc-after#readme",
+	"bugs": "https://github.com/michal-kocarek/tsc-after/issues",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/michal-kocarek/tsc-after.git"
 	},
+	"funding": "https://github.com/sponsors/michal-kocarek",
 	"license": "MIT",
 	"author": {
-		"name": "michal-kocarek"
+		"name": "Michal Kočárek",
+		"url": "https://github.com/michal-kocarek"
 	},
 	"sideEffects": false,
 	"type": "module",

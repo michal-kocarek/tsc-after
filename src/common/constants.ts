@@ -20,13 +20,13 @@ export const cliArgsOptions = {
 	project: {
 		default: "tsconfig.json",
 		helpDescription:
-			"Use the project given the path to its configuration file, or to a folder with a 'tsconfig.json'.",
+			"Use the project given the path to its configuration file, or to a directory with a 'tsconfig.json'.",
 		short: "p",
 		type: "string",
 	},
 	noClean: {
 		default: false,
-		helpDescription: "Disable removing stale outputs from 'outDir'.",
+		helpDescription: "Skip cleanup and only run '--copy'.",
 		type: "boolean",
 	},
 	copy: {
