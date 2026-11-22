@@ -57,21 +57,6 @@ const INVALID_CONFIGS = [
 		name: "unknown compiler option",
 	},
 	{
-		config: "",
-		diagnostic: "outDir is not set in tsconfig.json",
-		name: "empty tsconfig.json",
-	},
-	{
-		config: "{}",
-		diagnostic: "outDir is not set in tsconfig.json",
-		name: "config without compilerOptions",
-	},
-	{
-		config: JSON.stringify({ compilerOptions: { rootDir: "src" } }),
-		diagnostic: "outDir is not set in tsconfig.json",
-		name: "config without outDir",
-	},
-	{
 		config: JSON.stringify({
 			compilerOptions: { outDir: "src" },
 			include: ["src"],
@@ -177,32 +162,6 @@ describe("--project option", () => {
 			});
 		},
 	);
-
-	it("refuses --project .. without changing project files", async ({
-		expect,
-		task,
-	}) => {
-		await withProject(task, async (projectDir) => {
-			const staleOutputPath = join(projectDir, "dist/stale.js");
-			await mkdir(dirname(staleOutputPath), { recursive: true });
-			await writeFile(staleOutputPath, "keep stale output\n");
-			const before = await readTree(projectDir);
-
-			const cleanup = await runTscAfter(["--project", ".."], {
-				allowFailure: true,
-				cwd: projectDir,
-			});
-
-			expect(cliOutcome(cleanup)).toStrictEqual({
-				exitCode: 1,
-				hasStackTrace: false,
-				stderr: expect.stringContaining(
-					"Refusing to traverse outside current working directory",
-				),
-			});
-			await expect(readTree(projectDir)).resolves.toStrictEqual(before);
-		});
-	});
 
 	it.for(withCleanModes([{ name: "inherited relative paths" }]))(
 		"resolves an extends chain through --project ($mode)",

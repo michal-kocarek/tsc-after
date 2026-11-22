@@ -125,7 +125,7 @@ jobs:
         if: ${{ matrix.typescript != '' }}
         run: |
           scripts/with-typescript-version "$TYPESCRIPT_VERSION" -- bash -c '
-            pnpm exec vitest run --project unit src/common/typescript/__tests__ &&
+            pnpm exec vitest run --project unit src/common/typescript/__tests__ src/common/__tests__/project.unit.test.ts &&
             pnpm run test:e2e --run
           '
         env:

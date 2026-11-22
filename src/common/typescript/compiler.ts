@@ -1,15 +1,13 @@
 export interface Compiler {
 	close(): void;
-	getOutputPaths(project: Project): Set<string>;
-	parseProject(configFilePath: string): Project;
+	parseProject(configFilePath: string): ParsedProject;
 	readonly useCaseSensitiveFileNames: boolean;
 }
 
-export interface Project {
-	configFilePath: string;
-	fileNames: string[];
+export interface ParsedProject {
+	getOutputPaths(): Set<string>;
 	options: CompilerOptions;
-	programFileNames: string[];
+	sourceFileNames: string[];
 }
 
 interface CompilerOptions {

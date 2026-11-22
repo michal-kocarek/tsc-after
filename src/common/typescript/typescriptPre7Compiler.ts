@@ -1,6 +1,6 @@
 import ts from "typescript";
 
-import type { Compiler, Project } from "./compiler.ts";
+import type { Compiler, ParsedProject } from "./compiler.ts";
 
 import { UserError } from "../errors.ts";
 import {
@@ -17,10 +17,6 @@ type ConfigFileMetadata = Pick<
 /** Uses the `typescript` API for TypeScript 3.9 through 6.x. */
 export class TypeScriptPre7Compiler implements Compiler {
 	readonly useCaseSensitiveFileNames: boolean;
-	private readonly parsedCommandLines = new WeakMap<
-		Project,
-		ts.ParsedCommandLine
-	>();
 
 	constructor() {
 		this.useCaseSensitiveFileNames = ts.sys.useCaseSensitiveFileNames;
@@ -30,12 +26,33 @@ export class TypeScriptPre7Compiler implements Compiler {
 		// The TypeScript API has no resources to dispose.
 	}
 
-	getOutputPaths(project: Project): Set<string> {
-		const parsedCommandLine = this.parsedCommandLines.get(project);
-		if (parsedCommandLine === undefined) {
-			throw new Error("Project was not parsed by this compiler.");
-		}
+	parseProject(configFilePath: string): ParsedProject {
+		const parsedCommandLine = parseCommandLine(configFilePath);
+		const program = ts.createProgram(
+			parsedCommandLine.fileNames,
+			parsedCommandLine.options,
+		);
+		const sourceFileNames = program
+			.getSourceFiles()
+			.filter(
+				(sourceFile) =>
+					!program.isSourceFileDefaultLibrary(sourceFile) &&
+					!program.isSourceFileFromExternalLibrary(sourceFile),
+			)
+			.map((sourceFile) => sourceFile.fileName);
 
+		return {
+			getOutputPaths: () =>
+				this.getOutputPaths(parsedCommandLine, sourceFileNames),
+			options: parsedCommandLine.options,
+			sourceFileNames,
+		};
+	}
+
+	private getOutputPaths(
+		parsedCommandLine: ts.ParsedCommandLine,
+		sourceFileNames: string[],
+	): Set<string> {
 		if (
 			typescriptVersion < TYPESCRIPT_4_2 &&
 			parsedCommandLine.options.rootDir === undefined
@@ -45,7 +62,7 @@ export class TypeScriptPre7Compiler implements Compiler {
 			);
 		}
 
-		const emittableFileNames = project.programFileNames.filter(
+		const emittableFileNames = sourceFileNames.filter(
 			(fileName) => !isDeclarationFileName(fileName),
 		);
 		if (
@@ -87,75 +104,6 @@ export class TypeScriptPre7Compiler implements Compiler {
 
 		return outputPaths;
 	}
-
-	parseProject(configFilePath: string): Project {
-		const formatHost: ts.FormatDiagnosticsHost = {
-			getCanonicalFileName: (fileName) => fileName,
-			getCurrentDirectory: () => process.cwd(),
-			getNewLine: () => ts.sys.newLine,
-		};
-		const checkConfigFile = (filePath: string) => {
-			const config = ts.readConfigFile(filePath.replaceAll("\\", "/"), (name) =>
-				ts.sys.readFile(name),
-			);
-			if (config.error !== undefined) {
-				throw new UserError(
-					ts.formatDiagnostics([config.error], formatHost).trimEnd(),
-				);
-			}
-		};
-		checkConfigFile(configFilePath);
-		const parsedCommandLine = ts.getParsedCommandLineOfConfigFile(
-			configFilePath,
-			undefined,
-			{
-				...ts.sys,
-				onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
-					throw new UserError(
-						ts.formatDiagnostics([diagnostic], formatHost).trimEnd(),
-					);
-				},
-			},
-		);
-
-		if (parsedCommandLine === undefined) {
-			throw new UserError("Could not read tsconfig.json.");
-		}
-
-		if (parsedCommandLine.errors.length > 0) {
-			throw new UserError(
-				ts.formatDiagnostics(parsedCommandLine.errors, formatHost).trimEnd(),
-			);
-		}
-
-		const configFileOption = parsedCommandLine.options["configFile"];
-		const configFile = isConfigFileMetadata(configFileOption)
-			? configFileOption
-			: undefined;
-		for (const filePath of configFile?.extendedSourceFiles ?? []) {
-			checkConfigFile(filePath);
-		}
-		const program = ts.createProgram(
-			parsedCommandLine.fileNames,
-			parsedCommandLine.options,
-		);
-		const project: Project = {
-			configFilePath: configFile?.fileName ?? configFilePath,
-			fileNames: parsedCommandLine.fileNames,
-			options: parsedCommandLine.options,
-			programFileNames: program
-				.getSourceFiles()
-				.filter(
-					(sourceFile) =>
-						!program.isSourceFileDefaultLibrary(sourceFile) &&
-						!program.isSourceFileFromExternalLibrary(sourceFile),
-				)
-				.map((sourceFile) => sourceFile.fileName),
-		};
-
-		this.parsedCommandLines.set(project, parsedCommandLine);
-		return project;
-	}
 }
 
 function isConfigFileMetadata(value: unknown): value is ConfigFileMetadata {
@@ -189,4 +137,55 @@ function isDeclarationFileName(fileName: string): boolean {
 		fileName.endsWith(".d.mts") ||
 		fileName.endsWith(".d.cts")
 	);
+}
+
+function parseCommandLine(configFilePath: string): ts.ParsedCommandLine {
+	const formatHost: ts.FormatDiagnosticsHost = {
+		getCanonicalFileName: (fileName) => fileName,
+		getCurrentDirectory: () => process.cwd(),
+		getNewLine: () => ts.sys.newLine,
+	};
+	const checkConfigFile = (filePath: string) => {
+		const config = ts.readConfigFile(filePath.replaceAll("\\", "/"), (name) =>
+			ts.sys.readFile(name),
+		);
+		if (config.error !== undefined) {
+			throw new UserError(
+				ts.formatDiagnostics([config.error], formatHost).trimEnd(),
+			);
+		}
+	};
+	checkConfigFile(configFilePath);
+	const parsedCommandLine = ts.getParsedCommandLineOfConfigFile(
+		configFilePath,
+		undefined,
+		{
+			...ts.sys,
+			onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+				throw new UserError(
+					ts.formatDiagnostics([diagnostic], formatHost).trimEnd(),
+				);
+			},
+		},
+	);
+
+	if (parsedCommandLine === undefined) {
+		throw new UserError("Could not read tsconfig.json.");
+	}
+
+	if (parsedCommandLine.errors.length > 0) {
+		throw new UserError(
+			ts.formatDiagnostics(parsedCommandLine.errors, formatHost).trimEnd(),
+		);
+	}
+
+	const configFileOption = parsedCommandLine.options["configFile"];
+	const configFile = isConfigFileMetadata(configFileOption)
+		? configFileOption
+		: undefined;
+	for (const filePath of configFile?.extendedSourceFiles ?? []) {
+		checkConfigFile(filePath);
+	}
+
+	return parsedCommandLine;
 }

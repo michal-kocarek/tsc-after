@@ -1,15 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { Project } from "./typescript/compiler.ts";
+import type { Project } from "./project.ts";
 
 import { isNodeErrorOf, UserError } from "./errors.ts";
 import { isPathInside, normalizePathForComparison } from "./paths.ts";
-
-const MISSING_OUT_DIR_ERROR =
-	'outDir is not set in tsconfig.json; tsc-after only cleans a dedicated outDir. Set compilerOptions.outDir, e.g. "dist".';
-const DECLARATION_DISABLED_ERROR =
-	"Refusing to clean declarationDir because declaration is not enabled.";
 
 export interface CleanupRoot {
 	name: "declarationDir" | "outDir";
@@ -127,27 +122,24 @@ export function readCleanupRoot(
 }
 
 export function resolveCleanupRoots(
-	project: Project,
+	project: Pick<
+		Project,
+		| "declarationDir"
+		| "outDir"
+		| "sourceFileNames"
+		| "useCaseSensitiveFileNames"
+	>,
 	cwd: string,
-	useCaseSensitiveFileNames: boolean,
 ): CleanupRoot[] {
-	if (project.options.outDir === undefined) {
-		throw new UserError(MISSING_OUT_DIR_ERROR);
-	}
-
-	const outDirAbsolutePath = path.resolve(cwd, project.options.outDir);
+	const { declarationDir, outDir, useCaseSensitiveFileNames } = project;
 	const roots: CleanupRoot[] = [
 		{
 			name: "outDir",
-			path: outDirAbsolutePath,
-			relativePath: path.relative(cwd, outDirAbsolutePath),
+			path: outDir,
+			relativePath: path.relative(cwd, outDir),
 		},
 	];
-	if (project.options.declarationDir !== undefined) {
-		if (project.options.declaration !== true) {
-			throw new UserError(DECLARATION_DISABLED_ERROR);
-		}
-		const declarationDir = path.resolve(cwd, project.options.declarationDir);
+	if (declarationDir !== undefined) {
 		roots.push({
 			name: "declarationDir",
 			path: declarationDir,
@@ -189,7 +181,7 @@ export function resolveCleanupRoots(
 			}
 		}
 
-		for (const file of project.programFileNames) {
+		for (const file of project.sourceFileNames) {
 			const filePath = path.resolve(cwd, file);
 			let realFilePath = filePath;
 			try {
@@ -213,7 +205,7 @@ export function resolveCleanupRoots(
 	return roots.filter(
 		(root) =>
 			root.name === "outDir" ||
-			!isPathInside(outDirAbsolutePath, root.path, useCaseSensitiveFileNames),
+			!isPathInside(outDir, root.path, useCaseSensitiveFileNames),
 	);
 }
 

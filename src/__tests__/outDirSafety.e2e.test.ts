@@ -17,39 +17,6 @@ import {
 } from "./project.ts";
 
 describe("outDir safety", () => {
-	it.for(withCleanModes([{ name: "outFile" }]))(
-		"refuses $name without changing files ($mode)",
-		async ({ args }, { expect, task }) => {
-			await withProject(task, async (projectDir) => {
-				await writeJson(projectDir, "tsconfig.json", {
-					compilerOptions: {
-						...ISOLATED_COMPILER_OPTIONS,
-						module: "amd",
-						outDir: "dist",
-						outFile: "dist/bundle.js",
-						rootDir: "src",
-					},
-					include: ["src"],
-				});
-				await mkdir(join(projectDir, "dist"));
-				await writeFile(join(projectDir, "dist/bundle.js"), "keep");
-				const before = await readTree(projectDir);
-
-				const cleanup = await runTscAfter(args, {
-					allowFailure: true,
-					cwd: projectDir,
-				});
-
-				expect(cliOutcome(cleanup)).toStrictEqual({
-					exitCode: 1,
-					hasStackTrace: false,
-					stderr: expect.stringContaining("outFile is not supported"),
-				});
-				await expect(readTree(projectDir)).resolves.toStrictEqual(before);
-			});
-		},
-	);
-
 	if (Number.parseInt(ts.version, 10) >= 7) {
 		// These cases cover the TypeScript 7 adapter, which is not used by older compilers.
 		it.for(CLEAN_MODES)(
@@ -793,41 +760,6 @@ describe("outDir safety", () => {
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
 						"Refusing to clean declarationDir through a symbolic link: types-link!",
-					),
-				});
-				expect(await readTree(projectDir)).toStrictEqual(before);
-			});
-		},
-	);
-
-	it.for(CLEAN_MODES)(
-		"refuses declarationDir when declaration emit is disabled ($mode)",
-		async ({ args }, { expect, task }) => {
-			await withProject(task, async (projectDir) => {
-				await writeJson(projectDir, "tsconfig.json", {
-					compilerOptions: {
-						...ISOLATED_COMPILER_OPTIONS,
-						declarationDir: "types",
-						outDir: "dist",
-						rootDir: "src",
-					},
-				});
-				await mkdir(join(projectDir, "types"));
-				await writeFile(join(projectDir, "types/stale.d.ts"), "stale");
-				await mkdir(join(projectDir, "dist"));
-				await writeFile(join(projectDir, "dist/stale.js"), "keep");
-				const before = await readTree(projectDir);
-
-				const cleanup = await runTscAfter(args, {
-					allowFailure: true,
-					cwd: projectDir,
-				});
-
-				expect(cliOutcome(cleanup)).toStrictEqual({
-					exitCode: 1,
-					hasStackTrace: false,
-					stderr: expect.stringContaining(
-						"Refusing to clean declarationDir because declaration is not enabled.",
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);

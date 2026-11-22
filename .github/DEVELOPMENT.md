@@ -86,7 +86,7 @@ TSC_AFTER_NODE_EXECUTABLE=/path/to/node TSC_AFTER_EXPECTED_NODE_VERSION=18.11.0 
 
 The compatibility job runs end-to-end tests on the lowest supported version of each Node.js line with the locked TypeScript.
 It also tests TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0 and `.nvmrc`.
-Those overridden TypeScript entries also run the version-gated compiler adapter unit tests in `src/common/typescript/__tests__/`.
+Those overridden TypeScript entries also run the compiler unit tests in `src/common/typescript/__tests__/` and the project-loading tests in `src/common/__tests__/project.unit.test.ts`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
 The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
@@ -95,7 +95,7 @@ To reproduce a matrix entry locally, build first with the locked development dep
 
 ```shell
 pnpm build
-TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=3.9.10 scripts/with-typescript-version 3.9.10 -- bash -c 'pnpm exec vitest run --project unit src/common/typescript/__tests__ && pnpm run test:e2e --run'
+TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=3.9.10 scripts/with-typescript-version 3.9.10 -- bash -c 'pnpm exec vitest run --project unit src/common/typescript/__tests__ src/common/__tests__/project.unit.test.ts && pnpm run test:e2e --run'
 ```
 
 The helper keeps `package.json` and `pnpm-lock.yaml` modified for the duration of the command, then restores both files and reinstalls the locked dependencies when the command exits.

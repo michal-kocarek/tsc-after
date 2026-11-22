@@ -3,8 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it, vi } from "vitest";
 
-import type { Project } from "../typescript/compiler.ts";
-
 import {
 	type CleanupRoot,
 	readCleanupRoot,
@@ -21,13 +19,15 @@ describe(resolveCleanupRoots, () => {
 
 		expect(() =>
 			resolveCleanupRoots(
-				createProject({ outDir: "../outside" }),
+				createProject(projectDir, { outDir: "../outside" }),
 				projectDir,
-				true,
 			),
 		).toThrow(UserError);
 		expect(() =>
-			resolveCleanupRoots(createProject({ outDir: "." }), projectDir, true),
+			resolveCleanupRoots(
+				createProject(projectDir, { outDir: "." }),
+				projectDir,
+			),
 		).toThrow(UserError);
 	});
 
@@ -42,9 +42,8 @@ describe(resolveCleanupRoots, () => {
 
 		expect(() =>
 			resolveCleanupRoots(
-				createProject({ outDir: "dist" }, [sourcePath]),
+				createProject(projectDir, { outDir: "dist" }, [sourcePath]),
 				projectDir,
-				true,
 			),
 		).toThrow(`contains source file '${path.join("dist", "index.ts")}'`);
 	});
@@ -63,9 +62,8 @@ describe(resolveCleanupRoots, () => {
 
 		expect(() =>
 			resolveCleanupRoots(
-				createProject({ outDir: "dist" }, [sourcePath]),
+				createProject(projectDir, { outDir: "dist" }, [sourcePath]),
 				projectDir,
-				true,
 			),
 		).toThrow(`contains source file '${path.join("src", "index.ts")}'`);
 	});
@@ -79,13 +77,11 @@ describe(resolveCleanupRoots, () => {
 
 		expect(
 			resolveCleanupRoots(
-				createProject({
-					declaration: true,
+				createProject(projectDir, {
 					declarationDir: path.join(outDir, "types"),
 					outDir,
 				}),
 				projectDir,
-				true,
 			),
 		).toStrictEqual([
 			{
@@ -106,9 +102,8 @@ describe(resolveCleanupRoots, () => {
 
 		expect(() =>
 			resolveCleanupRoots(
-				createProject({ outDir: "linked" }),
+				createProject(projectDir, { outDir: "linked" }),
 				projectDir,
-				true,
 			),
 		).toThrow("Refusing to clean outDir through a symbolic link: linked!");
 	});
@@ -123,9 +118,8 @@ describe(resolveCleanupRoots, () => {
 
 		expect(() =>
 			resolveCleanupRoots(
-				createProject({ outDir: "linked/dist" }),
+				createProject(projectDir, { outDir: "linked/dist" }),
 				projectDir,
-				true,
 			),
 		).toThrow(
 			`Refusing to clean outDir through a symbolic link: ${path.join("linked", "dist")}!`,
@@ -137,7 +131,10 @@ describe(resolveCleanupRoots, () => {
 		fs.symlinkSync("missing", path.join(projectDir, "dist"));
 
 		expect(() =>
-			resolveCleanupRoots(createProject({ outDir: "dist" }), projectDir, true),
+			resolveCleanupRoots(
+				createProject(projectDir, { outDir: "dist" }),
+				projectDir,
+			),
 		).toThrow("Refusing to clean outDir through a symbolic link: dist!");
 	});
 
@@ -150,9 +147,8 @@ describe(resolveCleanupRoots, () => {
 
 		expect(() =>
 			resolveCleanupRoots(
-				createProject({ outDir: "file/dist" }),
+				createProject(projectDir, { outDir: "file/dist" }),
 				projectDir,
-				true,
 			),
 		).toThrow(
 			`Refusing to clean outDir '${path.join("file", "dist")}': 'file' is not a directory.`,
@@ -168,9 +164,8 @@ describe(resolveCleanupRoots, () => {
 
 		expect(() =>
 			resolveCleanupRoots(
-				createProject({ outDir: "dist" }, [sourcePath]),
+				createProject(projectDir, { outDir: "dist" }, [sourcePath]),
 				projectDir,
-				true,
 			),
 		).toThrow(`contains source file '${path.join("dist", "missing.ts")}'`);
 	});
@@ -194,7 +189,10 @@ describe(resolveCleanupRoots, () => {
 			});
 
 		expect(
-			resolveCleanupRoots(createProject({ outDir: "dist" }), projectDir, true),
+			resolveCleanupRoots(
+				createProject(projectDir, { outDir: "dist" }),
+				projectDir,
+			),
 		).toStrictEqual([{ name: "outDir", path: rootPath, relativePath: "dist" }]);
 		expect(lstatSync).toHaveBeenCalledWith(rootPath);
 	});
@@ -336,14 +334,18 @@ describe(readCleanupRoot, () => {
 });
 
 function createProject(
-	options: Project["options"],
-	programFileNames: string[] = [],
-): Project {
+	projectDir: string,
+	options: { declarationDir?: string; outDir: string },
+	sourceFileNames: string[] = [],
+): Parameters<typeof resolveCleanupRoots>[0] {
 	return {
-		configFilePath: "tsconfig.json",
-		fileNames: [],
-		options,
-		programFileNames,
+		declarationDir:
+			options.declarationDir === undefined
+				? undefined
+				: path.resolve(projectDir, options.declarationDir),
+		outDir: path.resolve(projectDir, options.outDir),
+		sourceFileNames,
+		useCaseSensitiveFileNames: true,
 	};
 }
 
