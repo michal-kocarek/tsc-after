@@ -36,6 +36,8 @@ jobs:
           ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - uses: ./.github/actions/prepare
+        with:
+          cache: "false"
 
       # pnpm/setup installs only the node binary, so npm would come from the runner image
       - name: Install npm with staged publishing support
