@@ -55,6 +55,7 @@
 		"*": "prettier --ignore-unknown --write"
 	},
 	"devDependencies": {
+		"@codecov/bundle-analyzer": "2.0.1",
 		"@commitlint/cli": "21.2.4",
 		"@commitlint/config-conventional": "21.2.4",
 		"@eslint-community/eslint-plugin-eslint-comments": "4.8.1",

@@ -90,6 +90,7 @@ They also cover TypeScript 3.9.10 on Node.js 16.19.0, and TypeScript 7.1.0-beta 
 Vitest always runs on `.nvmrc`; the Node.js entry selects the Node.js that runs `tsc` and `tsc-after`.
 See the comments in `.github/workflows/ci.yaml` for the pairing rationale and the source of truth for the matrix.
 Branch protection requires only the `CI Gate` check, which fails unless every job in its `needs` succeeds; add each new CI job there instead of to the repository settings.
+The non-required `Codecov` job runs after `CI Gate`, including on failure, and needs no change when gated jobs are added.
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
 The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
 TypeScript 3.7 added `getOutputFileNames`, 3.8 added `watchOptions`, and 3.9 is the oldest version that passes the test suite unchanged; 3.9.10 is the latest patch of that release line.
@@ -138,8 +139,10 @@ While a run is in progress, retrieve logs for a finished job directly:
 gh api --allow-escape-sequences "repos/michal-kocarek/tsc-after/actions/jobs/$JOB_ID/logs"
 ```
 
-Each failed test job uploads an artifact, kept for one day, with a Vitest JSON report per test run and `environment.json`.
+Each test matrix entry uploads a one-day artifact with Vitest JSON and JUnit reports for every test run, when available.
+On failure, the artifact also contains `environment.json`.
 The environment report records the runner image, Node.js and TypeScript versions, CPUs, memory, load averages, disk space, temporary directory paths, and file name case sensitivity.
+Each entry also uploads its LCOV coverage when available, and `check` uploads the built `dist/`; the `Codecov` job collects these artifacts for coverage, test analytics, and bundle analysis.
 Download the artifacts uploaded so far with:
 
 ```shell
