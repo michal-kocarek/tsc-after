@@ -104,6 +104,38 @@ The helper keeps `package.json` and `pnpm-lock.yaml` modified for the duration o
 Do not run it concurrently with package-manager installs, edits to those files, or `pnpm clean`.
 Testing a version does not by itself change the supported peer dependency range.
 
+### Diagnosing CI failures
+
+Find `RUN_ID` after `/runs/` in the run URL, and `JOB_ID` after `/job/`.
+Vitest reports each failed test as a GitHub annotation with its file, line, name, and error.
+Start with the run summary, which lists the failed jobs and their annotations:
+
+```shell
+gh run view "$RUN_ID"
+```
+
+For the complete annotations of one job, query the API:
+
+```shell
+gh api "repos/michal-kocarek/tsc-after/check-runs/$JOB_ID/annotations"
+```
+
+If the annotations are not enough, read the failed steps' logs:
+
+```shell
+gh run view "$RUN_ID" --log-failed
+```
+
+Each failed test job uploads an artifact, kept for one day, with a Vitest JSON report per test run and `environment.json`.
+The environment report records the runner image, Node.js and TypeScript versions, CPUs, memory, load averages, disk space, temporary directory paths, and file name case sensitivity.
+Download the artifacts with:
+
+```shell
+gh run download "$RUN_ID"
+```
+
+CI sets `TEST_RESULTS_DIR` to turn on these reports; `vitest.config.ts` writes them there.
+
 `pnpm run test` is an alias for the source tests.
 Add the `--coverage` flag to compute source test coverage and place reports in the `coverage/` directory:
 

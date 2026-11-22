@@ -1,6 +1,12 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 const FIXTURES_GLOB = "**/__tests__/fixtures/**";
+
+// eslint-disable-next-line n/no-process-env -- CI collects test reports to upload from failed jobs.
+const testResultsDir = process.env["TEST_RESULTS_DIR"] ?? "";
+// Unit and end-to-end tests run separately; colons are invalid in Windows file names.
+const testResultsFileName = `vitest-${new Date().toISOString().replaceAll(":", "-")}.json`;
 
 export default defineConfig({
 	test: {
@@ -14,6 +20,15 @@ export default defineConfig({
 		expect: {
 			requireAssertions: true,
 		},
+		...(testResultsDir === ""
+			? {}
+			: {
+					outputFile: {
+						json: path.join(testResultsDir, testResultsFileName),
+					},
+					// Listing reporters disables the automatic github-actions reporter.
+					reporters: ["default", "github-actions", "json"],
+				}),
 		projects: [
 			{
 				extends: true,

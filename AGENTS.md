@@ -64,6 +64,7 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 ## Testing
 
 - For development or testing workflow details, consult [`.github/DEVELOPMENT.md`](.github/DEVELOPMENT.md).
+- For CI failure triage, follow [Diagnosing CI failures](.github/DEVELOPMENT.md#diagnosing-ci-failures).
 - Run `pnpm typecheck` when validating code changes; `pnpm build` uses tsdown and does not typecheck.
 - Tests use Vitest and live in `__tests__` next to the code: `*.unit.test.ts` for unit tests, `*.e2e.test.ts` for end-to-end tests.
 - Use `expect` from the test context (`it("...", ({ expect }) => { ... })`), not the global one.
