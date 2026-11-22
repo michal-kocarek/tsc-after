@@ -48,24 +48,6 @@ jobs:
         if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
         run: pnpm lint
 
-  test:
-    name: Test (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/prepare
-      - run: pnpm run test:unit --run --coverage
-      - if: always()
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-      - run: pnpm build
-      - run: pnpm run test:e2e --run
-
   # TypeScript tests its own Node.js compatibility upstream, so test our adapters
   # at the important edges rather than the full cross product. TypeScript 3.9–6.x
   # shares one API path, checked locally across 3.9–5.8; CI tests its endpoints.
@@ -73,8 +55,8 @@ jobs:
   # Node.js 16.19/18.11 added util.parseArgs `default`. TypeScript 3.7 added
   # getOutputFileNames, 3.8 added watchOptions, and 3.9 is the oldest version
   # passing the suite unchanged (3.9.10 is the latest 3.9 patch).
-  compatibility:
-    name: Compatibility (Node.js ${{ matrix.node || 'default' }}, TypeScript ${{ matrix.typescript || 'locked' }}, ${{ matrix.os || 'ubuntu-latest' }})
+  test:
+    name: Test (${{ matrix.os || 'ubuntu-latest' }}, Node.js ${{ matrix.node || 'default' }}, TypeScript ${{ matrix.typescript || 'locked' }})
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     defaults:
       run:
@@ -83,6 +65,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Locked TypeScript and default Node.js on both operating systems.
+          - os: ubuntu-latest
+          - os: windows-latest
           # Locked TypeScript on the oldest Node.js 16; keep this axis in sync with engines.node.
           - node: 16.19.0
           # Locked TypeScript on the oldest supported Node.js 18.
@@ -122,20 +107,24 @@ jobs:
         with:
           node-version-file: .nvmrc
       - uses: ./.github/actions/prepare
+      # Build with the locked development dependencies before swapping TypeScript.
       - run: pnpm build
       - run: '"${TSC_AFTER_NODE_EXECUTABLE:-node}" bin/tsc-after.js --version'
-      - name: Locked TypeScript end-to-end tests
-        if: ${{ matrix.typescript == '' }}
-        run: pnpm run test:e2e --run
-      - name: TypeScript adapter unit and end-to-end tests
-        if: ${{ matrix.typescript != '' }}
+      - name: Unit and end-to-end tests
         run: |
-          scripts/with-typescript-version "$TYPESCRIPT_VERSION" -- bash -c '
-            pnpm exec vitest run --project unit src/common/typescript/__tests__ src/common/__tests__/project.unit.test.ts &&
-            pnpm run test:e2e --run
-          '
+          tests=(bash -c 'pnpm run test:unit --run --coverage && pnpm run test:e2e --run')
+          if [[ -n $TYPESCRIPT_VERSION ]]; then
+            scripts/with-typescript-version "$TYPESCRIPT_VERSION" -- "${tests[@]}"
+          else
+            "${tests[@]}"
+          fi
         env:
           TYPESCRIPT_VERSION: ${{ matrix.typescript }}
+      # Every entry uploads, so Codecov merges coverage of version-specific branches.
+      - if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   # Single stable job to mark as required in branch protection; add every new job to `needs`.
   gate:
@@ -143,7 +132,6 @@ jobs:
     if: always()
     needs:
       - check
-      - compatibility
       - test
     runs-on: ubuntu-latest
     steps:
