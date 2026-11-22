@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, it, onTestFinished, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 
 import { parseArgs } from "../../common/util.ts";
 import { mainAction } from "../mainAction.ts";
@@ -9,6 +9,7 @@ import { mainAction } from "../mainAction.ts";
 describe(mainAction, () => {
 	it("keeps a busy cleanup root after removing its stale files", async ({
 		expect,
+		onTestFinished,
 	}) => {
 		const projectDir = fs.mkdtempSync(
 			path.join(os.tmpdir(), "tsc-after-mount-"),

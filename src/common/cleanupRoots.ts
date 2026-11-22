@@ -6,9 +6,9 @@ import type { Project } from "./typescript/compiler.ts";
 import { isNodeErrorOf, UserError } from "./errors.ts";
 import { isPathInside, normalizePathForComparison } from "./paths.ts";
 
-export const MISSING_OUT_DIR_ERROR =
+const MISSING_OUT_DIR_ERROR =
 	'outDir is not set in tsconfig.json; tsc-after only cleans a dedicated outDir. Set compilerOptions.outDir, e.g. "dist".';
-export const DECLARATION_DISABLED_ERROR =
+const DECLARATION_DISABLED_ERROR =
 	"Refusing to clean declarationDir because declaration is not enabled.";
 
 export interface CleanupRoot {

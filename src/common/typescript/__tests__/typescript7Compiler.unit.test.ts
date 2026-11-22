@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, it, onTestFinished } from "vitest";
+import { describe, it } from "vitest";
 
 import { UserError } from "../../errors.ts";
 import { TypeScript7Compiler } from "../typescript7Compiler.ts";
@@ -10,6 +10,7 @@ import { TYPESCRIPT_7_1, typescriptVersion } from "../version.ts";
 describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 	it("parses project files and keeps the root config path", async ({
 		expect,
+		onTestFinished,
 	}) => {
 		const projectDir = createTempProject({
 			"base.json": JSON.stringify({
@@ -25,7 +26,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		onTestFinished(() => {
 			fs.rmSync(projectDir, { force: true, recursive: true });
 		});
-		const compiler = await createCompiler();
+		const compiler = await createCompiler(onTestFinished);
 
 		const configFilePath = path.join(projectDir, "tsconfig.json");
 		const project = compiler.parseProject(configFilePath);
@@ -45,6 +46,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 
 	it("returns JavaScript, declaration, and map output paths", async ({
 		expect,
+		onTestFinished,
 	}) => {
 		const projectDir = createTempProject({
 			"src/index.ts": "export const value = 1;",
@@ -61,7 +63,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		onTestFinished(() => {
 			fs.rmSync(projectDir, { force: true, recursive: true });
 		});
-		const compiler = await createCompiler();
+		const compiler = await createCompiler(onTestFinished);
 
 		const project = compiler.parseProject(
 			path.join(projectDir, "tsconfig.json"),
@@ -77,7 +79,10 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		);
 	});
 
-	it("converts config diagnostics into a UserError", async ({ expect }) => {
+	it("converts config diagnostics into a UserError", async ({
+		expect,
+		onTestFinished,
+	}) => {
 		const projectDir = createTempProject({
 			"src/index.ts": "export const value = 1;",
 			"tsconfig.json": JSON.stringify({
@@ -87,7 +92,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		onTestFinished(() => {
 			fs.rmSync(projectDir, { force: true, recursive: true });
 		});
-		const compiler = await createCompiler();
+		const compiler = await createCompiler(onTestFinished);
 
 		expect(() =>
 			compiler.parseProject(path.join(projectDir, "tsconfig.json")),
@@ -96,6 +101,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 
 	it("derives output paths when noEmitOnError is enabled", async ({
 		expect,
+		onTestFinished,
 	}) => {
 		const projectDir = createTempProject({
 			"src/index.ts": "export const value: number = 'invalid';",
@@ -110,7 +116,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		onTestFinished(() => {
 			fs.rmSync(projectDir, { force: true, recursive: true });
 		});
-		const compiler = await createCompiler();
+		const compiler = await createCompiler(onTestFinished);
 		const project = compiler.parseProject(
 			path.join(projectDir, "tsconfig.json"),
 		);
@@ -120,15 +126,18 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		);
 	});
 
-	it("reports TS5083 when a config file is missing", async ({ expect }) => {
-		const compiler = await createCompiler();
+	it("reports TS5083 when a config file is missing", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		const compiler = await createCompiler(onTestFinished);
 
 		expect(() =>
 			compiler.parseProject(path.join(os.tmpdir(), "missing-tsconfig.json")),
 		).toThrow("error TS5083");
 	});
 
-	it("resolves package-based extends", async ({ expect }) => {
+	it("resolves package-based extends", async ({ expect, onTestFinished }) => {
 		const projectDir = createTempProject({
 			"node_modules/package-config/config/tsconfig.json": JSON.stringify({
 				compilerOptions: { outDir: "dist" },
@@ -144,7 +153,7 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		onTestFinished(() => {
 			fs.rmSync(projectDir, { force: true, recursive: true });
 		});
-		const compiler = await createCompiler();
+		const compiler = await createCompiler(onTestFinished);
 
 		const configFilePath = path.join(projectDir, "tsconfig.json");
 		const project = compiler.parseProject(configFilePath);
@@ -155,7 +164,10 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		);
 	});
 
-	it("reports malformed inherited config diagnostics", async ({ expect }) => {
+	it("reports malformed inherited config diagnostics", async ({
+		expect,
+		onTestFinished,
+	}) => {
 		const projectDir = createTempProject({
 			"base.json": "{",
 			"src/index.ts": "export const value = 1;",
@@ -164,19 +176,22 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 		onTestFinished(() => {
 			fs.rmSync(projectDir, { force: true, recursive: true });
 		});
-		const compiler = await createCompiler();
+		const compiler = await createCompiler(onTestFinished);
 
 		expect(() =>
 			compiler.parseProject(path.join(projectDir, "tsconfig.json")),
 		).toThrow(UserError);
 	});
 
-	it("uses case sensitivity detected by the API", async ({ expect }) => {
+	it("uses case sensitivity detected by the API", async ({
+		expect,
+		onTestFinished,
+	}) => {
 		const projectDir = createTempProject({ caseProbe: "" });
 		onTestFinished(() => {
 			fs.rmSync(projectDir, { force: true, recursive: true });
 		});
-		const compiler = await createCompiler();
+		const compiler = await createCompiler(onTestFinished);
 		const caseInsensitivePath = path.join(projectDir, "CASEPROBE");
 
 		expect(compiler.useCaseSensitiveFileNames).toBe(
@@ -186,8 +201,9 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 
 	it("closes after errors and tolerates repeated close calls", async ({
 		expect,
+		onTestFinished,
 	}) => {
-		const compiler = await createCompiler();
+		const compiler = await createCompiler(onTestFinished);
 
 		expect(() =>
 			compiler.parseProject(path.join(os.tmpdir(), "missing-tsconfig.json")),
@@ -201,11 +217,13 @@ describe.runIf(typescriptVersion >= TYPESCRIPT_7_1)(TypeScript7Compiler, () => {
 	});
 });
 
-async function createCompiler(): Promise<TypeScript7Compiler> {
-	const compilerHolder: { current?: TypeScript7Compiler } = {};
-	onTestFinished(() => compilerHolder.current?.close());
+async function createCompiler(
+	onTestFinished: (cleanup: () => void) => void,
+): Promise<TypeScript7Compiler> {
 	const compiler = await TypeScript7Compiler.create();
-	compilerHolder.current = compiler;
+	onTestFinished(() => {
+		compiler.close();
+	});
 	return compiler;
 }
 

@@ -1,6 +1,4 @@
-import { describe, it, onTestFinished } from "vitest";
-
-import type { Compiler } from "../compiler.ts";
+import { describe, it } from "vitest";
 
 import { loadCompiler } from "../loadCompiler.ts";
 import { TypeScript7Compiler } from "../typescript7Compiler.ts";
@@ -10,11 +8,12 @@ import { TYPESCRIPT_7_0, typescriptVersion } from "../version.ts";
 describe(loadCompiler, () => {
 	it("selects the adapter for the installed TypeScript version", async ({
 		expect,
+		onTestFinished,
 	}) => {
-		const compilerHolder: { current?: Compiler } = {};
-		onTestFinished(() => compilerHolder.current?.close());
 		const compiler = await loadCompiler();
-		compilerHolder.current = compiler;
+		onTestFinished(() => {
+			compiler.close();
+		});
 
 		const expectedCompilerClass =
 			typescriptVersion < TYPESCRIPT_7_0

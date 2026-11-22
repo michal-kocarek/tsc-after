@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, it, onTestFinished } from "vitest";
+import { describe, it } from "vitest";
 
 import { UserError } from "../../errors.ts";
 import { TypeScriptPre7Compiler } from "../typescriptPre7Compiler.ts";
@@ -14,7 +14,10 @@ import {
 describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 	TypeScriptPre7Compiler,
 	() => {
-		it("parses project files and keeps the root config path", ({ expect }) => {
+		it("parses project files and keeps the root config path", ({
+			expect,
+			onTestFinished,
+		}) => {
 			const projectDir = createTempProject({
 				"base.json": JSON.stringify({
 					compilerOptions: { outDir: "dist" },
@@ -54,6 +57,7 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 
 		it("returns JavaScript, declaration, and map output paths", ({
 			expect,
+			onTestFinished,
 		}) => {
 			const projectDir = createTempProject({
 				"src/index.ts": "export const value = 1;",
@@ -95,7 +99,7 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 
 		it.runIf(typescriptVersion < TYPESCRIPT_4_2)(
 			"requires rootDir on TypeScript 3.9 through 4.1",
-			({ expect }) => {
+			({ expect, onTestFinished }) => {
 				const projectDir = createTempProject({
 					"src/index.ts": "export const value = 1;",
 					"tsconfig.json": JSON.stringify({
@@ -120,7 +124,10 @@ describe.runIf(typescriptVersion < TYPESCRIPT_7_0)(
 			},
 		);
 
-		it("converts config diagnostics into a UserError", ({ expect }) => {
+		it("converts config diagnostics into a UserError", ({
+			expect,
+			onTestFinished,
+		}) => {
 			const projectDir = createTempProject({
 				"tsconfig.json": JSON.stringify({
 					compilerOptions: { anInvalidOption: true },

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, it, onTestFinished, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 
 import type { Project } from "../typescript/compiler.ts";
 
@@ -13,8 +13,11 @@ import {
 import { UserError } from "../errors.ts";
 
 describe(resolveCleanupRoots, () => {
-	it("refuses roots outside cwd or containing cwd", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("refuses roots outside cwd or containing cwd", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
 
 		expect(() =>
 			resolveCleanupRoots(
@@ -28,8 +31,11 @@ describe(resolveCleanupRoots, () => {
 		).toThrow(UserError);
 	});
 
-	it("refuses a root that contains a source file", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("refuses a root that contains a source file", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
 		const sourcePath = path.join(projectDir, "dist/index.ts");
 		fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
 		fs.writeFileSync(sourcePath, "export {};");
@@ -40,11 +46,14 @@ describe(resolveCleanupRoots, () => {
 				projectDir,
 				true,
 			),
-		).toThrow("contains source file 'dist/index.ts'");
+		).toThrow(`contains source file '${path.join("dist", "index.ts")}'`);
 	});
 
-	it("refuses a source whose real path is inside the root", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("refuses a source whose real path is inside the root", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
 		const outDir = path.join(projectDir, "dist");
 		const sourcePath = path.join(projectDir, "src/index.ts");
 		fs.mkdirSync(outDir);
@@ -58,11 +67,14 @@ describe(resolveCleanupRoots, () => {
 				projectDir,
 				true,
 			),
-		).toThrow("contains source file 'src/index.ts'");
+		).toThrow(`contains source file '${path.join("src", "index.ts")}'`);
 	});
 
-	it("drops declarationDir when it is inside outDir", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("drops declarationDir when it is inside outDir", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
 		const outDir = path.join(projectDir, "dist");
 
 		expect(
@@ -84,9 +96,12 @@ describe(resolveCleanupRoots, () => {
 		]);
 	});
 
-	it("refuses a root reached through a symbolic link", ({ expect }) => {
-		const projectDir = createTempDir();
-		const targetDir = createTempDir();
+	it("refuses a root reached through a symbolic link", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
+		const targetDir = createTempDir(onTestFinished);
 		fs.symlinkSync(targetDir, path.join(projectDir, "linked"), "dir");
 
 		expect(() =>
@@ -98,9 +113,12 @@ describe(resolveCleanupRoots, () => {
 		).toThrow("Refusing to clean outDir through a symbolic link: linked!");
 	});
 
-	it("refuses a missing root under a symbolic link", ({ expect }) => {
-		const projectDir = createTempDir();
-		const targetDir = createTempDir();
+	it("refuses a missing root under a symbolic link", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
+		const targetDir = createTempDir(onTestFinished);
 		fs.symlinkSync(targetDir, path.join(projectDir, "linked"), "dir");
 
 		expect(() =>
@@ -109,11 +127,13 @@ describe(resolveCleanupRoots, () => {
 				projectDir,
 				true,
 			),
-		).toThrow("Refusing to clean outDir through a symbolic link: linked/dist!");
+		).toThrow(
+			`Refusing to clean outDir through a symbolic link: ${path.join("linked", "dist")}!`,
+		);
 	});
 
-	it("refuses a dangling root symbolic link", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("refuses a dangling root symbolic link", ({ expect, onTestFinished }) => {
+		const projectDir = createTempDir(onTestFinished);
 		fs.symlinkSync("missing", path.join(projectDir, "dist"));
 
 		expect(() =>
@@ -121,8 +141,11 @@ describe(resolveCleanupRoots, () => {
 		).toThrow("Refusing to clean outDir through a symbolic link: dist!");
 	});
 
-	it("refuses a non-directory parent component", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("refuses a non-directory parent component", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
 		fs.writeFileSync(path.join(projectDir, "file"), "not a directory");
 
 		expect(() =>
@@ -132,12 +155,15 @@ describe(resolveCleanupRoots, () => {
 				true,
 			),
 		).toThrow(
-			"Refusing to clean outDir 'file/dist': 'file' is not a directory.",
+			`Refusing to clean outDir '${path.join("file", "dist")}': 'file' is not a directory.`,
 		);
 	});
 
-	it("uses the lexical path when a source cannot be resolved", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("uses the lexical path when a source cannot be resolved", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
 		const sourcePath = path.join(projectDir, "dist/missing.ts");
 
 		expect(() =>
@@ -146,11 +172,14 @@ describe(resolveCleanupRoots, () => {
 				projectDir,
 				true,
 			),
-		).toThrow("contains source file 'dist/missing.ts'");
+		).toThrow(`contains source file '${path.join("dist", "missing.ts")}'`);
 	});
 
-	it("accepts a cleanup root on another device", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("accepts a cleanup root on another device", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
 		const rootPath = path.join(projectDir, "dist");
 		fs.mkdirSync(rootPath);
 		const originalLstatSync = fs.lstatSync;
@@ -172,8 +201,11 @@ describe(resolveCleanupRoots, () => {
 });
 
 describe(readCleanupRoot, () => {
-	it("marks stale files and empty directories for removal", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("marks stale files and empty directories for removal", ({
+		expect,
+		onTestFinished,
+	}) => {
+		const projectDir = createTempDir(onTestFinished);
 		const root = createRoot(projectDir);
 		const emptyDirPath = path.join(root.path, "empty");
 		const staleFilePath = path.join(root.path, "stale.js");
@@ -189,8 +221,9 @@ describe(readCleanupRoot, () => {
 
 	it("keeps expected outputs and symbolic links as skipped entries", ({
 		expect,
+		onTestFinished,
 	}) => {
-		const projectDir = createTempDir();
+		const projectDir = createTempDir(onTestFinished);
 		const root = createRoot(projectDir);
 		const expectedPath = path.join(root.path, "current.js");
 		const linkPath = path.join(root.path, "linked");
@@ -217,8 +250,9 @@ describe(readCleanupRoot, () => {
 
 	it("normalizes expected output separators before comparing paths", ({
 		expect,
+		onTestFinished,
 	}) => {
-		const projectDir = createTempDir();
+		const projectDir = createTempDir(onTestFinished);
 		const root = createRoot(projectDir);
 		const expectedPath = path.join(root.path, "current.js");
 		fs.mkdirSync(root.path, { recursive: true });
@@ -240,8 +274,9 @@ describe(readCleanupRoot, () => {
 
 	it("compares expected output paths case-insensitively when requested", ({
 		expect,
+		onTestFinished,
 	}) => {
-		const projectDir = createTempDir();
+		const projectDir = createTempDir(onTestFinished);
 		const root = createRoot(projectDir);
 		const expectedPath = path.join(root.path, "current.js");
 		fs.mkdirSync(root.path, { recursive: true });
@@ -260,15 +295,15 @@ describe(readCleanupRoot, () => {
 		});
 	});
 
-	it("returns no verdicts for a missing root", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("returns no verdicts for a missing root", ({ expect, onTestFinished }) => {
+		const projectDir = createTempDir(onTestFinished);
 		const root = createRoot(projectDir);
 
 		expect(readCleanupRoot(root, new Set(), true)).toStrictEqual([]);
 	});
 
-	it("skips a child folder on another device", ({ expect }) => {
-		const projectDir = createTempDir();
+	it("skips a child folder on another device", ({ expect, onTestFinished }) => {
+		const projectDir = createTempDir(onTestFinished);
 		const root = createRoot(projectDir);
 		const mountedDirPath = path.join(root.path, "mounted");
 		const nestedFilePath = path.join(mountedDirPath, "host-file.js");
@@ -317,7 +352,7 @@ function createRoot(projectDir: string): CleanupRoot {
 	return { name: "outDir", path: rootPath, relativePath: "dist" };
 }
 
-function createTempDir(): string {
+function createTempDir(onTestFinished: (cleanup: () => void) => void): string {
 	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "tsc-after-"));
 	onTestFinished(() => {
 		fs.rmSync(projectDir, { force: true, recursive: true });
