@@ -1,6 +1,6 @@
 {
 	"name": "tsc-after",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Remove the stale files tsc leaves in outDir. A safe, incremental-friendly replacement for rm -rf dist && tsc, with zero dependencies. 🧹",
 	"keywords": [
 		"clean",

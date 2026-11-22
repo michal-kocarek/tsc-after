@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.1](https://github.com/michal-kocarek/tsc-after/compare/v0.5.0...v1.0.1) (2026-11-22)
+
+### ⚠ BREAKING CHANGES
+
+* drop support for old TypeScript below 4.2 ([#18](https://github.com/michal-kocarek/tsc-after/issues/18))
+
+### Features
+
+* drop support for old TypeScript below 4.2 ([#18](https://github.com/michal-kocarek/tsc-after/issues/18)) ([a934c27](https://github.com/michal-kocarek/tsc-after/commit/a934c27860f8094a5c957fffc8da61d4789986fa))
+* implement `--copy` for static asset copying ([#17](https://github.com/michal-kocarek/tsc-after/issues/17)) ([fad4ca5](https://github.com/michal-kocarek/tsc-after/commit/fad4ca5839ee1bf54449a80faf4ba87877faf240))
+
 ## [0.5.0](https://github.com/michal-kocarek/tsc-after/compare/v0.4.1...v0.5.0) (2026-11-22)
 
 ### Features
