@@ -93,15 +93,15 @@ Branch protection requires only the `CI Gate` check, which fails unless every jo
 The Node.js floor is `^16.19.0 || >=18.11.0`, where `util.parseArgs()` gained `default`.
 The TypeScript peer range is `>=3.9.10 <7 || >=7.1.0-beta <8`.
 TypeScript 3.7 added `getOutputFileNames`, 3.8 added `watchOptions`, and 3.9 is the oldest version that passes the test suite unchanged; 3.9.10 is the latest patch of that release line.
-To reproduce a matrix entry locally, build first with the locked development dependencies, then run both test suites through the TypeScript version helper:
+To reproduce a matrix entry locally, run both test suites through the TypeScript version helper:
 
 ```shell
-pnpm build
 TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION=3.9.10 scripts/with-typescript-version 3.9.10 -- bash -c 'pnpm run test:unit --run && pnpm run test:e2e --run'
 ```
 
-The helper keeps `package.json` and `pnpm-lock.yaml` modified for the duration of the command, then restores both files and reinstalls the locked dependencies when the command exits.
-Do not run it concurrently with package-manager installs, edits to those files, or `pnpm clean`.
+Each invocation copies the Git-selected working tree into its own fresh `.tmp` workspace and runs the command there.
+Run only one E2E suite at a time because Vitest already runs compiler-spawning E2E tests concurrently.
+Run `pnpm clean` only after all helper invocations have exited.
 Testing a version does not by itself change the supported peer dependency range.
 
 ### Diagnosing CI failures

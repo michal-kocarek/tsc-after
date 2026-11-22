@@ -1,18 +1,15 @@
 #!/usr/bin/env bash
-set -o pipefail
+set -euo pipefail
 
 usage() {
 	cat << 'EOF'
 Usage: with-typescript-version <version> -- <command> [args...]
 
-Temporarily install a TypeScript version, run the command, then reinstall the
-project dependencies. package.json and pnpm-lock.yaml stay modified until the
-command exits, then are restored from backups.
-
-Do not run package-manager installs, edit the manifest or lockfile, or run the
-project's clean script concurrently. The lock and backups are kept in .tmp; if
-interrupted uncatchably or recovery fails, restore both files from there and run
-pnpm install --frozen-lockfile before removing the lock directory.
+Copies Git-tracked and non-ignored untracked files into a fresh .tmp workspace,
+then installs dependencies, builds, installs the requested TypeScript version,
+and runs the command there. Each invocation gets a fresh workspace. This is not
+a security sandbox: absolute paths and symbolic links can still reach the
+original.
 EOF
 }
 
@@ -24,56 +21,41 @@ fi
 version=$1
 shift 2
 
-script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P) || exit 1
-project_dir=$(cd -- "$script_dir/.." && pwd -P) || exit 1
-tmp_dir="$project_dir/.tmp"
-lock_dir="$tmp_dir/with-typescript-version.lock"
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+project_dir=$(cd -- "$script_dir/.." && pwd -P)
+working_dir=$(pwd -P)
+
+case "$working_dir" in
+	"$project_dir") relative_dir=. ;;
+	"$project_dir/"*) relative_dir=${working_dir#"$project_dir"/} ;;
+	*)
+		printf '%s\n' "Run this helper from inside its project directory ($project_dir)" >&2
+		exit 1
+		;;
+esac
+tmp_dir="$project_dir/.tmp/sandbox"
+snapshot_dir=
 
 if ! command -v pnpm > /dev/null 2>&1; then
-	printf 'pnpm is required to install the temporary TypeScript version.\n' >&2
-	exit 1
-fi
-if [[ ! -f $project_dir/package.json || ! -f $project_dir/pnpm-lock.yaml ]]; then
-	printf 'Expected package.json and pnpm-lock.yaml under %s.\n' "$project_dir" >&2
+	printf '%s\n' 'pnpm is required to install the temporary TypeScript version.' >&2
 	exit 1
 fi
 if ! mkdir -p -- "$tmp_dir"; then
-	printf 'Could not create temporary directory %s.\n' "$tmp_dir" >&2
+	printf '%s\n' "Could not create temporary directory $tmp_dir." >&2
 	exit 1
 fi
-if ! mkdir -- "$lock_dir" 2> /dev/null; then
-	printf 'Another helper may be running, or a stale lock exists at %s.\n' "$lock_dir" >&2
+snapshot_dir=$(mktemp -d -- "$tmp_dir/$(date -u +%Y%m%dT%H%M%S)-$version-XXXXXXXX") || {
+	printf '%s\n' "Could not create a snapshot directory under $tmp_dir." >&2
 	exit 1
-fi
-
-if ! cp -p -- "$project_dir/package.json" "$lock_dir/package.json" \
-	|| ! cp -p -- "$project_dir/pnpm-lock.yaml" "$lock_dir/pnpm-lock.yaml"; then
-	printf 'Could not back up the project manifest and lockfile; no install was attempted.\n' >&2
-	rm -f -- "$lock_dir/package.json" "$lock_dir/pnpm-lock.yaml"
-	rmdir -- "$lock_dir" 2> /dev/null || :
-	exit 1
-fi
-
-restore_files() {
-	cp -p -- "$lock_dir/package.json" "$project_dir/package.json" \
-		&& cp -p -- "$lock_dir/pnpm-lock.yaml" "$project_dir/pnpm-lock.yaml"
 }
 
 finish() {
 	local status=$?
 	trap - EXIT INT TERM HUP
 
-	if ! restore_files; then
-		printf 'Could not restore project files. Backups and lock are retained in %s.\n' "$lock_dir" >&2
-		exit "$((status == 0 ? 1 : status))"
-	fi
-	if ! pnpm --dir "$project_dir" install --frozen-lockfile; then
-		printf 'Could not reinstall the original dependencies. Backups and lock are retained in %s.\n' "$lock_dir" >&2
-		exit "$((status == 0 ? 1 : status))"
-	fi
-	if ! rm -rf -- "$lock_dir"; then
-		printf 'Could not remove helper lock %s.\n' "$lock_dir" >&2
-		exit "$((status == 0 ? 1 : status))"
+	if [[ -n $snapshot_dir ]] && ! rm -rf -- "$snapshot_dir"; then
+		printf '%s\n' "Could not remove snapshot directory $snapshot_dir." >&2
+		status=$((status == 0 ? 1 : status))
 	fi
 	exit "$status"
 }
@@ -83,10 +65,45 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-if ! pnpm --dir "$project_dir" add --save-dev --save-exact --ignore-scripts "typescript@$version"; then
-	printf 'Could not install TypeScript version %s.\n' "$version" >&2
+if ! git -C "$project_dir" ls-files --cached --others --exclude-standard -z -- \
+	| while IFS= read -r -d '' path; do
+		if [[ -e "$project_dir/$path" || -L "$project_dir/$path" ]]; then
+			printf '%s\0' "$path"
+		fi
+	done \
+	| tar --null --verbatim-files-from --no-recursion -C "$project_dir" --files-from=- -cf - \
+	| tar -C "$snapshot_dir" -xf -; then
+	printf '%s\n' "Could not copy the Git-selected project files into snapshot directory $snapshot_dir." >&2
 	exit 1
 fi
 
-PATH="$project_dir/node_modules/.bin:${PATH-}" "$@"
-exit $?
+if ! pnpm --dir "$snapshot_dir" install --frozen-lockfile; then
+	printf '%s\n' "Could not install the locked dependencies in snapshot directory $snapshot_dir." >&2
+	exit 1
+fi
+if ! pnpm --dir "$snapshot_dir" build; then
+	printf '%s\n' "Could not build the project in snapshot directory $snapshot_dir." >&2
+	exit 1
+fi
+if ! pnpm --dir "$snapshot_dir" add --save-dev --save-exact --ignore-scripts "typescript@$version"; then
+	printf '%s\n' "Could not install TypeScript version $version in the snapshot." >&2
+	exit 1
+fi
+
+for executable in tsc tsserver; do
+	if ! ln -sf -- "../typescript/bin/$executable" "$snapshot_dir/node_modules/.bin/$executable"; then
+		printf '%s\n' "Could not select the TypeScript $executable executable in the snapshot." >&2
+		exit 1
+	fi
+done
+
+snapshot_working_dir=$snapshot_dir
+if [[ $relative_dir != . ]]; then
+	snapshot_working_dir="$snapshot_dir/$relative_dir"
+fi
+if ! mkdir -p -- "$snapshot_working_dir" || ! cd -- "$snapshot_working_dir"; then
+	printf '%s\n' "Could not create or enter the copied working directory $snapshot_working_dir." >&2
+	exit 1
+fi
+
+PATH="$snapshot_dir/node_modules/.bin:${PATH-}" "$@"

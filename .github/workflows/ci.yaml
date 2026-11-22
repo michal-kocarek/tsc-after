@@ -60,7 +60,7 @@ jobs:
     name: Test / ${{ matrix.os || 'linux' }}, node ${{ matrix.node || 'default' }}, ts ${{ matrix.typescript || 'default' }}
     runs-on: ${{ matrix.os == 'windows' && 'windows-latest' || 'ubuntu-latest' }}
     env:
-      TEST_RESULTS_DIR: .tmp/ci
+      TEST_RESULTS_DIR: ${{ github.workspace }}/.tmp/ci
       TSC_AFTER_EXPECTED_NODE_VERSION: ${{ matrix.node || '' }}
       TSC_AFTER_EXPECTED_TYPESCRIPT_VERSION: ${{ matrix.typescript || '' }}
     defaults:
@@ -109,12 +109,12 @@ jobs:
         with:
           node-version-file: .nvmrc
       - uses: ./.github/actions/prepare
-      # Build with the locked development dependencies before swapping TypeScript.
+      # Keep the locked build for the version check; the helper builds its snapshot separately.
       - run: pnpm build
       - run: '"${TSC_AFTER_NODE_EXECUTABLE:-node}" bin/tsc-after.js --version'
       - name: Unit and end-to-end tests
         run: |
-          tests=(bash -c 'pnpm run test:unit --run --coverage && pnpm run test:e2e --run')
+          tests=(bash -c 'pnpm run test:unit --run --coverage --coverage.reportsDirectory="$GITHUB_WORKSPACE/coverage" && pnpm run test:e2e --run')
           if [[ -n $TYPESCRIPT_VERSION ]]; then
             scripts/with-typescript-version "$TYPESCRIPT_VERSION" -- "${tests[@]}"
           else
@@ -254,18 +254,21 @@ jobs:
           console.log(JSON.stringify(report, null, 2));
           EOF
       - name: Upload test diagnostics
-        if: failure()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results-${{ matrix.os || 'linux' }}-node-${{ matrix.node || 'default' }}-typescript-${{ matrix.typescript || 'default' }}
           path: ${{ env.TEST_RESULTS_DIR }}
           retention-days: 1
           if-no-files-found: ignore
-      # Every entry uploads, so Codecov merges coverage of version-specific branches.
-      - if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      - name: Upload coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-${{ matrix.os || 'linux' }}-node-${{ matrix.node || 'default' }}-typescript-${{ matrix.typescript || 'default' }}
+          path: ${{ github.workspace }}/coverage/lcov.info
+          retention-days: 1
+          if-no-files-found: ignore
 
   # Single stable job to mark as required in branch protection; add every new job to `needs`.
   gate:
