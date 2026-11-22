@@ -3,11 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "vitest";
 
+import { resolveCleanupRoots } from "../cleanup.ts";
 import {
 	applyCopy,
 	type CopyEntry,
 	parseCopyEntry,
-	planCopy,
+	planCopy as planCopyWithRoots,
 } from "../copy.ts";
 import { realpath } from "../paths.ts";
 
@@ -41,7 +42,7 @@ describe(parseCopyEntry, () => {
 	});
 });
 
-describe(planCopy, () => {
+describe(planCopyWithRoots, () => {
 	it("refuses an absolute destination", ({ expect, onTestFinished }) => {
 		const projectDir = createTempDir(onTestFinished);
 		const sourcePath = createSource(projectDir);
@@ -106,14 +107,15 @@ describe(planCopy, () => {
 
 	it("refuses missing source files", ({ expect, onTestFinished }) => {
 		const projectDir = createTempDir(onTestFinished);
+		const missingSourcePath = path.join(projectDir, "missing.json");
 
 		expect(() =>
 			planCopy(
-				[copyEntry("src/missing.json", "schema.json")],
+				[copyEntry(missingSourcePath, "schema.json")],
 				createProject(projectDir),
 				projectDir,
 			),
-		).toThrow("Refusing to copy 'src/missing.json': it does not exist.");
+		).toThrow("Refusing to copy 'missing.json': it does not exist.");
 	});
 
 	it("refuses source paths that are not regular files", ({
@@ -468,7 +470,8 @@ describe(applyCopy, () => {
 			projectDir,
 		);
 
-		expect(applyCopy(plan, { dry: false })).toStrictEqual(plan);
+		applyCopy(plan, { dry: false });
+
 		expect(fs.readFileSync(destinationPath, "utf8")).toBe(
 			fs.readFileSync(sourcePath, "utf8"),
 		);
@@ -502,7 +505,8 @@ describe(applyCopy, () => {
 			projectDir,
 		);
 
-		expect(applyCopy(plan, { dry: true })).toStrictEqual(plan);
+		applyCopy(plan, { dry: true });
+
 		expect(fs.existsSync(path.join(projectDir, "dist/assets"))).toBe(false);
 	});
 });
@@ -524,7 +528,7 @@ function createProject(
 		outputPaths?: string[];
 		useCaseSensitiveFileNames?: boolean;
 	} = {},
-): Parameters<typeof planCopy>[1] {
+): Parameters<typeof planCopyWithRoots>[1] {
 	return {
 		declarationDir:
 			declarationDir === undefined
@@ -555,4 +559,13 @@ function createTempDir(onTestFinished: (cleanup: () => void) => void): string {
 		fs.rmSync(projectDir, { force: true, recursive: true });
 	});
 	return projectDir;
+}
+
+function planCopy(
+	entries: readonly CopyEntry[],
+	project: Parameters<typeof planCopyWithRoots>[1],
+	cwd: string,
+) {
+	const roots = resolveCleanupRoots({ ...project, sourceFileNames: [] }, cwd);
+	return planCopyWithRoots(entries, project, roots, cwd);
 }

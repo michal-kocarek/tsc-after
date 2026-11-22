@@ -1,8 +1,13 @@
 import path from "node:path";
 
-import { applyCleanup, planCleanup } from "../common/cleanup.ts";
+import {
+	applyCleanup,
+	type CleanupPlan,
+	planCleanup,
+	resolveCleanupRoots,
+} from "../common/cleanup.ts";
 import { binName } from "../common/constants.ts";
-import { applyCopy, planCopy } from "../common/copy.ts";
+import { applyCopy, type CopyPlan, planCopy } from "../common/copy.ts";
 import { assertUnreachable } from "../common/errors.ts";
 import { realpath } from "../common/paths.ts";
 import { loadProject } from "../common/project.ts";
@@ -13,21 +18,22 @@ export async function mainAction(args: ParsedCliArgs): Promise<void> {
 	const project = await loadProject(args.values.project, cwd);
 	print(`Using tsconfig: ${path.relative(cwd, project.configFilePath)}`);
 
-	const copyPlan = planCopy(args.copyEntries, project, cwd);
+	const roots = resolveCleanupRoots(project, cwd);
+	const copyPlan = planCopy(args.copyEntries, project, roots, cwd);
 	const cleanupPlan = planCleanup(
 		project,
-		cwd,
+		roots,
 		copyPlan.map(({ destinationPath }) => destinationPath),
 	);
 	const { dry, verbose } = args.values;
 	const cleanupResults = args.values.noClean
 		? []
 		: applyCleanup(cleanupPlan, { dry });
-	const copyResults = applyCopy(copyPlan, { dry });
+	applyCopy(copyPlan, { dry });
 
 	reportCleanupVerdicts(cleanupResults, cwd, { dry, verbose });
-	reportCopyVerdicts(copyResults, cwd, { dry, verbose });
-	reportSummaries(cleanupPlan, cleanupResults, copyResults, {
+	reportCopyVerdicts(copyPlan, cwd, { dry, verbose });
+	reportSummaries(cleanupPlan, cleanupResults, copyPlan, {
 		dry,
 		hasCopyEntries: copyPlan.length > 0,
 		noClean: args.values.noClean,
@@ -39,7 +45,7 @@ function formatCount(count: number, singular: string, plural: string): string {
 }
 
 function reportCleanupVerdicts(
-	results: ReturnType<typeof applyCleanup>,
+	results: CleanupPlan,
 	cwd: string,
 	{ dry, verbose }: { dry: boolean; verbose: boolean },
 ): void {
@@ -72,7 +78,7 @@ function reportCleanupVerdicts(
 }
 
 function reportCopyVerdicts(
-	results: ReturnType<typeof applyCopy>,
+	results: CopyPlan,
 	cwd: string,
 	{ dry, verbose }: { dry: boolean; verbose: boolean },
 ): void {
@@ -93,18 +99,18 @@ function reportCopyVerdicts(
 }
 
 function reportSummaries(
-	cleanupPlan: ReturnType<typeof planCleanup>,
-	cleanupResults: ReturnType<typeof applyCleanup>,
-	copyResults: ReturnType<typeof applyCopy>,
+	cleanupPlan: CleanupPlan,
+	cleanupResults: CleanupPlan,
+	copyResults: CopyPlan,
 	{
 		dry,
 		hasCopyEntries,
 		noClean,
 	}: { dry: boolean; hasCopyEntries: boolean; noClean: boolean },
 ): void {
-	const copyCount = copyResults.filter(
-		({ type }) => type === "copyFile",
-	).length;
+	const verbs = dry
+		? { copy: "Would copy", remove: "Would remove", removeAfterCopy: "remove" }
+		: { copy: "Copied", remove: "Removed", removeAfterCopy: "removed" };
 	const cleanupResultsByRoot = new Map(
 		cleanupResults.map(({ root, verdicts }) => [root.path, verdicts]),
 	);
@@ -114,6 +120,10 @@ function reportSummaries(
 			continue;
 		}
 
+		const copyCount =
+			root.name === "outDir"
+				? copyResults.filter(({ type }) => type === "copyFile").length
+				: 0;
 		const verdicts = cleanupResultsByRoot.get(root.path) ?? [];
 		const fileCount = verdicts.filter(
 			({ type }) => type === "removeFile",
@@ -129,43 +139,35 @@ function reportSummaries(
 			);
 		}
 
-		if (noClean) {
-			if (copyCount > 0) {
-				const copyVerb = dry ? "Would copy" : "Copied";
+		const actionParts: string[] = [];
+		if (copyCount > 0) {
+			actionParts.push(
+				`${verbs.copy} ${formatCount(copyCount, "file", "files")}`,
+			);
+		}
+		if (!noClean && removeParts.length > 0) {
+			const removeVerb = copyCount > 0 ? verbs.removeAfterCopy : verbs.remove;
+			actionParts.push(`${removeVerb} ${removeParts.join(" and ")}`);
+		}
+
+		if (actionParts.length === 0) {
+			if (dry || cleanupPlan.length > 1) {
+				const nothingToDo = noClean
+					? "Nothing to copy to"
+					: root.name === "outDir" && hasCopyEntries
+						? "Nothing to copy or remove from"
+						: "Nothing to remove from";
 				print(
-					`${copyVerb} ${formatCount(copyCount, "file", "files")} to ${styleText("italic", root.relativePath)}`,
+					`${binName}: ${nothingToDo} ${styleText("italic", root.relativePath)}`,
 				);
-			} else if (dry || cleanupPlan.length > 1) {
-				print(`Nothing to copy to ${styleText("italic", root.relativePath)}`);
 			}
 			continue;
 		}
 
-		if (copyCount > 0 && root.name === "outDir") {
-			const copySummary = `${dry ? "Would copy" : "Copied"} ${formatCount(copyCount, "file", "files")}`;
-			if (removeParts.length > 0) {
-				const removeSummary = `${dry ? "remove" : "removed"} ${removeParts.join(" and ")}`;
-				print(
-					`${dry ? "" : `${binName}: `}${copySummary} and ${removeSummary} from ${styleText("italic", root.relativePath)}`,
-				);
-			} else {
-				print(
-					`${dry ? "" : `${binName}: `}${copySummary} to ${styleText("italic", root.relativePath)}`,
-				);
-			}
-		} else if (removeParts.length > 0) {
-			const removeVerb = dry ? "Would remove" : "Removed";
-			print(
-				`${binName}: ${removeVerb} ${removeParts.join(" and ")} from ${styleText("italic", root.relativePath)}`,
-			);
-		} else if (dry || cleanupPlan.length > 1) {
-			const nothingVerb =
-				root.name === "outDir" && hasCopyEntries
-					? "Nothing to copy or remove from"
-					: "Nothing to remove from";
-			print(
-				`${binName}: ${nothingVerb} ${styleText("italic", root.relativePath)}`,
-			);
-		}
+		const preposition =
+			copyCount > 0 && removeParts.length === 0 ? "to" : "from";
+		print(
+			`${binName}: ${actionParts.join(" and ")} ${preposition} ${styleText("italic", root.relativePath)}`,
+		);
 	}
 }

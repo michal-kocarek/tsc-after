@@ -3,11 +3,15 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it, vi } from "vitest";
 
-import { applyCleanup, planCleanup } from "../cleanup.ts";
+import {
+	applyCleanup,
+	planCleanup as createCleanupPlan,
+	resolveCleanupRoots,
+} from "../cleanup.ts";
 import { UserError } from "../errors.ts";
 import { realpath } from "../paths.ts";
 
-describe(planCleanup, () => {
+describe(resolveCleanupRoots, () => {
 	it("refuses roots outside cwd or containing cwd", ({
 		expect,
 		onTestFinished,
@@ -15,14 +19,16 @@ describe(planCleanup, () => {
 		const projectDir = createTempDir(onTestFinished);
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(projectDir, { outDir: "../outside" }),
 				projectDir,
-				[],
 			),
 		).toThrow(UserError);
 		expect(() =>
-			planCleanup(createProject(projectDir, { outDir: "." }), projectDir, []),
+			resolveCleanupRoots(
+				createProject(projectDir, { outDir: "." }),
+				projectDir,
+			),
 		).toThrow(UserError);
 	});
 
@@ -36,14 +42,13 @@ describe(planCleanup, () => {
 		fs.writeFileSync(sourcePath, "export {};");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(
 					projectDir,
 					{ outDir: "dist" },
 					{ sourceFileNames: [sourcePath] },
 				),
 				projectDir,
-				[],
 			),
 		).toThrow(`contains source file '${path.join("dist", "index.ts")}'`);
 	});
@@ -61,14 +66,13 @@ describe(planCleanup, () => {
 		fs.symlinkSync(path.join(outDir, "index.ts"), sourcePath);
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(
 					projectDir,
 					{ outDir: "dist" },
 					{ sourceFileNames: [sourcePath] },
 				),
 				projectDir,
-				[],
 			),
 		).toThrow(`contains source file '${path.join("src", "index.ts")}'`);
 	});
@@ -81,14 +85,13 @@ describe(planCleanup, () => {
 		const sourcePath = path.join(projectDir, "dist/missing.ts");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(
 					projectDir,
 					{ outDir: "dist" },
 					{ sourceFileNames: [sourcePath] },
 				),
 				projectDir,
-				[],
 			),
 		).toThrow(`contains source file '${path.join("dist", "missing.ts")}'`);
 	});
@@ -102,10 +105,9 @@ describe(planCleanup, () => {
 		fs.symlinkSync(targetDir, path.join(projectDir, "linked"), "dir");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(projectDir, { outDir: "linked" }),
 				projectDir,
-				[],
 			),
 		).toThrow("Refusing to clean outDir through a symbolic link: linked!");
 	});
@@ -119,10 +121,9 @@ describe(planCleanup, () => {
 		fs.symlinkSync(targetDir, path.join(projectDir, "linked"), "dir");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(projectDir, { outDir: "linked/dist" }),
 				projectDir,
-				[],
 			),
 		).toThrow(
 			`Refusing to clean outDir through a symbolic link: ${path.join("linked", "dist")}!`,
@@ -134,10 +135,9 @@ describe(planCleanup, () => {
 		fs.symlinkSync("missing", path.join(projectDir, "dist"));
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(projectDir, { outDir: "dist" }),
 				projectDir,
-				[],
 			),
 		).toThrow("Refusing to clean outDir through a symbolic link: dist!");
 	});
@@ -150,16 +150,17 @@ describe(planCleanup, () => {
 		fs.writeFileSync(path.join(projectDir, "file"), "not a directory");
 
 		expect(() =>
-			planCleanup(
+			resolveCleanupRoots(
 				createProject(projectDir, { outDir: "file/dist" }),
 				projectDir,
-				[],
 			),
 		).toThrow(
 			`Refusing to clean outDir '${path.join("file", "dist")}': 'file' is not a directory.`,
 		);
 	});
+});
 
+describe(createCleanupPlan, () => {
 	it("plans nothing for a missing root", ({ expect, onTestFinished }) => {
 		const projectDir = createTempDir(onTestFinished);
 
@@ -229,7 +230,7 @@ describe(planCleanup, () => {
 		]);
 	});
 
-	it("keeps copy destinations as expected output files", ({
+	it("keeps copy destinations with their own reason", ({
 		expect,
 		onTestFinished,
 	}) => {
@@ -250,7 +251,7 @@ describe(planCleanup, () => {
 				verdicts: [
 					{
 						path: destinationPath,
-						reason: "expected output file",
+						reason: "copy destination",
 						type: "skipped",
 					},
 					{
@@ -616,7 +617,7 @@ function createProject(
 		sourceFileNames?: string[];
 		useCaseSensitiveFileNames?: boolean;
 	} = {},
-): Parameters<typeof planCleanup>[0] {
+): Parameters<typeof createCleanupPlan>[0] {
 	return {
 		declarationDir:
 			dirs.declarationDir === undefined
@@ -647,8 +648,20 @@ function outDirRoot(projectDir: string, relativePath: string) {
 	};
 }
 
+function planCleanup(
+	project: Parameters<typeof createCleanupPlan>[0],
+	cwd: string,
+	copyDestinations: readonly string[],
+) {
+	return createCleanupPlan(
+		project,
+		resolveCleanupRoots(project, cwd),
+		copyDestinations,
+	);
+}
+
 function planVerdicts(
-	project: Parameters<typeof planCleanup>[0],
+	project: Parameters<typeof createCleanupPlan>[0],
 	cwd: string,
 ): unknown[] {
 	return planCleanup(project, cwd, []).flatMap(({ verdicts }) => verdicts);

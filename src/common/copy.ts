@@ -1,10 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { CleanupRoot } from "./cleanup.ts";
 import type { Project } from "./project.ts";
 
-import { isNodeErrorOf, UserError } from "./errors.ts";
-import { isPathInside, normalizePathForComparison, realpath } from "./paths.ts";
+import { UserError } from "./errors.ts";
+import {
+	isPathInside,
+	lstatIfExists,
+	normalizedAncestorDirPaths,
+	normalizePathForComparison,
+	realpath,
+} from "./paths.ts";
 
 export interface CopyEntry {
 	destination: string;
@@ -42,10 +49,12 @@ export function planCopy(
 		Project,
 		"declarationDir" | "outDir" | "outputPaths" | "useCaseSensitiveFileNames"
 	>,
+	roots: readonly CleanupRoot[],
 	cwd: string,
 ): CopyPlan {
 	const { outDir, useCaseSensitiveFileNames } = project;
-	const destinationPaths = entries.map(({ destination }) => {
+	const resolvedEntries = entries.map((entry) => {
+		const { destination } = entry;
 		if (path.isAbsolute(destination)) {
 			throw refusingCopyTo(
 				destination,
@@ -76,63 +85,55 @@ export function planCopy(
 			);
 		}
 
-		return destinationPath;
+		return { destinationPath, entry };
 	});
 
 	assertDestinationsDoNotConflict(
-		destinationPaths,
+		resolvedEntries.map(({ destinationPath }) => destinationPath),
 		project.outputPaths,
+		outDir,
 		useCaseSensitiveFileNames,
 		cwd,
 	);
 
-	return entries.map(({ source }, index) => {
-		const destinationPath = destinationPaths[index];
-		if (destinationPath === undefined) {
-			throw new Error("Unreachable copy destination.");
-		}
-
+	return resolvedEntries.map(({ destinationPath, entry: { source } }) => {
 		const sourcePath = path.resolve(cwd, source);
+		const sourceDisplayPath = relativePath(cwd, sourcePath);
 		if (!isPathInside(cwd, sourcePath, useCaseSensitiveFileNames)) {
 			throw refusingCopySource(
-				source,
+				sourceDisplayPath,
 				"it is outside the current working directory",
 			);
 		}
 
 		const sourceStat = lstatIfExists(sourcePath);
 		if (sourceStat === undefined) {
-			throw refusingCopySource(source, "it does not exist");
+			throw refusingCopySource(sourceDisplayPath, "it does not exist");
 		}
 		if (sourceStat.isSymbolicLink()) {
-			throw refusingCopySource(source, "it is a symbolic link");
+			throw refusingCopySource(sourceDisplayPath, "it is a symbolic link");
 		}
 		if (!sourceStat.isFile()) {
-			throw refusingCopySource(source, "it is not a regular file");
+			throw refusingCopySource(sourceDisplayPath, "it is not a regular file");
 		}
 
 		const sourceRealPath = realpath(sourcePath);
 		const realCwd = realpath(cwd);
 		if (!isPathInside(realCwd, sourceRealPath, useCaseSensitiveFileNames)) {
 			throw refusingCopySource(
-				source,
+				sourceDisplayPath,
 				"its real path is outside the current working directory",
 			);
 		}
 
-		for (const [rootName, rootPath] of [
-			["outDir", outDir],
-			...(project.declarationDir === undefined
-				? []
-				: [["declarationDir", project.declarationDir]]),
-		] as const) {
+		for (const root of roots) {
 			if (
-				isPathInside(rootPath, sourcePath, useCaseSensitiveFileNames) ||
-				isPathInside(rootPath, sourceRealPath, useCaseSensitiveFileNames)
+				isPathInside(root.path, sourcePath, useCaseSensitiveFileNames) ||
+				isPathInside(root.path, sourceRealPath, useCaseSensitiveFileNames)
 			) {
 				throw refusingCopySource(
-					source,
-					`it is inside ${rootName} '${relativePath(cwd, rootPath)}'`,
+					sourceDisplayPath,
+					`it is inside ${root.name} '${relativePath(cwd, root.path)}'`,
 				);
 			}
 		}
@@ -159,9 +160,9 @@ export function planCopy(
 }
 
 /** Creates parent directories and copies planned files unless this is a dry run. */
-export function applyCopy(plan: CopyPlan, { dry }: { dry: boolean }): CopyPlan {
+export function applyCopy(plan: CopyPlan, { dry }: { dry: boolean }): void {
 	if (dry) {
-		return plan;
+		return;
 	}
 
 	for (const verdict of plan) {
@@ -170,71 +171,77 @@ export function applyCopy(plan: CopyPlan, { dry }: { dry: boolean }): CopyPlan {
 			fs.copyFileSync(verdict.sourcePath, verdict.destinationPath);
 		}
 	}
-
-	return plan;
 }
 
 function assertDestinationsDoNotConflict(
 	destinationPaths: readonly string[],
 	outputPaths: ReadonlySet<string>,
+	outDir: string,
 	useCaseSensitiveFileNames: boolean,
 	cwd: string,
 ): void {
-	const overlaps = (left: string, right: string) =>
-		isPathInside(left, right, useCaseSensitiveFileNames) ||
-		isPathInside(right, left, useCaseSensitiveFileNames);
+	const normalizedOutputPaths = new Set(
+		[...outputPaths].map((outputPath) =>
+			normalizePathForComparison(outputPath, useCaseSensitiveFileNames),
+		),
+	);
+	const normalizedOutputAncestorPaths = new Set(
+		[...outputPaths].flatMap((outputPath) =>
+			normalizedAncestorDirPaths(outputPath, outDir, useCaseSensitiveFileNames),
+		),
+	);
+	const normalizedDestinations = new Set<string>();
+	const normalizedDestinationAncestorPaths = new Set<string>();
 
-	for (const [index, destinationPath] of destinationPaths.entries()) {
-		for (const otherDestinationPath of destinationPaths.slice(index + 1)) {
-			if (overlaps(destinationPath, otherDestinationPath)) {
-				const samePath =
-					normalizePathForComparison(
-						destinationPath,
-						useCaseSensitiveFileNames,
-					) ===
-					normalizePathForComparison(
-						otherDestinationPath,
-						useCaseSensitiveFileNames,
-					);
-				throw refusingCopyTo(
-					relativePath(cwd, destinationPath),
-					samePath
-						? "it is shared with another copy entry"
-						: "it is nested with another copy destination",
-				);
-			}
+	for (const destinationPath of destinationPaths) {
+		const normalizedDestinationPath = normalizePathForComparison(
+			destinationPath,
+			useCaseSensitiveFileNames,
+		);
+		const normalizedAncestors = normalizedAncestorDirPaths(
+			destinationPath,
+			outDir,
+			useCaseSensitiveFileNames,
+		);
+
+		if (normalizedDestinations.has(normalizedDestinationPath)) {
+			throw refusingCopyTo(
+				relativePath(cwd, destinationPath),
+				"it is shared with another copy entry",
+			);
 		}
-
-		for (const outputPath of outputPaths) {
-			if (overlaps(destinationPath, outputPath)) {
-				const samePath =
-					normalizePathForComparison(
-						destinationPath,
-						useCaseSensitiveFileNames,
-					) ===
-					normalizePathForComparison(outputPath, useCaseSensitiveFileNames);
-				throw refusingCopyTo(
-					relativePath(cwd, destinationPath),
-					samePath
-						? "it is an output of the project"
-						: "it overlaps an output of the project",
-				);
-			}
-		}
-	}
-}
-
-function lstatIfExists(filePath: string): fs.Stats | undefined {
-	try {
-		return fs.lstatSync(filePath);
-	} catch (error) {
 		if (
-			isNodeErrorOf(error, Error, "ENOENT") ||
-			isNodeErrorOf(error, Error, "ENOTDIR")
+			normalizedDestinationAncestorPaths.has(normalizedDestinationPath) ||
+			normalizedAncestors.some((ancestorPath) =>
+				normalizedDestinations.has(ancestorPath),
+			)
 		) {
-			return undefined;
+			throw refusingCopyTo(
+				relativePath(cwd, destinationPath),
+				"it is nested with another copy destination",
+			);
 		}
-		throw error;
+
+		const isOutput = normalizedOutputPaths.has(normalizedDestinationPath);
+		if (
+			isOutput ||
+			normalizedOutputAncestorPaths.has(normalizedDestinationPath) ||
+			normalizedAncestors.some((ancestorPath) =>
+				normalizedOutputPaths.has(ancestorPath),
+			)
+		) {
+			throw refusingCopyTo(
+				relativePath(cwd, destinationPath),
+				isOutput
+					? "it is an output of the project"
+					: "it overlaps an output of the project",
+			);
+		}
+
+		normalizedDestinations.add(normalizedDestinationPath);
+		for (const ancestorPath of normalizedAncestors) {
+			normalizedDestinationAncestorPaths.add(ancestorPath);
+		}
 	}
 }
 

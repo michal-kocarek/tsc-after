@@ -44,7 +44,7 @@ describe("copy", () => {
 								"Using tsconfig: tsconfig.json",
 								"Would remove file: dist/stale.js",
 								"Would copy file: src/schema.json -> dist/assets/schema.json",
-								"Would copy 1 file and remove 1 file from dist",
+								"tsc-after: Would copy 1 file and remove 1 file from dist",
 							]
 						: [
 								"Using tsconfig: tsconfig.json",
@@ -163,7 +163,7 @@ describe("copy", () => {
 
 			expect(cleanup.stdout.split("\n")).toStrictEqual([
 				"Using tsconfig: tsconfig.json",
-				"Copied 1 file to dist",
+				"tsc-after: Copied 1 file to dist",
 			]);
 			await expect(
 				readFile(join(projectDir, "dist/stale.js"), "utf8"),

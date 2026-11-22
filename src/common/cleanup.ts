@@ -4,11 +4,17 @@ import path from "node:path";
 import type { Project } from "./project.ts";
 
 import { assertUnreachable, isNodeErrorOf, UserError } from "./errors.ts";
-import { isPathInside, normalizePathForComparison, realpath } from "./paths.ts";
+import {
+	isPathInside,
+	lstatIfExists,
+	normalizedAncestorDirPaths,
+	normalizePathForComparison,
+	realpath,
+} from "./paths.ts";
 
-type CleanupPlan = readonly RootCleanup[];
+export type CleanupPlan = readonly RootCleanup[];
 
-interface CleanupRoot {
+export interface CleanupRoot {
 	name: "declarationDir" | "outDir";
 	path: string;
 	relativePath: string;
@@ -39,48 +45,50 @@ export function planCleanup(
 		| "sourceFileNames"
 		| "useCaseSensitiveFileNames"
 	>,
-	cwd: string,
+	roots: readonly CleanupRoot[],
 	copyDestinations: readonly string[],
 ): CleanupPlan {
 	const { outDir, useCaseSensitiveFileNames } = project;
 	const normalizedOutputPaths = new Set(
-		[...project.outputPaths, ...copyDestinations].map((filePath) =>
+		[...project.outputPaths].map((filePath) =>
 			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
 		),
 	);
-	const normalizedCopyDestinationDirs = new Set<string>();
-	for (const destinationPath of copyDestinations) {
-		let dirPath = path.dirname(destinationPath);
-		while (isPathInside(outDir, dirPath, useCaseSensitiveFileNames)) {
-			normalizedCopyDestinationDirs.add(
-				normalizePathForComparison(dirPath, useCaseSensitiveFileNames),
-			);
-			if (
-				normalizePathForComparison(dirPath, useCaseSensitiveFileNames) ===
-				normalizePathForComparison(outDir, useCaseSensitiveFileNames)
-			) {
-				break;
-			}
-			dirPath = path.dirname(dirPath);
-		}
-	}
+	const normalizedCopyDestinations = new Set(
+		copyDestinations.map((filePath) =>
+			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
+		),
+	);
+	const normalizedCopyDestinationDirs = new Set(
+		copyDestinations.flatMap((filePath) =>
+			normalizedAncestorDirPaths(filePath, outDir, useCaseSensitiveFileNames),
+		),
+	);
 	const isCopyDestinationDir = (dirPath: string) =>
 		normalizedCopyDestinationDirs.has(
 			normalizePathForComparison(dirPath, useCaseSensitiveFileNames),
 		);
-	const isOutputPath = (filePath: string) =>
-		normalizedOutputPaths.has(
-			normalizePathForComparison(filePath, useCaseSensitiveFileNames),
+	const getKeepReason = (filePath: string) => {
+		const normalizedPath = normalizePathForComparison(
+			filePath,
+			useCaseSensitiveFileNames,
 		);
+		if (normalizedCopyDestinations.has(normalizedPath)) {
+			return "copy destination";
+		}
+		if (normalizedOutputPaths.has(normalizedPath)) {
+			return "expected output file";
+		}
+		return undefined;
+	};
 
 	let outDirIsRemoved = false;
 	const plan: RootCleanup[] = [];
-	for (const root of resolveCleanupRoots(project, cwd)) {
-		const verdicts = readCleanupRoot(
-			root.path,
-			isOutputPath,
+	for (const root of roots) {
+		const verdicts = readCleanupRoot(root.path, {
+			getKeepReason,
 			isCopyDestinationDir,
-			(dirPath) => {
+			isDirOwnedElsewhere: (dirPath) => {
 				if (
 					root.name === "outDir" ||
 					!isPathInside(outDir, dirPath, useCaseSensitiveFileNames)
@@ -89,7 +97,7 @@ export function planCleanup(
 				}
 				return outDirIsRemoved;
 			},
-		);
+		});
 		if (root.name === "outDir") {
 			outDirIsRemoved = verdicts.some(
 				(verdict) => verdict.type === "removeDir" && verdict.path === root.path,
@@ -154,19 +162,105 @@ function notADirectoryError(root: CleanupRoot, componentPath: string): string {
  * `isDirOwnedElsewhere` returns `undefined` for a directory this root owns, or
  * whether another root's plan removes it.
  */
+interface CleanupReadOptions {
+	getKeepReason: (filePath: string) => string | undefined;
+	isCopyDestinationDir: (dirPath: string) => boolean;
+	isDirOwnedElsewhere: (dirPath: string) => boolean | undefined;
+}
+
+export function resolveCleanupRoots(
+	project: Pick<
+		Project,
+		| "declarationDir"
+		| "outDir"
+		| "sourceFileNames"
+		| "useCaseSensitiveFileNames"
+	>,
+	cwd: string,
+): CleanupRoot[] {
+	const { declarationDir, outDir, useCaseSensitiveFileNames } = project;
+	const roots: CleanupRoot[] = [
+		{
+			name: "outDir",
+			path: outDir,
+			relativePath: path.relative(cwd, outDir),
+		},
+	];
+	if (declarationDir !== undefined) {
+		roots.push({
+			name: "declarationDir",
+			path: declarationDir,
+			relativePath: path.relative(cwd, declarationDir),
+		});
+	}
+
+	for (const root of roots) {
+		if (
+			!isPathInside(cwd, root.path, useCaseSensitiveFileNames) ||
+			isPathInside(root.path, cwd, useCaseSensitiveFileNames)
+		) {
+			throw new UserError(
+				`Refusing to traverse outside safe paths containing tsconfig to process ${root.name}!`,
+			);
+		}
+
+		let componentPath = cwd;
+		for (const component of root.relativePath.split(path.sep)) {
+			componentPath = path.join(componentPath, component);
+			const stat = lstatIfExists(componentPath);
+			if (stat === undefined) {
+				break;
+			}
+			if (stat.isSymbolicLink()) {
+				throw new UserError(
+					`Refusing to clean ${root.name} through a symbolic link: ${root.relativePath}!`,
+				);
+			}
+			if (!stat.isDirectory()) {
+				throw new UserError(
+					notADirectoryError(root, path.relative(cwd, componentPath)),
+				);
+			}
+		}
+
+		for (const file of project.sourceFileNames) {
+			const filePath = path.resolve(cwd, file);
+			let realFilePath = filePath;
+			try {
+				realFilePath = realpath(filePath);
+			} catch (error) {
+				if (!isNodeErrorOf(error, Error, "ENOENT")) {
+					throw error;
+				}
+			}
+			if (
+				isPathInside(root.path, filePath, useCaseSensitiveFileNames) ||
+				isPathInside(root.path, realFilePath, useCaseSensitiveFileNames)
+			) {
+				throw new UserError(
+					`Refusing to clean ${root.name} '${root.relativePath}': it contains source file '${path.relative(cwd, file)}'.`,
+				);
+			}
+		}
+	}
+
+	return roots.filter(
+		(root) =>
+			root.name === "outDir" ||
+			!isPathInside(outDir, root.path, useCaseSensitiveFileNames),
+	);
+}
+
 function readCleanupRoot(
 	rootPath: string,
-	isOutputPath: (filePath: string) => boolean,
-	isCopyDestinationDir: (dirPath: string) => boolean,
-	isDirOwnedElsewhere: (dirPath: string) => boolean | undefined,
+	{
+		getKeepReason,
+		isCopyDestinationDir,
+		isDirOwnedElsewhere,
+	}: CleanupReadOptions,
 ): Verdict[] {
-	try {
-		fs.lstatSync(rootPath);
-	} catch (error) {
-		if (isNodeErrorOf(error, Error, "ENOENT")) {
-			return [];
-		}
-		throw error;
+	if (lstatIfExists(rootPath) === undefined) {
+		return [];
 	}
 
 	return readDir(rootPath);
@@ -205,10 +299,11 @@ function readCleanupRoot(
 			}
 
 			if (fullPathStat.isFile()) {
-				if (isOutputPath(fullPath)) {
+				const keepReason = getKeepReason(fullPath);
+				if (keepReason !== undefined) {
 					verdicts.push({
 						path: fullPath,
-						reason: "expected output file",
+						reason: keepReason,
 						type: "skipped",
 					});
 					dirIsEmpty = false;
@@ -261,92 +356,4 @@ function readCleanupRoot(
 
 		return verdicts;
 	}
-}
-
-function resolveCleanupRoots(
-	project: Pick<
-		Project,
-		| "declarationDir"
-		| "outDir"
-		| "sourceFileNames"
-		| "useCaseSensitiveFileNames"
-	>,
-	cwd: string,
-): CleanupRoot[] {
-	const { declarationDir, outDir, useCaseSensitiveFileNames } = project;
-	const roots: CleanupRoot[] = [
-		{
-			name: "outDir",
-			path: outDir,
-			relativePath: path.relative(cwd, outDir),
-		},
-	];
-	if (declarationDir !== undefined) {
-		roots.push({
-			name: "declarationDir",
-			path: declarationDir,
-			relativePath: path.relative(cwd, declarationDir),
-		});
-	}
-
-	for (const root of roots) {
-		if (
-			!isPathInside(cwd, root.path, useCaseSensitiveFileNames) ||
-			isPathInside(root.path, cwd, useCaseSensitiveFileNames)
-		) {
-			throw new UserError(
-				`Refusing to traverse outside safe paths containing tsconfig to process ${root.name}!`,
-			);
-		}
-
-		let componentPath = cwd;
-		for (const component of root.relativePath.split(path.sep)) {
-			componentPath = path.join(componentPath, component);
-			let stat: fs.Stats;
-			try {
-				stat = fs.lstatSync(componentPath);
-			} catch (error) {
-				if (isNodeErrorOf(error, Error, "ENOENT")) {
-					break;
-				}
-				throw error;
-			}
-			if (stat.isSymbolicLink()) {
-				throw new UserError(
-					`Refusing to clean ${root.name} through a symbolic link: ${root.relativePath}!`,
-				);
-			}
-			if (!stat.isDirectory()) {
-				throw new UserError(
-					notADirectoryError(root, path.relative(cwd, componentPath)),
-				);
-			}
-		}
-
-		for (const file of project.sourceFileNames) {
-			const filePath = path.resolve(cwd, file);
-			let realFilePath = filePath;
-			try {
-				realFilePath = realpath(filePath);
-			} catch (error) {
-				if (!isNodeErrorOf(error, Error, "ENOENT")) {
-					throw error;
-				}
-			}
-			if (
-				isPathInside(root.path, filePath, useCaseSensitiveFileNames) ||
-				isPathInside(root.path, realFilePath, useCaseSensitiveFileNames)
-			) {
-				throw new UserError(
-					`Refusing to clean ${root.name} '${root.relativePath}': it contains source file '${path.relative(cwd, file)}'.`,
-				);
-			}
-		}
-	}
-
-	return roots.filter(
-		(root) =>
-			root.name === "outDir" ||
-			!isPathInside(outDir, root.path, useCaseSensitiveFileNames),
-	);
 }
