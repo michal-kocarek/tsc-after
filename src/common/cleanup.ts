@@ -5,6 +5,7 @@ import type { Project } from "./project.ts";
 
 import { assertUnreachable, isNodeErrorOf, UserError } from "./errors.ts";
 import {
+	displayPath,
 	isPathInside,
 	lstatIfExists,
 	normalizedAncestorDirPaths,
@@ -25,8 +26,18 @@ interface RootCleanup {
 	verdicts: readonly Verdict[];
 }
 
+type SkipReason =
+	| "busy directory"
+	| "copy destination"
+	| "copy destination directory"
+	| "different device"
+	| "directory not empty"
+	| "expected output file"
+	| "symbolic link"
+	| "unknown file type";
+
 type Verdict =
-	| { path: string; reason: string; type: "skipped" }
+	| { path: string; reason: SkipReason; type: "skipped" }
 	| { path: string; type: "removeDir" }
 	| { path: string; type: "removeFile" };
 
@@ -39,11 +50,7 @@ type Verdict =
 export function planCleanup(
 	project: Pick<
 		Project,
-		| "declarationDir"
-		| "outDir"
-		| "outputPaths"
-		| "sourceFileNames"
-		| "useCaseSensitiveFileNames"
+		"outDir" | "outputPaths" | "useCaseSensitiveFileNames"
 	>,
 	roots: readonly CleanupRoot[],
 	copyDestinations: readonly string[],
@@ -68,7 +75,7 @@ export function planCleanup(
 		normalizedCopyDestinationDirs.has(
 			normalizePathForComparison(dirPath, useCaseSensitiveFileNames),
 		);
-	const getKeepReason = (filePath: string) => {
+	const getKeepReason = (filePath: string): SkipReason | undefined => {
 		const normalizedPath = normalizePathForComparison(
 			filePath,
 			useCaseSensitiveFileNames,
@@ -113,6 +120,12 @@ export function planCleanup(
  * Removes what the plan marks for removal, contents before their directories.
  * Returns the plan's verdicts, with a busy cleanup root reported as skipped.
  */
+interface CleanupReadOptions {
+	getKeepReason: (filePath: string) => SkipReason | undefined;
+	isCopyDestinationDir: (dirPath: string) => boolean;
+	isDirOwnedElsewhere: (dirPath: string) => boolean | undefined;
+}
+
 export function applyCleanup(
 	plan: CleanupPlan,
 	{ dry }: { dry: boolean },
@@ -153,21 +166,6 @@ export function applyCleanup(
 	}));
 }
 
-function notADirectoryError(root: CleanupRoot, componentPath: string): string {
-	return `Refusing to clean ${root.name} '${root.relativePath}': '${componentPath}' is not a directory.`;
-}
-
-/**
- * Walks a cleanup root, listing contents before their directory.
- * `isDirOwnedElsewhere` returns `undefined` for a directory this root owns, or
- * whether another root's plan removes it.
- */
-interface CleanupReadOptions {
-	getKeepReason: (filePath: string) => string | undefined;
-	isCopyDestinationDir: (dirPath: string) => boolean;
-	isDirOwnedElsewhere: (dirPath: string) => boolean | undefined;
-}
-
 export function resolveCleanupRoots(
 	project: Pick<
 		Project,
@@ -183,14 +181,14 @@ export function resolveCleanupRoots(
 		{
 			name: "outDir",
 			path: outDir,
-			relativePath: path.relative(cwd, outDir),
+			relativePath: displayPath(cwd, outDir),
 		},
 	];
 	if (declarationDir !== undefined) {
 		roots.push({
 			name: "declarationDir",
 			path: declarationDir,
-			relativePath: path.relative(cwd, declarationDir),
+			relativePath: displayPath(cwd, declarationDir),
 		});
 	}
 
@@ -200,7 +198,7 @@ export function resolveCleanupRoots(
 			isPathInside(root.path, cwd, useCaseSensitiveFileNames)
 		) {
 			throw new UserError(
-				`Refusing to traverse outside safe paths containing tsconfig to process ${root.name}!`,
+				`Refusing to traverse outside safe paths containing tsconfig to process ${root.name}.`,
 			);
 		}
 
@@ -213,12 +211,12 @@ export function resolveCleanupRoots(
 			}
 			if (stat.isSymbolicLink()) {
 				throw new UserError(
-					`Refusing to clean ${root.name} through a symbolic link: ${root.relativePath}!`,
+					`Refusing to clean ${root.name} through a symbolic link: ${root.relativePath}.`,
 				);
 			}
 			if (!stat.isDirectory()) {
 				throw new UserError(
-					notADirectoryError(root, path.relative(cwd, componentPath)),
+					notADirectoryError(root, displayPath(cwd, componentPath)),
 				);
 			}
 		}
@@ -238,7 +236,7 @@ export function resolveCleanupRoots(
 				isPathInside(root.path, realFilePath, useCaseSensitiveFileNames)
 			) {
 				throw new UserError(
-					`Refusing to clean ${root.name} '${root.relativePath}': it contains source file '${path.relative(cwd, file)}'.`,
+					`Refusing to clean ${root.name} '${root.relativePath}': it contains source file '${displayPath(cwd, file)}'.`,
 				);
 			}
 		}
@@ -251,6 +249,15 @@ export function resolveCleanupRoots(
 	);
 }
 
+function notADirectoryError(root: CleanupRoot, componentPath: string): string {
+	return `Refusing to clean ${root.name} '${root.relativePath}': '${componentPath}' is not a directory.`;
+}
+
+/**
+ * Walks a cleanup root, listing contents before their directory.
+ * `isDirOwnedElsewhere` returns `undefined` for a directory this root owns, or
+ * whether another root's plan removes it.
+ */
 function readCleanupRoot(
 	rootPath: string,
 	{

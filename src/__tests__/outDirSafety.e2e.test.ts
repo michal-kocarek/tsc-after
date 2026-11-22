@@ -381,7 +381,7 @@ describe("outDir safety", () => {
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
 						toPlatformSep(
-							`Refusing to clean ${kind === "declaration" ? "declarationDir" : "outDir"} through a symbolic link: ${rootPath}!`,
+							`Refusing to clean ${kind === "declaration" ? "declarationDir" : "outDir"} through a symbolic link: ${rootPath}.`,
 						),
 					),
 				});
@@ -426,7 +426,7 @@ describe("outDir safety", () => {
 				staleOutputExists: true,
 				stderr: expect.stringContaining(
 					toPlatformSep(
-						"Refusing to clean outDir through a symbolic link: linked/dist!",
+						"Refusing to clean outDir through a symbolic link: linked/dist.",
 					),
 				),
 			});
@@ -758,7 +758,7 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						"Refusing to traverse outside safe paths containing tsconfig to process declarationDir!",
+						"Refusing to traverse outside safe paths containing tsconfig to process declarationDir.",
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);
@@ -799,7 +799,7 @@ describe("outDir safety", () => {
 					exitCode: 1,
 					hasStackTrace: false,
 					stderr: expect.stringContaining(
-						"Refusing to clean declarationDir through a symbolic link: types-link!",
+						"Refusing to clean declarationDir through a symbolic link: types-link.",
 					),
 				});
 				expect(await readTree(projectDir)).toStrictEqual(before);

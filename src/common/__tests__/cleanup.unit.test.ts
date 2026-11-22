@@ -109,7 +109,7 @@ describe(resolveCleanupRoots, () => {
 				createProject(projectDir, { outDir: "linked" }),
 				projectDir,
 			),
-		).toThrow("Refusing to clean outDir through a symbolic link: linked!");
+		).toThrow("Refusing to clean outDir through a symbolic link: linked.");
 	});
 
 	it("refuses a missing root under a symbolic link", ({
@@ -126,7 +126,7 @@ describe(resolveCleanupRoots, () => {
 				projectDir,
 			),
 		).toThrow(
-			`Refusing to clean outDir through a symbolic link: ${path.join("linked", "dist")}!`,
+			`Refusing to clean outDir through a symbolic link: ${path.join("linked", "dist")}.`,
 		);
 	});
 
@@ -139,7 +139,7 @@ describe(resolveCleanupRoots, () => {
 				createProject(projectDir, { outDir: "dist" }),
 				projectDir,
 			),
-		).toThrow("Refusing to clean outDir through a symbolic link: dist!");
+		).toThrow("Refusing to clean outDir through a symbolic link: dist.");
 	});
 
 	it("refuses a non-directory parent component", ({
@@ -617,7 +617,8 @@ function createProject(
 		sourceFileNames?: string[];
 		useCaseSensitiveFileNames?: boolean;
 	} = {},
-): Parameters<typeof createCleanupPlan>[0] {
+): Parameters<typeof createCleanupPlan>[0] &
+	Parameters<typeof resolveCleanupRoots>[0] {
 	return {
 		declarationDir:
 			dirs.declarationDir === undefined
@@ -649,7 +650,8 @@ function outDirRoot(projectDir: string, relativePath: string) {
 }
 
 function planCleanup(
-	project: Parameters<typeof createCleanupPlan>[0],
+	project: Parameters<typeof createCleanupPlan>[0] &
+		Parameters<typeof resolveCleanupRoots>[0],
 	cwd: string,
 	copyDestinations: readonly string[],
 ) {
@@ -661,7 +663,8 @@ function planCleanup(
 }
 
 function planVerdicts(
-	project: Parameters<typeof createCleanupPlan>[0],
+	project: Parameters<typeof createCleanupPlan>[0] &
+		Parameters<typeof resolveCleanupRoots>[0],
 	cwd: string,
 ): unknown[] {
 	return planCleanup(project, cwd, []).flatMap(({ verdicts }) => verdicts);

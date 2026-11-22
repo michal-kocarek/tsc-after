@@ -528,7 +528,8 @@ function createProject(
 		outputPaths?: string[];
 		useCaseSensitiveFileNames?: boolean;
 	} = {},
-): Parameters<typeof planCopyWithRoots>[1] {
+): Parameters<typeof planCopyWithRoots>[1] &
+	Parameters<typeof resolveCleanupRoots>[0] {
 	return {
 		declarationDir:
 			declarationDir === undefined
@@ -536,6 +537,7 @@ function createProject(
 				: path.resolve(projectDir, declarationDir),
 		outDir: path.resolve(projectDir, outDir),
 		outputPaths: new Set(outputPaths),
+		sourceFileNames: [],
 		useCaseSensitiveFileNames,
 	};
 }
@@ -563,9 +565,10 @@ function createTempDir(onTestFinished: (cleanup: () => void) => void): string {
 
 function planCopy(
 	entries: readonly CopyEntry[],
-	project: Parameters<typeof planCopyWithRoots>[1],
+	project: Parameters<typeof planCopyWithRoots>[1] &
+		Parameters<typeof resolveCleanupRoots>[0],
 	cwd: string,
 ) {
-	const roots = resolveCleanupRoots({ ...project, sourceFileNames: [] }, cwd);
+	const roots = resolveCleanupRoots(project, cwd);
 	return planCopyWithRoots(entries, project, roots, cwd);
 }

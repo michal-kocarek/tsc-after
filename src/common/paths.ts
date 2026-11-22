@@ -3,6 +3,10 @@ import path from "node:path";
 
 import { isNodeErrorOf } from "./errors.ts";
 
+export function displayPath(cwd: string, filePath: string): string {
+	return path.relative(cwd, filePath) || ".";
+}
+
 export function isPathInside(
 	dirPath: string,
 	filePath: string,
@@ -20,9 +24,7 @@ export function isPathInside(
 	return (
 		normalizedDirPath === normalizedFilePath ||
 		normalizedFilePath.startsWith(
-			normalizedDirPath.endsWith(path.sep)
-				? normalizedDirPath
-				: `${normalizedDirPath}${path.sep}`,
+			ensureTrailingDirectorySeparator(normalizedDirPath),
 		)
 	);
 }
@@ -50,9 +52,7 @@ export function normalizedAncestorDirPaths(
 		rootPath,
 		useCaseSensitiveFileNames,
 	);
-	const rootPathPrefix = normalizedRootPath.endsWith(path.sep)
-		? normalizedRootPath
-		: `${normalizedRootPath}${path.sep}`;
+	const rootPathPrefix = ensureTrailingDirectorySeparator(normalizedRootPath);
 	const ancestorDirPaths: string[] = [];
 	let dirPath: string | undefined = path.dirname(filePath);
 
@@ -88,6 +88,10 @@ export function normalizePathForComparison(
 	return useCaseSensitiveFileNames
 		? normalizedPath
 		: normalizedPath.toLowerCase();
+}
+
+function ensureTrailingDirectorySeparator(filePath: string): string {
+	return filePath.endsWith(path.sep) ? filePath : `${filePath}${path.sep}`;
 }
 
 /**

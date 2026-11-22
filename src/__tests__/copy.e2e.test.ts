@@ -367,7 +367,7 @@ describe("copy", () => {
 				hasStackTrace: false,
 				stderr: expect.stringContaining(
 					toPlatformSep(
-						"Refusing to clean outDir through a symbolic link: linked/dist!",
+						"Refusing to clean outDir through a symbolic link: linked/dist.",
 					),
 				),
 			});

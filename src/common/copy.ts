@@ -6,6 +6,7 @@ import type { Project } from "./project.ts";
 
 import { UserError } from "./errors.ts";
 import {
+	displayPath,
 	isPathInside,
 	lstatIfExists,
 	normalizedAncestorDirPaths,
@@ -42,49 +43,27 @@ export function parseCopyEntry(value: string): CopyEntry | undefined {
 	};
 }
 
-/** Validates every entry without changing files and plans copies that are needed. */
+/**
+ * Validates every entry without changing files and plans copies that are needed.
+ * `cwd` must be a real path.
+ */
 export function planCopy(
 	entries: readonly CopyEntry[],
 	project: Pick<
 		Project,
-		"declarationDir" | "outDir" | "outputPaths" | "useCaseSensitiveFileNames"
+		"outDir" | "outputPaths" | "useCaseSensitiveFileNames"
 	>,
 	roots: readonly CleanupRoot[],
 	cwd: string,
 ): CopyPlan {
 	const { outDir, useCaseSensitiveFileNames } = project;
 	const resolvedEntries = entries.map((entry) => {
-		const { destination } = entry;
-		if (path.isAbsolute(destination)) {
-			throw refusingCopyTo(
-				destination,
-				"destination must be relative to outDir",
-			);
-		}
-		if (destination.split(/[/\\]/u).includes("..")) {
-			throw refusingCopyTo(destination, "destination must not contain '..'");
-		}
-		if (destination.endsWith("/") || destination.endsWith("\\")) {
-			throw refusingCopyTo(destination, "destination must be a file path");
-		}
-
-		const destinationPath = path.resolve(outDir, destination);
-		if (
-			normalizePathForComparison(destinationPath, useCaseSensitiveFileNames) ===
-			normalizePathForComparison(outDir, useCaseSensitiveFileNames)
-		) {
-			throw refusingCopyTo(
-				relativePath(cwd, destinationPath),
-				"it resolves to outDir",
-			);
-		}
-		if (!isPathInside(outDir, destinationPath, useCaseSensitiveFileNames)) {
-			throw refusingCopyTo(
-				relativePath(cwd, destinationPath),
-				"destination must be inside outDir",
-			);
-		}
-
+		const destinationPath = resolveDestination(
+			entry,
+			outDir,
+			useCaseSensitiveFileNames,
+			cwd,
+		);
 		return { destinationPath, entry };
 	});
 
@@ -97,46 +76,12 @@ export function planCopy(
 	);
 
 	return resolvedEntries.map(({ destinationPath, entry: { source } }) => {
-		const sourcePath = path.resolve(cwd, source);
-		const sourceDisplayPath = relativePath(cwd, sourcePath);
-		if (!isPathInside(cwd, sourcePath, useCaseSensitiveFileNames)) {
-			throw refusingCopySource(
-				sourceDisplayPath,
-				"it is outside the current working directory",
-			);
-		}
-
-		const sourceStat = lstatIfExists(sourcePath);
-		if (sourceStat === undefined) {
-			throw refusingCopySource(sourceDisplayPath, "it does not exist");
-		}
-		if (sourceStat.isSymbolicLink()) {
-			throw refusingCopySource(sourceDisplayPath, "it is a symbolic link");
-		}
-		if (!sourceStat.isFile()) {
-			throw refusingCopySource(sourceDisplayPath, "it is not a regular file");
-		}
-
-		const sourceRealPath = realpath(sourcePath);
-		const realCwd = realpath(cwd);
-		if (!isPathInside(realCwd, sourceRealPath, useCaseSensitiveFileNames)) {
-			throw refusingCopySource(
-				sourceDisplayPath,
-				"its real path is outside the current working directory",
-			);
-		}
-
-		for (const root of roots) {
-			if (
-				isPathInside(root.path, sourcePath, useCaseSensitiveFileNames) ||
-				isPathInside(root.path, sourceRealPath, useCaseSensitiveFileNames)
-			) {
-				throw refusingCopySource(
-					sourceDisplayPath,
-					`it is inside ${root.name} '${relativePath(cwd, root.path)}'`,
-				);
-			}
-		}
+		const { sourcePath, sourceStat } = validateSource(
+			source,
+			roots,
+			cwd,
+			useCaseSensitiveFileNames,
+		);
 
 		const destinationStat = validateDestinationPath(
 			outDir,
@@ -206,7 +151,7 @@ function assertDestinationsDoNotConflict(
 
 		if (normalizedDestinations.has(normalizedDestinationPath)) {
 			throw refusingCopyTo(
-				relativePath(cwd, destinationPath),
+				displayPath(cwd, destinationPath),
 				"it is shared with another copy entry",
 			);
 		}
@@ -217,7 +162,7 @@ function assertDestinationsDoNotConflict(
 			)
 		) {
 			throw refusingCopyTo(
-				relativePath(cwd, destinationPath),
+				displayPath(cwd, destinationPath),
 				"it is nested with another copy destination",
 			);
 		}
@@ -231,7 +176,7 @@ function assertDestinationsDoNotConflict(
 			)
 		) {
 			throw refusingCopyTo(
-				relativePath(cwd, destinationPath),
+				displayPath(cwd, destinationPath),
 				isOutput
 					? "it is an output of the project"
 					: "it overlaps an output of the project",
@@ -253,8 +198,40 @@ function refusingCopyTo(destination: string, reason: string): UserError {
 	return new UserError(`Refusing to copy to '${destination}': ${reason}.`);
 }
 
-function relativePath(cwd: string, filePath: string): string {
-	return path.relative(cwd, filePath) || ".";
+function resolveDestination(
+	{ destination }: CopyEntry,
+	outDir: string,
+	useCaseSensitiveFileNames: boolean,
+	cwd: string,
+): string {
+	if (path.isAbsolute(destination)) {
+		throw refusingCopyTo(destination, "destination must be relative to outDir");
+	}
+	if (destination.split(/[/\\]/u).includes("..")) {
+		throw refusingCopyTo(destination, "destination must not contain '..'");
+	}
+	if (destination.endsWith("/") || destination.endsWith("\\")) {
+		throw refusingCopyTo(destination, "destination must be a file path");
+	}
+
+	const destinationPath = path.resolve(outDir, destination);
+	if (
+		normalizePathForComparison(destinationPath, useCaseSensitiveFileNames) ===
+		normalizePathForComparison(outDir, useCaseSensitiveFileNames)
+	) {
+		throw refusingCopyTo(
+			displayPath(cwd, destinationPath),
+			"it resolves to outDir",
+		);
+	}
+	if (!isPathInside(outDir, destinationPath, useCaseSensitiveFileNames)) {
+		throw refusingCopyTo(
+			displayPath(cwd, destinationPath),
+			"destination must be inside outDir",
+		);
+	}
+
+	return destinationPath;
 }
 
 function validateDestinationPath(
@@ -274,14 +251,14 @@ function validateDestinationPath(
 		}
 		if (stat.isSymbolicLink()) {
 			throw refusingCopyTo(
-				relativePath(cwd, destinationPath),
-				`path component '${relativePath(cwd, currentPath)}' is a symbolic link`,
+				displayPath(cwd, destinationPath),
+				`path component '${displayPath(cwd, currentPath)}' is a symbolic link`,
 			);
 		}
 		if (!stat.isDirectory()) {
 			throw refusingCopyTo(
-				relativePath(cwd, destinationPath),
-				`path component '${relativePath(cwd, currentPath)}' is not a directory`,
+				displayPath(cwd, destinationPath),
+				`path component '${displayPath(cwd, currentPath)}' is not a directory`,
 			);
 		}
 	}
@@ -289,16 +266,66 @@ function validateDestinationPath(
 	const destinationStat = lstatIfExists(destinationPath);
 	if (destinationStat?.isSymbolicLink() === true) {
 		throw refusingCopyTo(
-			relativePath(cwd, destinationPath),
+			displayPath(cwd, destinationPath),
 			"it is a symbolic link",
 		);
 	}
 	if (destinationStat !== undefined && !destinationStat.isFile()) {
 		throw refusingCopyTo(
-			relativePath(cwd, destinationPath),
+			displayPath(cwd, destinationPath),
 			"it is not a regular file",
 		);
 	}
 
 	return destinationStat;
+}
+
+function validateSource(
+	source: string,
+	roots: readonly CleanupRoot[],
+	cwd: string,
+	useCaseSensitiveFileNames: boolean,
+): { sourcePath: string; sourceStat: fs.Stats } {
+	const sourcePath = path.resolve(cwd, source);
+	const sourceDisplayPath = displayPath(cwd, sourcePath);
+	if (!isPathInside(cwd, sourcePath, useCaseSensitiveFileNames)) {
+		throw refusingCopySource(
+			sourceDisplayPath,
+			"it is outside the current working directory",
+		);
+	}
+
+	const sourceStat = lstatIfExists(sourcePath);
+	if (sourceStat === undefined) {
+		throw refusingCopySource(sourceDisplayPath, "it does not exist");
+	}
+	if (sourceStat.isSymbolicLink()) {
+		throw refusingCopySource(sourceDisplayPath, "it is a symbolic link");
+	}
+	if (!sourceStat.isFile()) {
+		throw refusingCopySource(sourceDisplayPath, "it is not a regular file");
+	}
+
+	const sourceRealPath = realpath(sourcePath);
+	if (!isPathInside(cwd, sourceRealPath, useCaseSensitiveFileNames)) {
+		throw refusingCopySource(
+			sourceDisplayPath,
+			"its real path is outside the current working directory",
+		);
+	}
+
+	// resolveCleanupRoots omits declarationDir nested in outDir, which outDir covers.
+	for (const root of roots) {
+		if (
+			isPathInside(root.path, sourcePath, useCaseSensitiveFileNames) ||
+			isPathInside(root.path, sourceRealPath, useCaseSensitiveFileNames)
+		) {
+			throw refusingCopySource(
+				sourceDisplayPath,
+				`it is inside ${root.name} '${displayPath(cwd, root.path)}'`,
+			);
+		}
+	}
+
+	return { sourcePath, sourceStat };
 }

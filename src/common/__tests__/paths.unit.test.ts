@@ -1,7 +1,19 @@
 import path from "node:path";
 import { describe, it } from "vitest";
 
-import { isPathInside, normalizedAncestorDirPaths } from "../paths.ts";
+import {
+	displayPath,
+	isPathInside,
+	normalizedAncestorDirPaths,
+} from "../paths.ts";
+
+describe(displayPath, () => {
+	it("returns a dot for the current working directory", ({ expect }) => {
+		const cwd = path.resolve("project");
+
+		expect(displayPath(cwd, cwd)).toBe(".");
+	});
+});
 
 describe(isPathInside, () => {
 	it("returns true for equal paths", ({ expect }) => {
