@@ -9,6 +9,7 @@ inputs:
 
 runs:
   steps:
+    # Keep this composite-action directory in .github/dependabot.yaml's github-actions directories.
     - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
       with:
         cache: ${{ inputs.cache }}

@@ -8,7 +8,91 @@ hoist: false
 lockfile:
   includeResolutionSettings: true
 
-minimumReleaseAge: 1440
+# Keep in sync with the npm cooldown in .github/dependabot.yaml.
+minimumReleaseAge: 10080
+# Allow only versions already in the lockfile before the age window increased; pnpm prunes these when they leave the lockfile.
+minimumReleaseAgeExclude:
+  - "@babel/helper-string-parser@7.29.15"
+  - "@babel/parser@7.29.15"
+  - "@babel/types@7.29.15"
+  - "@cspell/cspell-bundled-dicts@10.5.2"
+  - "@cspell/cspell-json-reporter@10.5.2"
+  - "@cspell/cspell-performance-monitor@10.5.2"
+  - "@cspell/cspell-pipe@10.5.2"
+  - "@cspell/cspell-resolver@10.5.2"
+  - "@cspell/cspell-service-bus@10.5.2"
+  - "@cspell/cspell-types@10.5.2"
+  - "@cspell/cspell-worker@10.5.2"
+  - "@cspell/dynamic-import@10.5.2"
+  - "@cspell/filetypes@10.5.2"
+  - "@cspell/rpc@10.5.2"
+  - "@cspell/strong-weak-map@10.5.2"
+  - "@cspell/url@10.5.2"
+  - "@eslint/markdown@9.0.0"
+  - "@inquirer/ansi@2.1.1"
+  - "@inquirer/checkbox@5.3.1"
+  - "@inquirer/confirm@6.4.1"
+  - "@inquirer/core@12.1.1"
+  - "@inquirer/editor@5.5.0"
+  - "@inquirer/expand@5.2.1"
+  - "@inquirer/external-editor@3.1.1"
+  - "@inquirer/figures@2.1.1"
+  - "@inquirer/input@5.2.1"
+  - "@inquirer/number@4.3.1"
+  - "@inquirer/password@5.3.1"
+  - "@inquirer/rawlist@5.4.1"
+  - "@inquirer/search@4.4.1"
+  - "@inquirer/select@5.3.1"
+  - "@inquirer/type@4.3.1"
+  - "@rolldown/binding-android-arm-eabi@1.3.3"
+  - "@rolldown/binding-android-arm64@1.3.3"
+  - "@rolldown/binding-darwin-arm64@1.3.3"
+  - "@rolldown/binding-darwin-x64@1.3.3"
+  - "@rolldown/binding-freebsd-x64@1.3.3"
+  - "@rolldown/binding-linux-arm-gnueabihf@1.3.3"
+  - "@rolldown/binding-linux-arm64-gnu@1.3.3"
+  - "@rolldown/binding-linux-arm64-musl@1.3.3"
+  - "@rolldown/binding-linux-ppc64-gnu@1.3.3"
+  - "@rolldown/binding-linux-s390x-gnu@1.3.3"
+  - "@rolldown/binding-linux-x64-gnu@1.3.3"
+  - "@rolldown/binding-linux-x64-musl@1.3.3"
+  - "@rolldown/binding-openharmony-arm64@1.3.3"
+  - "@rolldown/binding-wasm32-wasi@1.3.3"
+  - "@rolldown/binding-win32-arm64-msvc@1.3.3"
+  - "@rolldown/binding-win32-x64-msvc@1.3.3"
+  - "@vitest/coverage-v8@5.1.1"
+  - "@vitest/istanbul-lib-coverage@2.1.1"
+  - "@vitest/istanbul-lib-report@2.1.1"
+  - "@vitest/mocker@5.1.1"
+  - "@vitest/spy@5.1.1"
+  - cac@7.1.1
+  - cspell-config-lib@10.5.2
+  - cspell-dictionary@10.5.2
+  - cspell-gitignore@10.5.2
+  - cspell-glob@10.5.2
+  - cspell-grammar@10.5.2
+  - cspell-io@10.5.2
+  - cspell-lib@10.5.2
+  - cspell-trie-lib@10.5.2
+  - cspell@10.5.2
+  - eslint-plugin-jsdoc@65.5.2
+  - fast-equals@6.4.1
+  - ignore@7.0.16
+  - js-tokens@10.0.1
+  - knip@6.48.0
+  - lint-staged@17.6.2
+  - mdast-util-find-and-replace@3.0.5
+  - mdast-util-gfm-autolink-literal@2.1.2
+  - mdast-util-to-markdown@2.2.4
+  - netmask@2.1.2
+  - release-it@21.1.3
+  - rolldown@1.3.3
+  - socks@2.8.11
+  - source-map-js@1.2.4
+  - tinybench@6.2.4
+  - unbash@6.0.5
+  - vitest@5.1.1
+minimumReleaseAgeExcludePrune: true
 
 permissions:
   tsdown:
@@ -21,4 +105,6 @@ trustPolicyExcludePrune: true
 update:
   githubActions: true
   ignoreDeps:
+    # Keep in sync with the npm ignore in .github/dependabot.yaml.
+    # TypeScript stays locked until 7.1 is released publicly.
     - typescript
