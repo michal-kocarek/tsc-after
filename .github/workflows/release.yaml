@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: npm-release
     permissions:
-      actions: read
-      contents: write
-      id-token: write
+      actions: read # Verify that CI Gate succeeded for the commit being released.
+      contents: write # Create the GitHub Release; the deploy key pushes commits and tags.
+      id-token: write # Authenticate to npm through trusted publishing.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

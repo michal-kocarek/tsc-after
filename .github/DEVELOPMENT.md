@@ -220,11 +220,12 @@ pnpm tsc --watch
 Squash is the only enabled merge method.
 Follow the title and blank-body guidance in [CONTRIBUTING.md](./CONTRIBUTING.md), check that `Conventional title` passed, and preserve the title in the merge dialog.
 Include any `Co-authored-by:` lines needed to credit other authors.
-Auto-merge and branch-update suggestions are enabled, but branches do not need to be up to date before merging.
-The `main branch is immutable` ruleset prevents deletion, force pushes, and merge commits; ordinary direct pushes remain allowed.
-The signature ruleset permits repository admins to bypass signatures for PR merges, without guaranteeing the resulting commit is signed; direct pushes need signed commits except when using a deploy key.
+Auto-merge and branch-update suggestions are enabled.
+The `main branch required checks` ruleset requires pull requests with zero approvals and passing, up-to-date `CI Gate` and `Conventional title` checks; the release deploy key can bypass these requirements.
+The `main branch is immutable` ruleset prevents deletion, force pushes, and merge commits.
+The signature ruleset requires signed commits for `main`; only the release deploy key can bypass it, and repository admins cannot bypass signatures for PR merges.
 The `v*` tag rulesets let deploy keys create tags and prevent everyone, including deploy keys, from updating or deleting them.
-Conversation resolution is not required because GitHub couples that ruleset option to requiring PRs, which would block direct pushes.
+Conversation resolution is not required.
 
 ## Releasing
 
