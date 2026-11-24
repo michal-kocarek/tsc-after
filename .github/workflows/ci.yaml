@@ -30,7 +30,7 @@ jobs:
         run: pnpm dedupe --check
       - name: Format Check
         if: *prepared
-        run: pnpm exec prettier --check .
+        run: pnpm format:check
       - name: Type Check
         if: *prepared
         run: pnpm typecheck

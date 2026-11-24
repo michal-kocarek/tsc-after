@@ -55,7 +55,7 @@
 ## Naming
 
 This tool is a companion to `tsc`, so mirror its vocabulary in identifiers, CLI flags, help text, messages, and docs.
-Before naming something new, check for an existing term in `pnpm exec tsc --help --all` and `pnpm exec tsc --build --help`.
+Before naming something new, check for an existing term in `pnpm typecheck --help --all` and `pnpm typecheck --build --help`.
 
 - For anything that maps to a compiler option, use the option name: `outDir`, `rootDir`, `declarationDir`, `outFile`, `tsBuildInfoFile`, `composite`, `incremental`.
   Don't use made-up names like "dist", "build dir", or "output folder" for `outDir`; `dist` is only an example value in user-facing docs.
@@ -68,8 +68,10 @@ Before naming something new, check for an existing term in `pnpm exec tsc --help
 
 ## Formatting and linting
 
-- After editing files, fix them instead of only checking them: run `pnpm exec prettier --write <files>` and `pnpm exec eslint --fix <files>` on the files you changed, then review the diff and resolve the remaining ESLint errors.
-  Pass only the files you changed; `pnpm lint --fix` fixes the whole repository.
+- Run package scripts as `pnpm <script>`.
+- Before finishing, fix the files you changed: run `pnpm format:files <files>`, then `pnpm lint --fix <files>`, review the diff, and resolve any remaining ESLint errors.
+  `pnpm format` and `pnpm lint --fix` apply to the whole repository.
+- Spell-check with `pnpm lint:spelling`; add project-specific words to `cspell.json`.
 - Try to write Markdown with one sentence per line; `prettier-plugin-sentences-per-line` reformats it anyway.
 - Run knip only through `pnpm lint:knip`; running it directly crashes.
 
