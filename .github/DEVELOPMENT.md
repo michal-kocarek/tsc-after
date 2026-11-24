@@ -56,8 +56,10 @@ It should be applied automatically when you save files in VS Code or make a Git 
 To manually reformat all files, you can run:
 
 ```shell
-pnpm format --write
+pnpm format
 ```
+
+To format specific files, run `pnpm format:files <files>`.
 
 ## Linting
 
@@ -70,11 +72,13 @@ Each should be shown in VS Code, and can be run manually on the command-line:
 
 Read the individual documentation for each linter to understand how it can be configured and used best.
 
-For example, ESLint can be run with `--fix` to auto-fix some lint rule complaints:
+ESLint can automatically fix some lint rule complaints across the repository:
 
 ```shell
-pnpm run lint --fix
+pnpm lint --fix
 ```
+
+Pass file paths to format or lint only those files, for example `pnpm lint --fix <files>`.
 
 Note that you'll need to run `pnpm build` before `pnpm lint` so that lint rules which check the file system can pick up on any built files.
 
