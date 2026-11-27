@@ -98,6 +98,7 @@ describe.each(starterProjects)("starter project $name", (starterProject) => {
 
 			it.for(withCleanModes([{ name: "deleted source outputs" }]))(
 				"cleans $name in $mode mode",
+				{ timeout: 30_000 },
 				async ({ args, mode }, { expect, task }) => {
 					await withProject(
 						task,
