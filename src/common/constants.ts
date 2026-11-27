@@ -38,7 +38,7 @@ export const cliArgsOptions = {
 	},
 	dry: {
 		default: false,
-		helpDescription: "Show what would be deleted.",
+		helpDescription: "Preview removals and copies without changing files.",
 		short: "d",
 		type: "boolean",
 	},

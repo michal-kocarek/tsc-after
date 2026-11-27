@@ -29,7 +29,7 @@ COMMAND LINE FLAGS
 
          --copy  Copy a file to a path relative to 'outDir', given as '<source>:<destination>'.
 
-      --dry, -d  Show what would be deleted.
+      --dry, -d  Preview removals and copies without changing files.
 
       --verbose  Enable verbose logging."
 `;
