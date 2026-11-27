@@ -85,13 +85,21 @@ Note that you'll need to run `pnpm build` before `pnpm lint` so that lint rules 
 ## Testing
 
 [Vitest](https://vitest.dev) is used for tests.
-Run source tests directly, or build the project before running end-to-end tests against the compiled CLI:
+Run the unit and end-to-end projects directly with the default Node runtime:
 
 ```shell
 pnpm run test:unit
-pnpm build
 pnpm run test:e2e
 ```
+
+Run both projects in one coverage run to combine unit and end-to-end subprocess coverage:
+
+```shell
+pnpm run test --run --coverage
+```
+
+The E2E helper runs the TypeScript entrypoint under Vitest's Node runtime so Vitest can map child-process coverage to production source.
+When `TSC_AFTER_NODE_EXECUTABLE` selects another Node executable, the helper runs the built CLI instead; build first, and that subprocess does not contribute source coverage.
 
 For compatibility testing with another Node executable, set `TSC_AFTER_NODE_EXECUTABLE` and `TSC_AFTER_EXPECTED_NODE_VERSION`.
 Both default to the Node version running Vitest:
@@ -106,7 +114,7 @@ The TypeScript peer range is `>=4.2.4 <7 || >=7.1.0-beta <8`.
 TypeScript 4.2 is the oldest supported minor because earlier versions compute output paths differently without `rootDir`; 4.2.4 is the latest patch of that release line.
 `README.md` gives users only a summary of these ranges; keep the exact bounds and their reasons here.
 
-Every entry of the CI test job runs the full unit and end-to-end suites.
+Every entry of the CI test job runs the full unit and end-to-end suites together with coverage.
 The entries cover the locked TypeScript on Ubuntu and Windows, and on the lowest supported version of each Node.js line.
 They also cover TypeScript 4.2.4 on Node.js 16.19.0, and TypeScript 7.1.0-beta on Node.js 22.0.0, `.nvmrc`, and Windows.
 Vitest always runs on `.nvmrc`; the Node.js entry selects the Node.js that runs `tsc` and `tsc-after`.

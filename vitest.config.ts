@@ -2,6 +2,7 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 const FIXTURES_GLOB = "**/__tests__/fixtures/**";
+const TESTS_GLOB = "**/__tests__/**";
 
 // eslint-disable-next-line n/no-process-env -- CI collects test reports to upload from failed jobs.
 const testResultsDir = process.env["TEST_RESULTS_DIR"] ?? "";
@@ -11,7 +12,8 @@ const testResultsFileName = `vitest-${new Date().toISOString().replaceAll(":", "
 export default defineConfig({
 	test: {
 		coverage: {
-			exclude: [FIXTURES_GLOB],
+			autoAttachSubprocess: true,
+			exclude: [TESTS_GLOB],
 			include: ["src/**/*.ts"],
 			reporter: ["html", "lcov"],
 		},
