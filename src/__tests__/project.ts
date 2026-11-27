@@ -40,7 +40,11 @@ const tscPath = join(
 	dirname(require.resolve("typescript/package.json")),
 	"bin/tsc",
 );
-const tscAfterPath = resolve(repositoryRoot, "bin/tsc-after.js");
+const tscAfterSourcePath = resolve(
+	repositoryRoot,
+	"src/entrypoints/tscAfter.ts",
+);
+const tscAfterBundlePath = resolve(repositoryRoot, "bin/tsc-after.js");
 const TS_EMITTED_FILE_PREFIX = "TSFILE:"; // cspell:ignore TSFILE
 
 interface ProjectOptions {
@@ -144,14 +148,25 @@ export async function runTscAfter(
 	args: readonly string[],
 	opts: RunOptions = {},
 ) {
-	const result = await execa(getNodeExecutable(), [tscAfterPath, ...args], {
+	const nodeExecutable = getNodeExecutable();
+	const runOptions = {
 		...(opts.cwd === undefined ? {} : { cwd: opts.cwd }),
 		env: {
 			FORCE_COLOR: undefined,
 			NO_COLOR: "1",
 		},
 		reject: !(opts.allowFailure ?? false),
-	});
+	};
+
+	// Run source under Vitest's Node for subprocess coverage; overrides may not support TypeScript.
+	const result =
+		nodeExecutable === process.execPath
+			? await execa(tscAfterSourcePath, args, {
+					...runOptions,
+					node: true,
+					nodePath: nodeExecutable,
+				})
+			: await execa(nodeExecutable, [tscAfterBundlePath, ...args], runOptions);
 
 	result.stdout = stripVTControlCharacters(result.stdout);
 	result.stderr = stripVTControlCharacters(result.stderr);
